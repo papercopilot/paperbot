@@ -1,12 +1,9 @@
+from .bots.sitebot import SiteBot
 
 class Pipeline:
     """Pipeline for paperbot."""
-    def __init__(self):
-        print("Pipeline")
+    def __init__(self, conf='', year=None):
+        self.bot = SiteBot(conf, year)
         
     def __call__(self):
-        print("Pipeline")
-    
-if __name__ == "__main__":
-    p = Pipeline()
-    p.__call__( )
+        self.bot()

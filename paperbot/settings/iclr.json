@@ -1,0 +1,35 @@
+{
+    "2024": {
+        "openreview": {
+            "api": "api2",
+            "review_invitation": "Official_Review",
+            "decision_invitation": "in_venue",
+            "track": {
+                "main": {
+                    "Total": "Conference/-/Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "ICLR 2024 Conference Submission": "Active",
+                    "ICLR 2024 Conference Withdrawn Submission": "Withdraw",
+                    "ICLR 2024 Conference Desk Rejected Submission": "Desk Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence",
+                    "correctness": "soundness",
+                    "novelty": "contribution",
+                    "presentation": "presentation"
+                }
+            }
+        },
+        "iclr.cc": {
+
+        }
+    }
+}
