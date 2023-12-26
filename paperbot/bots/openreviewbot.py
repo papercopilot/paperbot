@@ -1,4 +1,4 @@
-import sitebot as sitebot
+from . import sitebot
     
 class OpenreviewBot(sitebot.SiteBot):
     
