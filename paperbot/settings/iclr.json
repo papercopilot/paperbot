@@ -2,8 +2,11 @@
     "2024": {
         "openreview": {
             "api": "api2",
-            "review_invitation": "Official_Review",
-            "decision_invitation": "in_venue",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "Official_Review",
+                "decision": "in_venue"
+            },
             "track": {
                 "main": {
                     "Total": "Conference/-/Submission",
