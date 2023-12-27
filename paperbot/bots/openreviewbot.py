@@ -2,6 +2,8 @@ import requests
 from tqdm import tqdm
 import numpy as np
 import json
+from collections import Counter
+import spacy
 
 from . import sitebot
     
@@ -40,6 +42,8 @@ class OpenreviewBot(sitebot.SiteBot):
             'Desk Reject': 'Conference/-/Desk_Rejected_Submission'
         }
         
+        self.nlp = spacy.load('en_core_web_sm')
+        
     def get_tid(self, key):
         if key not in self.summary['tid']: self.summary['tid'][key] = len(self.summary['tid'])
         return self.summary['tid'][key]
@@ -73,6 +77,12 @@ class OpenreviewBot(sitebot.SiteBot):
         if tid not in self.summary['src']['openreview']['tid']: self.summary['src']['openreview']['tid'].append(tid)
         self.summary['tnum'][tid] = count
         
+    def get_hist_rating_avg(self, paperlist, status='', track=''):
+        data = np.array([o['rating_avg'] for o in paperlist if (not status or o['status'] == status) and (not track or o['track'] == track)])
+        hist = np.histogram(data, bins=np.arange(101)/10)[0]
+        hist_str = ';'.join(np.char.mod('%d', hist))
+        hist_sum = int(hist.sum())
+        return hist_sum, hist_str, hist
     
     def ping(self, url=''):
         response = requests.get(url)
@@ -273,9 +283,165 @@ class OpenreviewBot(sitebot.SiteBot):
             pbar.update(batch)
             
             self.paperlist.sort(key=lambda x: x['title'])
-            # with open(f'./logs/openreview/{self.conf}/{self.conf}{self.year}.json', 'w') as f:
-            #     json.dump(self.paperlist, f, indent=4)
         pbar.close()
+        
+    
+    def get_hist(self, track):
+        
+        tier_name = self.args['tname'][track]
+        
+        # get histogram for active/withdraw
+        # histogram for active will be zero when the decision is out, since all active paper will be moved to each tiers
+        for k in ['Active', 'Withdraw']:
+            if k in self.summary['tid']:
+                tid = self.summary['tid'][k]
+                hist_sum, hist_str, _ = self.get_hist_rating_avg(self.paperlist, status=k)
+                self.summary['thist'][tid], self.summary['thsum'][tid] = hist_str, hist_sum
+                
+                # if withdraw in thsum is not equal to withdraw in tnum, label the difference as "Post Decision Withdraw"
+                if k == 'Withdraw':
+                    # TODO: iclr 2018 has self.summary['tnum'][tid] - self.summary['thsum'][tid] < 0
+                    ttid = self.get_tid('Post Decision Withdraw')
+                    n_post_decision_withdraw = self.summary['tnum'][tid] - self.summary['thsum'][tid]
+                    self.summary['tnum'][ttid] = n_post_decision_withdraw if n_post_decision_withdraw > 0 else 0
+                
+        # whether to update active from tiers
+        tid = self.summary['tid']['Active']
+        update_active_from_tiers = True if self.summary['thsum'][tid] == 0 or self.summary['thsum'][tid]/self.summary['tnum'][tid] < 0.01 else False # when no active data or only several data points are available
+        rating_avg_hist_update = np.array(self.summary['thist'][tid].split(';')).astype(np.int32) # add tiers on top of active
+        
+        # rename tier by the tname values
+        for k in tier_name:
+            if k in self.summary['tid']:
+                tid = self.summary['tid'][k]
+                self.summary['tname'][tid] = tier_name[k]
+                
+                # get histogram
+                hist_sum, hist_str, hist = self.get_hist_rating_avg(self.paperlist, status=tier_name[k], track=track)
+                self.summary['thist'][tid], self.summary['thsum'][tid] = hist_str, hist_sum
+                
+                # update active from tiers if necessary
+                if update_active_from_tiers:
+                    rating_avg_hist_update += hist
+                    
+        # update active from tiers if necessary
+        if update_active_from_tiers:
+            tid = self.summary['tid']['Active']
+            self.summary['thist'][tid] = ';'.join(np.char.mod('%d', rating_avg_hist_update))
+            self.summary['thsum'][tid] = int(rating_avg_hist_update.sum())
+            
+        # get histogram over all submissions
+        tid = self.get_tid('Total')
+        hist_sum, hist_str, _ = self.get_hist_rating_avg(self.paperlist, track=track)
+        self.summary['thist'][tid], self.summary['thsum'][tid] = hist_str, hist_sum
+        
+    def get_tsf(self, track):
+        
+        tier_name = self.args['tname'][track]
+
+        try:
+            with open(f'../logs/openreview/{self.conf}/{self.conf}{self.year}.init.json') as f:
+                paperlist0 = json.load(f)
+                
+                # get histogram over all submissions at initial
+                tid = self.get_tid('Total0')
+                hist_sum, hist_str, _ = self.get_hist_rating_avg(paperlist0)
+                self.summary['thist'][tid], self.summary['thsum'][tid] = hist_str, hist_sum
+                
+                self.summary['ttsf'] = {}
+                if len(self.paperlist) == len(paperlist0):
+                    
+                    # rating_avg transfer matrix for total
+                    rating_avg_transfer = np.zeros((100, 100))
+                    tid = self.summary['tid']['Total']
+                    for o, o0 in zip(self.paperlist, paperlist0):
+                        if o['id'] != o0['id']: continue
+                        rating0_avg, rating_avg = o0['rating_avg'], o['rating_avg']
+                        if rating0_avg < 0 or rating_avg < 0: continue
+                        rating_avg_delta = rating_avg - rating0_avg
+                        rating_avg_transfer[int(rating0_avg*10), 50+int(rating_avg_delta*10)] += 1
+                    rating_avg_transfer = rating_avg_transfer.astype(np.int32)
+                    if rating_avg_transfer.sum() > 0: self.summary['ttsf'][tid] = ';'.join(np.char.mod('%d', rating_avg_transfer.flatten()))
+                    
+                    # rating_avg transfer matrix for withdraw and active
+                    for k in ['Active', 'Withdraw']:
+                        tid = self.summary['tid'][k]
+                        rating_avg_transfer = np.zeros((100, 100))
+                        for o, o0 in zip(self.paperlist, paperlist0):
+                            if o['id'] != o0['id']: continue
+                            if o['status'] != k: continue
+                            rating0_avg, rating_avg = o0['rating_avg'], o['rating_avg']
+                            if rating0_avg < 0 or rating_avg < 0: continue
+                            rating_avg_delta = rating_avg - rating0_avg
+                            rating_avg_transfer[int(rating0_avg*10), 50+int(rating_avg_delta*10)] += 1
+                        rating_avg_transfer = rating_avg_transfer.astype(np.int32)
+                        if rating_avg_transfer.sum() > 0: self.summary['ttsf'][tid] = ';'.join(np.char.mod('%d', rating_avg_transfer.flatten()))
+                    
+                    # whether to update active from tiers
+                    tid = self.summary['tid']['Active']
+                    update_active_from_tiers = True if tid not in self.summary['ttsf'] else False # when no active data or only several data points are available
+                    rating_avg_transfer_update = np.zeros((100, 100)).astype(np.int32)
+                    
+                    # rating_avg transfer matrix for each tier
+                    for k in tier_name:
+                        if k not in self.summary['tid']: continue
+                        tid = self.summary['tid'][k]
+                        rating_avg_transfer = np.zeros((100, 100))
+                        for o, o0 in zip(self.paperlist, paperlist0):
+                            if o['id'] != o0['id']: continue
+                            if o['status'] != tier_name[k]: continue
+                            rating0_avg, rating_avg = o0['rating_avg'], o['rating_avg']
+                            if rating0_avg < 0 or rating_avg < 0: continue
+                            rating_avg_delta = rating_avg - rating0_avg
+                            rating_avg_transfer[int(rating0_avg*10), 50+int(rating_avg_delta*10)] += 1
+                        rating_avg_transfer = rating_avg_transfer.astype(np.int32)
+                        # append to summary if there is any data
+                        if rating_avg_transfer.sum() > 0: self.summary['ttsf'][tid] = ';'.join(np.char.mod('%d', rating_avg_transfer.flatten()))
+                        if update_active_from_tiers: rating_avg_transfer_update += rating_avg_transfer
+                
+                # update active from tiers if necessary
+                if update_active_from_tiers:
+                    tid = self.summary['tid']['Active']
+                    if rating_avg_transfer_update.sum() > 0: self.summary['ttsf'][tid] = ';'.join(np.char.mod('%d', rating_avg_transfer_update.flatten()))
+                
+        except Exception as e:
+            print('initial file not available, skip then')
+            
+    def get_keywords(self):
+        
+        raw_keywords = []
+        for paper in tqdm(self.paperlist, desc='Loading keywords'):
+            raw_keywords += [k.strip().lower() for k in paper['keywords'].split(';') if k]
+            
+        # normalize phrases via spacy
+        def normalize_phrase(phrase):
+            doc = self.nlp(phrase.lower())
+            
+            normalized = []
+            for token in doc:
+                # Lemmatize only if the token is a noun
+                if token.pos_ in ['NOUN', 'PROPN']:
+                    normalized.append(token.lemma_)
+                else:
+                    normalized.append(token.text)
+            ret = ' '.join(normalized)
+            ret = ret.replace(' - ', '-') # remove space around hyphen
+            ret = ret.replace('( ', '(') # remove space after left parenthesis
+            ret = ret.replace(' )', ')') # remove space before right parenthesis
+        
+            return ret
+        
+        normalized_phrases = [normalize_phrase(phrase) for phrase in tqdm(raw_keywords[:100000], desc='Normalizing phrases')]
+        
+        phrase_counts = Counter(normalized_phrases)
+        n_phrase = len(phrase_counts)
+        self.summary['keywords'] = ';'.join([f'{k}:{v}' for k, v in phrase_counts.most_common(n_phrase)])
+                    
+        
+    def dump(self):
+        with open(f'../logs/openreview/{self.conf}/{self.conf}{self.year}.json', 'w') as f:
+            json.dump(self.paperlist, f, indent=4)
+
         
     def launch(self, offset=0, batch=1000):
         # loop over tracks
@@ -291,5 +457,9 @@ class OpenreviewBot(sitebot.SiteBot):
                     tid = self.get_tid(ivt)
                     self.update_meta_count(count, tid, ivt, submission_invitation)
                     self.crawl(url_page, tid, track, ivt)
+                    self.get_hist(track)
+                    self.get_tsf(track)
+                    self.get_keywords()
+                    self.dump()
                 else:
                     raise Exception("Site is not available.")
