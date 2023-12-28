@@ -45,7 +45,8 @@ class OpenreviewBot(sitebot.SiteBot):
             'Desk Reject': 'Conference/-/Desk_Rejected_Submission'
         }
         
-        self.nlp = spacy.load('en_core_web_sm')
+        # sm/md/lg
+        self.nlp = spacy.load('en_core_web_lg')
         
     def get_tid(self, key):
         if key not in self.summary['tid']: self.summary['tid'][key] = len(self.summary['tid'])
@@ -402,7 +403,7 @@ class OpenreviewBot(sitebot.SiteBot):
         except Exception as e:
             print('initial file not available, skip then')
             
-    def get_keywords(self):
+    def get_keywords(self, track):
         
         raw_keywords = []
         for paper in tqdm(self.paperlist, desc='Loading keywords'):
