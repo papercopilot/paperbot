@@ -34,5 +34,42 @@
         "iclr.cc": {
 
         }
+    },
+    "2023": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept: notable-top-5%": "Top-5%",
+                    "Accept: notable-top-25%": "Top-25%",
+                    "Accept: poster": "Poster",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "recommendation",
+                    "confidence": "confidence",
+                    "correctness": "correctness",
+                    "novelty": "technical_novelty_and_significance",
+                    "novelty_emp": "empirical_novelty_and_significance"
+                }
+            }
+        },
+        "iclr.cc": {
+
+        }
     }
 }

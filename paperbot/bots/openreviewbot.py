@@ -20,21 +20,24 @@ class OpenreviewBot(sitebot.SiteBot):
         self.baseurl = f'https://{api}.openreview.net/notes?invitation={invitation}/{year}'
         self.tracks = self.args['track']
         
-        self.summary = {
-            'tid': {}, # tier id
-            'tname': {}, # tier name
-            'tnum': {}, # tier num
-            'thist': {}, # tier histogram
-            'thsum': {}, # tier histogram sum
-            'src': {
-                'openreview': {
-                    'url': f'https://openreview.net/group?id={invitation}/{year}',
-                    'name': 'OpenReview',
-                    'tid': [], 
-                    'total': 0,
-                }
-            },
+        self.summarys = {}
+        for track in self.tracks:
+            self.summarys[track] = {
+                'tid': {}, # tier id
+                'tname': {}, # tier name
+                'tnum': {}, # tier num
+                'thist': {}, # tier histogram
+                'thsum': {}, # tier histogram sum
+                'src': {
+                    'openreview': {
+                        'tid': [], 
+                        'total': 0,
+                        'url': f'https://openreview.net/group?id={invitation}/{year}',
+                        'name': 'OpenReview',
+                    }
+                },
         }
+        self.summary = {}
         
         self.main_track = {
             'Active': 'Conference/-/Blind_Submission',
@@ -56,25 +59,17 @@ class OpenreviewBot(sitebot.SiteBot):
     
     def update_meta_count(self, count, tid, ivt, submission_invitation):
         
-        if 'Total' in submission_invitation and 'Total' == ivt: 
+        if 'Total' in submission_invitation:
             # if one of the submission_invitation is total, use the value in total
-            self.summary['src']['openreview']['total'] = count
+            if 'Total' == ivt: self.summary['src']['openreview']['total'] = count
+            elif tid not in self.summary['src']['openreview']['tid']: self.summary['src']['openreview']['tid'].append(tid)
         else: 
             # if there is no total, sum all submission_invitation
             self.summary['src']['openreview']['total'] += count
-        
-        # if 'Total' in submission_invitation:
-            # if one of the submission_invitation is total, use the value in total
-            # if 'Total' == ivt: self.summary['src']['openreview']['total'] = count
-            # elif tid not in self.summary['src']['openreview']['tid']: self.summary['src']['openreview']['tid'].append(tid)
-        # else: 
-            # if there is no total, sum all submission_invitation
-            # self.summary['src']['openreview']['total'] += count
-            # if 'Active' == ivt: pass
-            # elif tid not in self.summary['src']['openreview']['tid']: self.summary['src']['openreview']['tid'].append(tid)
+            if 'Active' == ivt: pass
+            elif tid not in self.summary['src']['openreview']['tid']: self.summary['src']['openreview']['tid'].append(tid)
         
         # fill summary
-        if tid not in self.summary['src']['openreview']['tid']: self.summary['src']['openreview']['tid'].append(tid)
         self.summary['tnum'][tid] = count
         
     def get_hist_rating_avg(self, paperlist, status='', track=''):
@@ -438,14 +433,29 @@ class OpenreviewBot(sitebot.SiteBot):
         self.summary['keywords'] = ';'.join([f'{k}:{v}' for k, v in phrase_counts.most_common(n_phrase)])
                     
         
-    def dump(self):
-        with open(f'../logs/openreview/{self.conf}/{self.conf}{self.year}.json', 'w') as f:
+    def dump_paperlist(self, path=None):
+        path = path if path else f'../logs/openreview/{self.conf}/{self.conf}{self.year}.json'
+        with open(path, 'w') as f:
             json.dump(self.paperlist, f, indent=4)
-
+            
+    def dump_summary(self, path=None):
+        path = path if path else f'../logs/openreview/{self.conf}.json'
+        with open(path, 'w') as f:
+            json.dump(self.summary, f, indent=4)
+            
+    def sorted_summary(self):
+        # sort tier and get tier name
+        parse = lambda x: dict(sorted(x.items()))
+        self.summary['tnum'] = parse(self.summary['tnum'])
+        self.summary['tname'] = parse(self.summary['tname'])
+        self.summary['thist'] = parse(self.summary['thist'])
+        self.summary['thsum'] = parse(self.summary['thsum'])
+        return parse(self.summary)
         
     def launch(self, offset=0, batch=1000):
         # loop over tracks
         for track in self.tracks:
+            self.summary = self.summarys[track] # initialize summary
             submission_invitation = self.tracks[track] # pages is submission_invitation in openreview.py
             
             # loop over pages
@@ -457,9 +467,16 @@ class OpenreviewBot(sitebot.SiteBot):
                     tid = self.get_tid(ivt)
                     self.update_meta_count(count, tid, ivt, submission_invitation)
                     self.crawl(url_page, tid, track, ivt)
-                    self.get_hist(track)
-                    self.get_tsf(track)
-                    self.get_keywords()
-                    self.dump()
                 else:
                     raise Exception("Site is not available.")
+            
+            # process and analyze
+            self.get_hist(track)
+            self.get_tsf(track)
+            self.summary = self.sorted_summary()
+            self.get_keywords(track)
+            
+            # update summary
+            self.summarys[track] = self.summary
+            
+        self.dump_paperlist()
