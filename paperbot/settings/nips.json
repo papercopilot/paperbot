@@ -1,0 +1,138 @@
+{
+    "2024": {
+
+    },
+    "2023": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "NeurIPS.cc",
+                "review": "Official_Review",
+                "decision": "in_venue"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission"
+                },
+                "Datasets & Benchmarks": {
+                    "Active": "Track/Datasets_and_Benchmarks/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "NeurIPS 2023 spotlight": "Spotlight",
+                    "NeurIPS 2023 poster": "Poster",
+                    "NeurIPS 2023 oral": "Oral",
+                    "Submitted to NeurIPS 2023": "Reject"
+                },
+                "Datasets & Benchmarks": {
+                    "NeurIPS 2023 Datasets and Benchmarks Spotlight": "Spotlight",
+                    "NeurIPS 2023 Datasets and Benchmarks Poster": "Poster",
+                    "NeurIPS 2023 Datasets and Benchmarks Oral": "Oral",
+                    "Submitted to NeurIPS 2023 Datasets and Benchmarks": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence",
+                    "correctness": "soundness",
+                    "novelty": "contribution",
+                    "presentation": "presentation"
+                },
+                "Datasets & Benchmarks": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
+        "nips.cc": {
+
+        }
+    },
+    "2022": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "NeurIPS.cc",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                },
+                "Datasets & Benchmarks": {
+                    "Active": "Track/Datasets_and_Benchmarks/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept": "Accept",
+                    "Reject": "Reject"
+                },
+                "Datasets & Benchmarks": {
+                    "Accept": "Accept",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence",
+                    "correctness": "soundness",
+                    "novelty": "contribution",
+                    "presentation": "presentation"
+                },
+                "Datasets & Benchmarks": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
+        "nips.cc": {
+
+        }
+
+    },
+    "2021": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "NeurIPS.cc",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Spotlight)": "Spotlight",
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                },
+                "Datasets & Benchmarks": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
+        "nips.cc": {
+
+        }
+    }
+}

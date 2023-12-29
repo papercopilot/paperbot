@@ -10,9 +10,7 @@ class SiteBot:
         
         # acquire settings
         args = util.load_settings(conf)
-        if str(year) not in args.keys():
-            raise Exception("Year is not available.")
-        self.args = args[str(year)]
+        self.args = {} if str(year) not in args.keys() else args[str(year)]
         
         # define output
         self.paperlist  = []
