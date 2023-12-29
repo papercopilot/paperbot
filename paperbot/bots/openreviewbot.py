@@ -12,7 +12,12 @@ class OpenreviewBot(sitebot.SiteBot):
     def __init__(self, conf='', year=None):
         super().__init__(conf, year)
         
+        # initialization
+        self.summary = {}
+        self.summarys = {}
+        
         # focus on openreview
+        if 'openreview' not in self.args: return
         self.args = self.args['openreview']
         
         api = self.args['api']
@@ -20,7 +25,6 @@ class OpenreviewBot(sitebot.SiteBot):
         self.baseurl = f'https://{api}.openreview.net/notes?invitation={invitation}/{year}'
         self.tracks = self.args['track']
         
-        self.summarys = {}
         for track in self.tracks:
             self.summarys[track] = {
                 'tid': {}, # tier id
@@ -37,8 +41,8 @@ class OpenreviewBot(sitebot.SiteBot):
                     }
                 },
         }
-        self.summary = {}
         
+        # TODO: remove maybe?
         self.main_track = {
             'Active': 'Conference/-/Blind_Submission',
             'Withdraw': 'Conference/-/Withdrawn_Submission',
@@ -455,6 +459,10 @@ class OpenreviewBot(sitebot.SiteBot):
         
     def launch(self, offset=0, batch=1000):
         # loop over tracks
+        if not self.args: 
+            print(f'{self.conf} {self.year}: Openreview Not available.')
+            return
+        
         for track in self.tracks:
             self.summary = self.summarys[track] # initialize summary
             submission_invitation = self.tracks[track] # pages is submission_invitation in openreview.py
@@ -468,8 +476,8 @@ class OpenreviewBot(sitebot.SiteBot):
                     tid = self.get_tid(ivt)
                     self.update_meta_count(count, tid, ivt, submission_invitation)
                     self.crawl(url_page, tid, track, ivt)
-                else:
-                    raise Exception("Site is not available.")
+                else: 
+                    print(f'{url_page} not available.')
             
             # process and analyze
             self.get_hist(track)

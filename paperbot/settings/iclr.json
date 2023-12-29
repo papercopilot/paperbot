@@ -71,5 +71,271 @@
         "iclr.cc": {
 
         }
+    },
+    "2022": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Spotlight)": "Spotlight",
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "recommendation",
+                    "confidence": "confidence",
+                    "correctness": "correctness",
+                    "novelty": "technical_novelty_and_significance",
+                    "novelty_emp": "empirical_novelty_and_significance"
+                }
+            }
+        },
+        "iclr.cc": {
+
+        }
+    },
+    "2021": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Spotlight)": "Spotlight",
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
+        "iclr.cc": {
+
+        }
+    },
+    "2020": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Spotlight)": "Spotlight",
+                    "Accept (Poster)": "Poster",
+                    "Accept (Talk)": "Talk",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
+        "iclr.cc": {
+
+        }
+    },
+    "2019": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "Official_Review",
+                "decision": "Meta_Review"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Oral)": "Oral",
+                    "Accept (Poster)": "Poster",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
+        "iclr.cc": {
+
+        }
+    },
+    "2018": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "Official_Review",
+                "decision": "Acceptance_Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Invite to Workshop Track": "Workshop",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
+        "iclr.cc": {
+
+        }
+    },
+    "2017": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "official/review",
+                "decision": "acceptance"
+            },
+            "track": {
+                "main": {
+                    "Active": "conference/-/submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Invite to Workshop Track": "Workshop",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
+        "iclr.cc": {
+
+        }
+    },
+    "2016": {
+
+    },
+    "2015": {
+
+    },
+    "2014": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "submission/review",
+                "decision": "in_notes"
+            },
+            "track": {
+                "main": {
+                    "Active": "conference/-/submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "submitted, no decision": "Poster"
+                }
+            },
+            "rname": {
+                "main": {}
+            }
+        },
+        "iclr.cc": {
+
+        }
+    },
+    "2013": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "official/review",
+                "decision": "in_notes"
+            },
+            "track": {
+                "main": {
+                    "Active": "conference/-/submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "conferencePoster-iclr2013-workshop": "Poster Workshop",
+                    "conferenceOral-iclr2013-workshop": "Oral Workshop",
+                    "conferencePoster-iclr2013-conference": "Poster",
+                    "conferenceOral-iclr2013-conference": "Oral",
+                    "reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {}
+            }
+        },
+        "iclr.cc": {
+
+        }
     }
 }

@@ -2,8 +2,8 @@ import paperbot
 
 def test_pipeline():
     confs = ['iclr']
-    years = [2024, 2023]
-    years = [2023]
+    years = range(2024, 2012, -1)
+    # years = [2014]
     p = paperbot.Pipeline(confs, years)
     assert p is not None
     p.launch()
