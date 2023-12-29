@@ -1,0 +1,134 @@
+{
+    "2023": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "robot-learning.org/CoRL",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "recommendation",
+                    "confidence": "confidence"
+                }
+            },
+            "rmap": {
+                "main": {
+                    "Strong Reject": "1",
+                    "Reject": "3",
+                    "Weak Reject": "4",
+                    "Boarderline": "5",
+                    "Weak Accept": "6",
+                    "Accept": "8",
+                    "Strong Accept": "10"
+                }
+            }
+        },
+        "robot-learning.org": {
+
+        }
+    },
+    "2022": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "robot-learning.org/CoRL",
+                "review": "Official_Review",
+                "decision": "Meta_Review"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "recommendation",
+                    "confidence": "confidence"
+                }
+            },
+            "rmap": {
+                "main": {
+                    "Strong Reject": "1",
+                    "Reject": "3",
+                    "Weak Reject": "4",
+                    "Boarderline": "5",
+                    "Weak Accept": "6",
+                    "Accept": "8",
+                    "Strong Accept": "10"
+                }
+            }
+        },
+        "robot-learning.org": {
+
+        }
+    },
+    "2021": {
+        "openreview": {
+            "api": "api",
+            "invitation": {
+                "root": "robot-learning.org/CoRL",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Blind_Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "recommendation",
+                    "confidence": "confidence"
+                }
+            },
+            "rmap": {
+                "main": {
+                    "Strong Reject": "1",
+                    "Reject": "3",
+                    "Weak Reject": "4",
+                    "Boarderline": "5",
+                    "Weak Accept": "6",
+                    "Accept": "8",
+                    "Strong Accept": "10"
+                }
+            }
+        },
+        "robot-learning.org": {
+
+        }
+    }
+}

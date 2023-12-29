@@ -1,0 +1,37 @@
+{
+    "2023": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "EMNLP",
+                "review": "Official_Review",
+                "decision": "Decision",
+                "meta": "Meta_Review"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Regular Long Paper Accept-Main": "Long Main",
+                    "Regular Short Paper Accept-Main": "Short Main",
+                    "Regular Long Paper Accept-Findings": "Long Findings",
+                    "Regular Short Paper Accept-Findings": "Short Findings",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "recommendation",
+                    "confidence": "Reviewer_Confidence",
+                    "correctness": "Soundness"
+                }
+            }
+        },
+        "icml.cc": {
+
+        }
+    }
+}

@@ -1,0 +1,29 @@
+{
+    "2023": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "ICML.cc",
+                "review": "",
+                "decision": "in_venue"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "ICML 2023 OralPoster": "Oral",
+                    "ICML 2023 Poster": "Poster"
+                }
+            },
+            "rname": {
+                "main": {}
+            }
+        },
+        "icml.cc": {
+
+        }
+    }
+}

@@ -22,9 +22,9 @@ class Pipeline:
         for conf in self.confs:
             self.summary_all[conf] = {}
             for year in self.years:
-                self.summary_all[conf][year] = {}
                 openreviewbot = OpenreviewBot(conf, year)
                 openreviewbot.launch()
                 
+                if not openreviewbot.summarys: continue
                 self.summary_all[conf][year] = openreviewbot.summarys
                 

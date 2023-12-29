@@ -411,6 +411,7 @@ class OpenreviewBot(sitebot.SiteBot):
         
         raw_keywords = []
         for paper in tqdm(self.paperlist, desc='Loading keywords'):
+            if paper['track'] != track: continue
             raw_keywords += [k.strip().lower() for k in paper['keywords'].split(';') if k]
             
         # normalize phrases via spacy
