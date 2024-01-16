@@ -18,7 +18,11 @@
                 "main": {
                     "ICLR 2024 Conference Submission": "Active",
                     "ICLR 2024 Conference Withdrawn Submission": "Withdraw",
-                    "ICLR 2024 Conference Desk Rejected Submission": "Desk Reject"
+                    "ICLR 2024 Conference Desk Rejected Submission": "Desk Reject",
+                    "ICLR 2024 poster": "Poster",
+                    "ICLR 2024 oral": "Oral",
+                    "ICLR 2024 spotlight": "Spotlight",
+                    "Submitted to ICLR 2024": "Pending"
                 }
             },
             "rname": {

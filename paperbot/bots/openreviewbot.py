@@ -292,19 +292,24 @@ class OpenreviewBot(sitebot.SiteBot):
         
         # get histogram for active/withdraw
         # histogram for active will be zero when the decision is out, since all active paper will be moved to each tiers
-        for k in ['Active', 'Withdraw']:
-            if k in self.summary['tid']:
-                tid = self.summary['tid'][k]
-                hist_sum, hist_str, _ = self.get_hist_rating_avg(self.paperlist, status=k)
-                self.summary['thist'][tid], self.summary['thsum'][tid] = hist_str, hist_sum
-                
-                # if withdraw in thsum is not equal to withdraw in tnum, label the difference as "Post Decision Withdraw"
-                if k == 'Withdraw':
-                    # TODO: iclr 2018 has self.summary['tnum'][tid] - self.summary['thsum'][tid] < 0
-                    ttid = self.get_tid('Post Decision Withdraw')
-                    n_post_decision_withdraw = self.summary['tnum'][tid] - self.summary['thsum'][tid]
-                    self.summary['tnum'][ttid] = n_post_decision_withdraw if n_post_decision_withdraw > 0 else 0
-                
+        k = 'Active'
+        tid = self.get_tid(k)
+        hist_sum, hist_str, _ = self.get_hist_rating_avg(self.paperlist, status=k)
+        self.summary['thist'][tid], self.summary['thsum'][tid] = hist_str, hist_sum
+        
+        k = 'Withdraw'
+        if 'Withdraw' in self.summary['tid']:
+            tid = self.summary['tid'][k]
+            hist_sum, hist_str, _ = self.get_hist_rating_avg(self.paperlist, status=k)
+            self.summary['thist'][tid], self.summary['thsum'][tid] = hist_str, hist_sum
+
+            # if withdraw in thsum is not equal to withdraw in tnum, label the difference as "Post Decision Withdraw"
+            if k == 'Withdraw':
+                # TODO: iclr 2018 has summary['tnum'][tid] - summary['thsum'][tid] < 0
+                ttid = self.get_tid('Post Decision Withdraw')
+                n_post_decision_withdraw = self.summary['tnum'][tid] - self.summary['thsum'][tid]
+                self.summary['tnum'][ttid] = n_post_decision_withdraw if n_post_decision_withdraw > 0 else 0
+        
         # whether to update active from tiers
         tid = self.summary['tid']['Active']
         update_active_from_tiers = True if self.summary['thsum'][tid] == 0 or self.summary['thsum'][tid]/self.summary['tnum'][tid] < 0.01 else False # when no active data or only several data points are available
