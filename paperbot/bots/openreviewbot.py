@@ -10,7 +10,7 @@ from . import sitebot
     
 class OpenreviewBot(sitebot.SiteBot):
     
-    def __init__(self, conf='', year=None, root_dir = '../logs/openreview'):
+    def __init__(self, conf='', year=None, root_dir = '../logs/openreview', dump_keywords=False):
         super().__init__(conf, year)
         
         # initialization
@@ -18,6 +18,7 @@ class OpenreviewBot(sitebot.SiteBot):
         self.summarys = {}
         
         self.keywords = {}
+        self.dump_keywords = dump_keywords
         
         # focus on openreview
         if 'openreview' not in self.args: return
@@ -426,7 +427,7 @@ class OpenreviewBot(sitebot.SiteBot):
         except Exception as e:
             print('initial file not available, skip then')
             
-    def get_keywords(self, track):
+    def parse_keywords(self, track):
         
         raw_keywords = []
         for paper in tqdm(self.paperlist, desc='Loading keywords'):
@@ -459,20 +460,23 @@ class OpenreviewBot(sitebot.SiteBot):
         return keywords_curr
                     
         
-    def dump_paperlist(self, path=None):
+    def save_paperlist(self, path=None):
         path = path if path else os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json')
         with open(path, 'w') as f:
             json.dump(self.paperlist, f, indent=4)
+        print(f'{path} saved.')
             
-    def dump_keywords(self, path=None):
+    def save_keywords(self, path=None):
         path = path if path else os.path.join(self.paths['keywords'], f'{self.conf}.json')
         with open(path, 'w') as f:
             json.dump(self.keywords, f, indent=4)
+        print(f'{path} saved.')
             
-    def dump_summary(self, path=None):
+    def save_summary(self, path=None):
         path = path if path else os.path.join(self.paths['summary'], f'{self.conf}.json')
         with open(path, 'w') as f:
             json.dump(self.summary, f, indent=4)
+        print(f'{path} saved.')
             
     def sorted_summary(self):
         # sort tier and get tier name
@@ -510,10 +514,12 @@ class OpenreviewBot(sitebot.SiteBot):
             self.get_hist(track)
             self.get_tsf(track)
             self.summary = self.sorted_summary()
-            self.keyword_curr = self.get_keywords(track)
+            
+            if self.dump_keywords:
+                self.keyword_curr = self.parse_keywords(track)
             
             # update summary
             self.summarys[track] = self.summary
             self.keywords[track] = self.keyword_curr
             
-        self.dump_paperlist()
+        self.save_paperlist()
