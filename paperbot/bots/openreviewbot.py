@@ -4,17 +4,20 @@ import numpy as np
 import json
 from collections import Counter
 import spacy
+import os
 
 from . import sitebot
     
 class OpenreviewBot(sitebot.SiteBot):
     
-    def __init__(self, conf='', year=None):
+    def __init__(self, conf='', year=None, root_dir = '../logs/openreview'):
         super().__init__(conf, year)
         
         # initialization
         self.summary = {}
         self.summarys = {}
+        
+        self.keywords = {}
         
         # focus on openreview
         if 'openreview' not in self.args: return
@@ -40,7 +43,8 @@ class OpenreviewBot(sitebot.SiteBot):
                         'name': 'OpenReview',
                     }
                 },
-        }
+            }
+            self.keywords[track] = {}
         
         # TODO: remove maybe?
         self.main_track = {
@@ -51,6 +55,13 @@ class OpenreviewBot(sitebot.SiteBot):
         
         # sm/md/lg
         self.nlp = spacy.load('en_core_web_lg')
+        
+        self.root_dir = root_dir
+        self.paths = {
+            'paperlist': os.path.join(self.root_dir, 'venues'),
+            'summary': os.path.join(self.root_dir, 'summary'),
+            'keywords': os.path.join(self.root_dir, 'keywords'),
+        }
         
     def get_tid(self, key):
         if key not in self.summary['tid']: self.summary['tid'][key] = len(self.summary['tid'])
@@ -105,7 +116,7 @@ class OpenreviewBot(sitebot.SiteBot):
             data = response.json()
             
             # process data here
-            for note in data['notes']:
+            for note in tqdm(data['notes'], leave=False, desc='Processing'):
                 
                 # value could be string or dict['value']
                 getstr = lambda x: x if not isinstance(x, dict) else x['value']
@@ -342,10 +353,13 @@ class OpenreviewBot(sitebot.SiteBot):
         
     def get_tsf(self, track):
         
+        def tsf2string(tsf):
+            return ';'.join(np.char.mod('%d', tsf.flatten()))
+        
         tier_name = self.args['tname'][track]
 
         try:
-            with open(f'../logs/openreview/{self.conf}/{self.conf}{self.year}.init.json') as f:
+            with open(os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.init.json')) as f:
                 paperlist0 = json.load(f)
                 
                 # get histogram over all submissions at initial
@@ -441,16 +455,22 @@ class OpenreviewBot(sitebot.SiteBot):
         
         phrase_counts = Counter(normalized_phrases)
         n_phrase = len(phrase_counts)
-        self.summary['keywords'] = ';'.join([f'{k}:{v}' for k, v in phrase_counts.most_common(n_phrase)])
+        keywords_curr = ';'.join([f'{k}:{v}' for k, v in phrase_counts.most_common(n_phrase)])
+        return keywords_curr
                     
         
     def dump_paperlist(self, path=None):
-        path = path if path else f'../logs/openreview/{self.conf}/{self.conf}{self.year}.json'
+        path = path if path else os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json')
         with open(path, 'w') as f:
             json.dump(self.paperlist, f, indent=4)
             
+    def dump_keywords(self, path=None):
+        path = path if path else os.path.join(self.paths['keywords'], f'{self.conf}.json')
+        with open(path, 'w') as f:
+            json.dump(self.keywords, f, indent=4)
+            
     def dump_summary(self, path=None):
-        path = path if path else f'../logs/openreview/{self.conf}.json'
+        path = path if path else os.path.join(self.paths['summary'], f'{self.conf}.json')
         with open(path, 'w') as f:
             json.dump(self.summary, f, indent=4)
             
@@ -471,6 +491,7 @@ class OpenreviewBot(sitebot.SiteBot):
         
         for track in self.tracks:
             self.summary = self.summarys[track] # initialize summary
+            self.keyword_curr = self.keywords[track] # initialize keyword
             submission_invitation = self.tracks[track] # pages is submission_invitation in openreview.py
             
             # loop over pages
@@ -489,9 +510,10 @@ class OpenreviewBot(sitebot.SiteBot):
             self.get_hist(track)
             self.get_tsf(track)
             self.summary = self.sorted_summary()
-            self.get_keywords(track)
+            self.keyword_curr = self.get_keywords(track)
             
             # update summary
             self.summarys[track] = self.summary
+            self.keywords[track] = self.keyword_curr
             
         self.dump_paperlist()
