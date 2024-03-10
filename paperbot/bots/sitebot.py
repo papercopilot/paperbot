@@ -2,11 +2,12 @@ from ..utils import util
 
 class SiteBot:
     """SiteBot for paperbot."""
-    def __init__(self, conf='', year=None):
+    def __init__(self, conf='', year=None, root_dir=''):
         
         # define data
         self.conf = conf
         self.year = year
+        self.root_dir = root_dir
         
         # acquire settings
         args = util.load_settings(conf)

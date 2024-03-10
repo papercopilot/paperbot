@@ -11,7 +11,7 @@ from . import sitebot
 class OpenreviewBot(sitebot.SiteBot):
     
     def __init__(self, conf='', year=None, root_dir = '../logs/openreview', dump_keywords=False):
-        super().__init__(conf, year)
+        super().__init__(conf, year, root_dir)
         
         # initialization
         self.summary = {}
@@ -57,7 +57,6 @@ class OpenreviewBot(sitebot.SiteBot):
         # sm/md/lg
         self.nlp = spacy.load('en_core_web_lg')
         
-        self.root_dir = root_dir
         self.paths = {
             'paperlist': os.path.join(self.root_dir, 'venues'),
             'summary': os.path.join(self.root_dir, 'summary'),
@@ -488,11 +487,11 @@ class OpenreviewBot(sitebot.SiteBot):
         return parse(self.summary)
         
     def launch(self, offset=0, batch=1000):
-        # loop over tracks
         if not self.args: 
             print(f'{self.conf} {self.year}: Openreview Not available.')
             return
         
+        # loop over tracks
         for track in self.tracks:
             self.summary = self.summarys[track] # initialize summary
             self.keyword_curr = self.keywords[track] # initialize keyword

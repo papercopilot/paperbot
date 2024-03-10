@@ -1,4 +1,4 @@
-from .bots.sitebot import SiteBot
+from .bots.ccbot import *
 from .bots.openreviewbot import OpenreviewBot
 import json
 import os
@@ -12,6 +12,8 @@ class Pipeline:
         self.keywords_all = {}
         
         self.dump_keywords = args.parse_keywords
+        self.fetch_openreview = args.fetch_openreview
+        self.fetch_site = args.fetch_site
         
         self.root_dir = args.root_dir
         self.paths = {
@@ -44,11 +46,20 @@ class Pipeline:
             self.summary_all[conf] = {}
             self.keywords_all[conf] = {}
             for year in self.years:
+                
+                # 
+                print('Initializing bots for', conf, year)
                 openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                openreviewbot.launch()
+                sitebot = eval(f"{conf.upper()}Bot")(conf, year, root_dir=self.paths['paperlists'], openreview_dir=openreviewbot.root_dir)
                 
-                if not openreviewbot.summarys: continue
-                self.summary_all[conf][year] = openreviewbot.summarys
-                if not openreviewbot.keywords: continue
-                self.keywords_all[conf][year] = openreviewbot.keywords
+                if self.fetch_openreview:
+                    # launch openreview bot
+                    openreviewbot.launch()
+                    if not openreviewbot.summarys: continue
+                    self.summary_all[conf][year] = openreviewbot.summarys
+                    if not openreviewbot.keywords: continue
+                    self.keywords_all[conf][year] = openreviewbot.keywords
                 
+                if self.fetch_site:
+                    # launch site bot
+                    sitebot.launch()

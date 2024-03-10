@@ -35,8 +35,21 @@
                 }
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        },
+        "confirm": {
+            "total": 7304,
+            "url": "Openreview ICLR 2024"
         }
     },
     "2023": {
@@ -72,8 +85,19 @@
                 }
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster"
+                    }
+                }
+            }
+        },
+        "confirm": {
+            "total": 4955,
+            "url": "Openreview ICLR 2023"
         }
     },
     "2022": {
@@ -109,8 +133,21 @@
                 }
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        },
+        "confirm": {
+            "total": 3422,
+            "url": "Openreview ICLR 2022"
         }
     },
     "2021": {
@@ -143,8 +180,21 @@
                 }
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        },
+        "confirm": {
+            "total": 3014,
+            "url": "Openreview ICLR 2021"
         }
     },
     "2020": {
@@ -177,8 +227,17 @@
                 }
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {}
+                }
+            }
+        },
+        "confirm": {
+            "total": 2594,
+            "url": "Openreview ICLR 2020"
         }
     },
     "2019": {
@@ -210,8 +269,21 @@
                 }
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        },
+        "confirm": {
+            "total": 1579,
+            "url": "Openreview ICLR 2019"
         }
     },
     "2018": {
@@ -244,8 +316,21 @@
                 }
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        },
+        "confirm": {
+            "total": 1013,
+            "url": "Openreview ICLR 2018"
         }
     },
     "2017": {
@@ -276,8 +361,17 @@
                 }
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {}
+                }
+            }
+        },
+        "confirm": {
+            "total": 490,
+            "url": "Openreview ICLR 2017"
         }
     },
     "2016": {
@@ -308,8 +402,13 @@
                 "main": {}
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {}
+                }
+            }
         }
     },
     "2013": {
@@ -338,8 +437,13 @@
                 "main": {}
             }
         },
-        "iclr.cc": {
-
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {}
+                }
+            }
         }
     }
 }
