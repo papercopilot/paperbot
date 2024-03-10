@@ -18,6 +18,7 @@ class Pipeline:
         self.root_dir = args.root_dir
         self.paths = {
             'openreview': os.path.join(self.root_dir, args.openreview_dir),
+            'site': os.path.join(self.root_dir, args.site_dir),
             'paperlists': os.path.join(self.root_dir, args.paperlists_dir),
             'statistics': os.path.join(self.root_dir, args.statistics_dir),
         }
@@ -50,7 +51,7 @@ class Pipeline:
                 # 
                 print('Initializing bots for', conf, year)
                 openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                sitebot = eval(f"{conf.upper()}Bot")(conf, year, root_dir=self.paths['paperlists'], openreview_dir=openreviewbot.root_dir)
+                sitebot = eval(f"{conf.upper()}Bot")(conf, year, root_dir=self.paths['site'])
                 
                 if self.fetch_openreview:
                     # launch openreview bot

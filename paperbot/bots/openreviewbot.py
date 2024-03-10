@@ -7,11 +7,14 @@ import spacy
 import os
 
 from . import sitebot
+from ..utils import util, summarizer
     
 class OpenreviewBot(sitebot.SiteBot):
     
     def __init__(self, conf='', year=None, root_dir = '../logs/openreview', dump_keywords=False):
         super().__init__(conf, year, root_dir)
+        
+        self.summarizer = summarizer.Summarizer()
         
         # initialization
         self.summary = {}
@@ -461,21 +464,15 @@ class OpenreviewBot(sitebot.SiteBot):
         
     def save_paperlist(self, path=None):
         path = path if path else os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json')
-        with open(path, 'w') as f:
-            json.dump(self.paperlist, f, indent=4)
-        print(f'{path} saved.')
+        util.save_json(path, self.paperlist)
             
     def save_keywords(self, path=None):
         path = path if path else os.path.join(self.paths['keywords'], f'{self.conf}.json')
-        with open(path, 'w') as f:
-            json.dump(self.keywords, f, indent=4)
-        print(f'{path} saved.')
+        util.save_json(path, self.keywords)
             
     def save_summary(self, path=None):
         path = path if path else os.path.join(self.paths['summary'], f'{self.conf}.json')
-        with open(path, 'w') as f:
-            json.dump(self.summary, f, indent=4)
-        print(f'{path} saved.')
+        util.save_json(path, self.summary)
             
     def sorted_summary(self):
         # sort tier and get tier name

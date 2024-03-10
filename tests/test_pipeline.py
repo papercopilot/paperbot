@@ -12,6 +12,7 @@ def set_arguments():
     # setup directories
     parser.add_argument('--root_dir', type=str, help='root directory for logs', default='../logs')
     parser.add_argument('--openreview_dir', type=str, help='directory for openreview logs', default='openreview')
+    parser.add_argument('--site_dir', type=str, help='directory for site logs', default='site')
     parser.add_argument('--paperlists_dir', type=str, help='directory for site logs', default='paperlists')
     parser.add_argument('--statistics_dir', type=str, help='directory for summary logs', default='stats')
     
