@@ -26,5 +26,5 @@ class SiteBot:
     def crawl(self, target=None):
         pass
     
-    def launch(self):
+    def launch(self, fetch_site=False):
         pass

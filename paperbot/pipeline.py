@@ -53,14 +53,12 @@ class Pipeline:
                 openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
                 sitebot = eval(f"{conf.upper()}Bot")(conf, year, root_dir=self.paths['site'])
                 
-                if self.fetch_openreview:
-                    # launch openreview bot
-                    openreviewbot.launch()
-                    if not openreviewbot.summarys: continue
-                    self.summary_all[conf][year] = openreviewbot.summarys
-                    if not openreviewbot.keywords: continue
-                    self.keywords_all[conf][year] = openreviewbot.keywords
+                # launch openreview bot
+                openreviewbot.launch(self.fetch_openreview)
+                if not openreviewbot.summarys: continue
+                self.summary_all[conf][year] = openreviewbot.summarys
+                if not openreviewbot.keywords: continue
+                self.keywords_all[conf][year] = openreviewbot.keywords
                 
-                if self.fetch_site:
-                    # launch site bot
-                    sitebot.launch()
+                # launch site bot
+                sitebot.launch(self.fetch_site)

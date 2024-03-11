@@ -493,7 +493,7 @@ class OpenreviewBot(sitebot.SiteBot):
     #     self.summary['thsum'] = parse(self.summary['thsum'])
     #     return parse(self.summary)
         
-    def launch(self, offset=0, batch=1000):
+    def launch(self, fetch_site=True):
         if not self.args: 
             print(f'{self.conf} {self.year}: Openreview Not available.')
             return
@@ -504,24 +504,28 @@ class OpenreviewBot(sitebot.SiteBot):
             # self.keyword_curr = self.keywords[track] # initialize keyword
             submission_invitation = self.tracks[track] # pages is submission_invitation in openreview.py
             
-            # loop over pages
-            for ivt in submission_invitation:
-            
-                url_page = f'{self.baseurl}/{submission_invitation[ivt]}'
-                count = self.ping(f'{url_page}&limit=3')
-                if count:
-                    # tid = self.get_tid(ivt)
-                    tid = self.summarizer.get_tid(ivt)
-                    self.update_meta_count(count, tid, ivt, submission_invitation)
-                    self.crawl(url_page, tid, track, ivt)
-                else: 
-                    print(f'{url_page} not available.')
-            
-            # process and analyze
-            # self.get_hist(track)
-            # self.get_tsf(track)
-            self.summarizer.set_paperlist(self.paperlist)
-            # self.summarizer.load_paperlist(os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json'))
+            # fetch paperlist
+            if fetch_site:
+                # loop over pages
+                for ivt in submission_invitation:
+                
+                    url_page = f'{self.baseurl}/{submission_invitation[ivt]}'
+                    count = self.ping(f'{url_page}&limit=3')
+                    if count:
+                        # tid = self.get_tid(ivt)
+                        tid = self.summarizer.get_tid(ivt)
+                        self.update_meta_count(count, tid, ivt, submission_invitation)
+                        self.crawl(url_page, tid, track, ivt)
+                    else: 
+                        print(f'{url_page} not available.')
+                
+                # process and analyze
+                # self.get_hist(track)
+                # self.get_tsf(track)
+                self.summarizer.set_paperlist(self.paperlist)
+            else:
+                self.summarizer.load_summary(os.path.join(self.paths['summary'], f'{self.conf}.json'), self.year, track)
+                self.summarizer.load_paperlist(os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json'))
             self.summarizer.load_paperlist_init(os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.init.json'))
             
             self.summarizer.get_histogram(self.args['tname'][track], track)

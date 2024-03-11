@@ -47,6 +47,20 @@ class Summarizer():
         with open(path) as f:
             paperlist = json.load(f)
             self.paperlist_init = sorted(paperlist, key=lambda x: x['id'])
+            
+    def load_summary(self, path, year, track):
+        if not os.path.exists(path): return
+        with open(path) as f:
+            summary = json.load(f)[str(year)][track]
+            self.src = summary['src']
+            # self.tier_ids = summary['tid']
+            self.tier_num = summary['tnum']
+            self.tier_names = summary['tname']
+            self.tier_hist = summary['thist']
+            self.tier_hist_sum = summary['thsum']
+            self.tier_ids = dict((v,k) for k,v in summary['tid'].items())
+            if 'ttsf' in summary: self.tier_tsf = summary['ttsf']
+            if 'ttsfsum' in summary: self.tier_tsf_sum = summary['ttsfsum']
         
     def get_tid(self, key):
         if key not in self.tier_ids:

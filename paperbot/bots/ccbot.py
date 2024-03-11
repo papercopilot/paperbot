@@ -97,7 +97,7 @@ class CCBot(sitebot.SiteBot):
             # fill in paperlist using data from the site
             pass
             
-    def launch(self):
+    def launch(self, fetch_site=False):
         if not self.args: 
             print(f'{self.conf} {self.year}: Site Not available.')
             return
