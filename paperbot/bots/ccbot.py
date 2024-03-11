@@ -14,6 +14,8 @@ class CCBot(sitebot.SiteBot):
     
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
+        
+        if 'site' not in self.args: return
         self.args = self.args['site']
         self.tracks = self.args['track']
         self.summarizer = summarizer.Summarizer()
