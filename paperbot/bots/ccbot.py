@@ -79,7 +79,7 @@ class CCBot(sitebot.SiteBot):
     
     def save_paperlist(self, path=None):
         path = path if path else os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json')
-        util.save_json(path, self.paperlist)
+        util.save_json(path, sorted(self.paperlist, key=lambda x: x['title']))
             
     def merge_paperlist(self):
         # merge the two paperlist
