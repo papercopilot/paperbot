@@ -32,20 +32,33 @@ class Summarizer():
         # sm/md/lg
         self.nlp = spacy.load('en_core_web_lg')
         
-    def set_paperlist(self, paperlist, key='id'):
-        self.paperlist = sorted(paperlist, key=lambda x: x[key])
+    def set_paperlist(self, paperlist, key='id', is_sort=False):
+        self.paperlist = sorted(paperlist, key=lambda x: x[key]) if is_sort else paperlist
+        
+    def set_paperlist_init(self, paperlist, key='id', is_sort=False):
+        self.paperlist_init = sorted(paperlist, key=lambda x: x[key]) if is_sort else paperlist
         
     def load_paperlist(self, path):
         if not os.path.exists(path): return
         with open(path) as f:
             paperlist = json.load(f)
-            self.set_paperlist(paperlist)
+            self.set_paperlist(paperlist, is_sort=True)
         
     def load_paperlist_init(self, path):
         if not os.path.exists(path): return
         with open(path) as f:
             paperlist = json.load(f)
-            self.paperlist_init = sorted(paperlist, key=lambda x: x['id'])
+            self.set_paperlist_init(paperlist, is_sort=True)
+            
+    def save_paperlist(self, path):
+        if not self.paperlist: return
+        with open(path, 'w') as f:
+            json.dump(self.paperlist, f, indent=4)
+            
+    def save_paperlist_init(self, path):
+        if not self.paperlist_init: return
+        with open(path, 'w') as f:
+            json.dump(self.paperlist_init, f, indent=4)
             
     def load_summary(self, path, year, track):
         if not os.path.exists(path): return

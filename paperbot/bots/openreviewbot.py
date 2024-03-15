@@ -16,9 +16,7 @@ class OpenreviewBot(sitebot.SiteBot):
         self.summarizer = summarizer.Summarizer()
         
         # initialization
-        self.summary = {}
         self.summarys = {}
-        
         self.keywords = {}
         self.dump_keywords = dump_keywords
         
@@ -110,14 +108,12 @@ class OpenreviewBot(sitebot.SiteBot):
                 if decision_invitation == 'in_notes': 
                     # iclr2013/2014 hack: decision in $note['content']['decision']
                     status = note['content']['decision']
-                    # self.update_summary(status, self.summary)
                     self.summarizer.update_summary(status)
                 elif decision_invitation == 'in_venue':
                     # icml2023 hack: decision in $note['venue']['value']
                     # iclr 2024, neurips 2023
                     status = note['content']['venue']['value']
                     status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
-                    # self.update_summary(status, self.summary)
                     self.summarizer.update_summary(status)
                     
                 # check comments
@@ -158,7 +154,6 @@ class OpenreviewBot(sitebot.SiteBot):
                             # similar to siggraph conference track and journal track, TODO: this needed to be redesigned
                             status = getstr(note['content']['Submission_Type']) + ' ' + getstr(reply['content']['decision'])
                             status = status if 'reject' not in status.lower() else 'Reject'
-                        # self.update_summary(status, self.summary)
                         self.summarizer.update_summary(status)
                     elif meta_invitation and meta_invitation in key_invitation:
                         # EMNLP2023
@@ -230,7 +225,6 @@ class OpenreviewBot(sitebot.SiteBot):
                 idx = [i for i, x in enumerate(self.paperlist) if x['title'].lower() == title.lower()]
                 if idx and len(self.paperlist[idx[0]]['title']) > 10:
                     # some withdraw paper also rename to withdraw or NA or soemthing
-                    # self.update_summary(status, self.summary, -1)
                     self.summarizer.update_summary(status, -1)
                     if rating_avg > self.paperlist[idx[0]]['rating_avg']: del self.paperlist[idx[0]]
                     else: continue
@@ -273,7 +267,7 @@ class OpenreviewBot(sitebot.SiteBot):
         
     def save_paperlist(self, path=None):
         path = path if path else os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json')
-        util.save_json(path, self.paperlist)
+        self.summarizer.save_paperlist(path)
         
     def launch(self, fetch_site=True):
         if not self.args: 
@@ -300,7 +294,7 @@ class OpenreviewBot(sitebot.SiteBot):
                         print(f'{url_page} not available.')
                 
                 # process and analyze
-                self.summarizer.set_paperlist(self.paperlist)
+                self.summarizer.set_paperlist(self.paperlist, is_sort=True)
             else:
                 self.summarizer.load_summary(os.path.join(self.paths['summary'], f'{self.conf}.json'), self.year, track)
                 self.summarizer.load_paperlist(os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json'))
@@ -308,14 +302,10 @@ class OpenreviewBot(sitebot.SiteBot):
             
             self.summarizer.get_histogram(self.args['tname'][track], track)
             self.summarizer.get_transfer_matrix(self.args['tname'][track], track)
-            self.summary = self.summarizer.summarize()
-            self.keyword_curr = self.summarizer.keywords
-            
-            if self.dump_keywords:
-                self.keyword_curr = self.summarizer.parse_keywords(track)
             
             # update summary
-            self.summarys[track] = self.summary
-            self.keywords[track] = self.keyword_curr
+            self.summarys[track] = self.summarizer.summarize()
+            self.keywords[track] = self.summarizer.parse_keywords(track) if self.dump_keywords else {}
             
+        # save paperlist for each venue per year
         self.save_paperlist()

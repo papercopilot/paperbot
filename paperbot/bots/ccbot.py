@@ -19,13 +19,6 @@ class CCBot(sitebot.SiteBot):
         self.args = self.args['site']
         self.tracks = self.args['track']
         self.summarizer = summarizer.Summarizer()
-        
-        # load openreview summary and paperlist if available
-        # if self.openreview_dir:
-        #     with open(os.path.join(self.openreview_dir, 'summary', f'{conf}.json'), 'r') as f:
-        #         self.summarys_init = json.load(f)
-        #     with open(os.path.join(self.openreview_dir, 'venues', f'{conf}/{conf}{year}.json'), 'r') as f:
-        #         self.paperlist_init = json.load(f)
                 
         self.summarys = {}
         self.paperlist = []
@@ -79,7 +72,7 @@ class CCBot(sitebot.SiteBot):
     
     def save_paperlist(self, path=None):
         path = path if path else os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json')
-        util.save_json(path, sorted(self.paperlist, key=lambda x: x['title']))
+        self.summarizer.save_paperlist(path)
             
     def merge_paperlist(self):
         # merge the two paperlist
@@ -111,7 +104,7 @@ class CCBot(sitebot.SiteBot):
                 url_page = f'{self.baseurl}/events/{k}'
                 self.crawl(url_page, k, track)
                 
-            self.summarizer.set_paperlist(self.paperlist, key='title')
+            self.summarizer.set_paperlist(self.paperlist, key='title', is_sort=True)
             self.summary = self.summarizer.summarize_paperlist(track)
                 
         self.save_paperlist()
