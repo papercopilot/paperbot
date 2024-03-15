@@ -111,6 +111,9 @@ class CCBot(sitebot.SiteBot):
                 url_page = f'{self.baseurl}/events/{k}'
                 self.crawl(url_page, k, track)
                 
+            self.summarizer.set_paperlist(self.paperlist, key='title')
+            self.summary = self.summarizer.summarize_paperlist(track)
+                
         self.save_paperlist()
         # self.merge_paperlist()
                 

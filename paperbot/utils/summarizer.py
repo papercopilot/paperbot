@@ -32,9 +32,8 @@ class Summarizer():
         # sm/md/lg
         self.nlp = spacy.load('en_core_web_lg')
         
-    def set_paperlist(self, paperlist):
-        self.paperlist = sorted(paperlist, key=lambda x: x['id'])
-        # sort paperlist by 'id'
+    def set_paperlist(self, paperlist, key='id'):
+        self.paperlist = sorted(paperlist, key=lambda x: x[key])
         
     def load_paperlist(self, path):
         if not os.path.exists(path): return
@@ -142,9 +141,6 @@ class Summarizer():
         
         if self.paperlist_init is None: return
         paperlist0 = self.paperlist_init
-        # try:
-            # with open(os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.init.json')) as f:
-        # paperlist0 = json.load(f)
         
         # get histogram over all submissions at initial
         tid = self.get_tid('Total0')
@@ -215,12 +211,12 @@ class Summarizer():
                 if update_active_from_tiers: 
                     rating_avg_transfer_update += rating_avg_transfer
         
-        # update active from tiers if necessary
-        if update_active_from_tiers:
-            tid = self.tier_ids['Active']
-            if rating_avg_transfer_update.sum() > 0: 
-                self.tier_tsf[tid] = ';'.join(np.char.mod('%d', rating_avg_transfer_update.flatten()))
-                self.tier_tsf_sum[tid] = int(rating_avg_transfer_update.sum())
+            # update active from tiers if necessary
+            if update_active_from_tiers:
+                tid = self.tier_ids['Active']
+                if rating_avg_transfer_update.sum() > 0: 
+                    self.tier_tsf[tid] = ';'.join(np.char.mod('%d', rating_avg_transfer_update.flatten()))
+                    self.tier_tsf_sum[tid] = int(rating_avg_transfer_update.sum())
         
         # except Exception as e:
             # print('initial file not available, skip then')
@@ -258,8 +254,13 @@ class Summarizer():
         
         phrase_counts = Counter(normalized_phrases)
         n_phrase = len(phrase_counts)
-        keywords_curr = ';'.join([f'{k}:{v}' for k, v in phrase_counts.most_common(n_phrase)])
+        keywords_curr = ';'.join([f'{k}:{v}' for k, v in sorted(phrase_counts.most_common(n_phrase))])
         return keywords_curr
+    
+    def summarize_paperlist(self, track):
+        status = [o['status'] for o in self.paperlist if (not track or o['track'] == track)]
+        return Counter(status)
+        
     
     def summarize(self, is_sort=True):
         
@@ -267,10 +268,12 @@ class Summarizer():
             'src': self.src,
             'tnum': self.tier_num,
             'tname': self.tier_names,
-            'thist': self.tier_hist,
-            'thsum': self.tier_hist_sum,
         }
         summary['tid'] = dict((v,k) for k,v in self.tier_ids.items())
+        
+        if self.tier_hist:
+            summary['thist'] = self.tier_hist
+            summary['thsum'] = self.tier_hist_sum
         if self.tier_tsf: 
             summary['ttsf'] = self.tier_tsf
             summary['ttsfsum'] = self.tier_tsf_sum

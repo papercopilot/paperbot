@@ -17,8 +17,8 @@ def set_arguments():
     parser.add_argument('--statistics_dir', type=str, help='directory for summary logs', default='stats')
     
     # 
-    parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview', default=False)
-    parser.add_argument('--fetch_site', action='store_true', help='fetch from site', default=False)
+    parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview', default=True)
+    parser.add_argument('--fetch_site', action='store_true', help='fetch from site', default=True)
     
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
 
@@ -26,8 +26,6 @@ def test_pipeline(args):
     p = paperbot.Pipeline(args)
     assert p is not None
     p.launch()
-    p.save_summary()
-    p.save_keywords()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

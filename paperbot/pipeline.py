@@ -8,8 +8,9 @@ class Pipeline:
     def __init__(self, args):
         self.confs = [] if args.confs is None else args.confs
         self.years = [] if args.years is None else args.years
-        self.summary_all = {}
-        self.keywords_all = {}
+        self.summary_openreview = {}
+        self.keywords_openreview = {}
+        self.summary_site = {}
         
         self.dump_keywords = args.parse_keywords
         self.fetch_openreview = args.fetch_openreview
@@ -28,24 +29,34 @@ class Pipeline:
         
     def save_summary(self):
         for conf in self.confs:
-            with open(os.path.join(self.paths['openreview'], f'summary/{conf}.json'), 'w') as f:
-                json.dump(self.summary_all[conf], f, indent=4)
+            summary_path = os.path.join(self.paths['openreview'], f'summary/{conf}.json')
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, 'w') as f:
+                json.dump(self.summary_openreview[conf], f, indent=4)
             print(f"Saved summary for {conf} to {self.paths['openreview']}")
+            
+            summary_path = os.path.join(self.paths['site'], f'summary/{conf}.json')
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, 'w') as f:
+                json.dump(self.summary_site[conf], f, indent=4)
                 
     def save_keywords(self):
         if not self.dump_keywords:
             print("Saving keywords is disabled. Set --keywords to True to enable.")
             return
         for conf in self.confs:
-            with open(os.path.join(self.paths['openreview'], f'keywords/{conf}.json'), 'w') as f:
-                json.dump(self.keywords_all[conf], f, indent=4)
+            keywords_path = os.path.join(self.paths['openreview'], f'keywords/{conf}.json')
+            os.makedirs(os.path.dirname(keywords_path), exist_ok=True)
+            with open(keywords_path, 'w') as f:
+                json.dump(self.keywords_openreview[conf], f, indent=4)
             print(f"Saved keywords for {conf} to {self.paths['openreview']}")
 
-    def launch(self):
+    def launch(self, is_save=True):
         
         for conf in self.confs:
-            self.summary_all[conf] = {}
-            self.keywords_all[conf] = {}
+            self.summary_openreview[conf] = {}
+            self.summary_site[conf] = {}
+            self.keywords_openreview[conf] = {}
             for year in self.years:
                 
                 # 
@@ -56,9 +67,15 @@ class Pipeline:
                 # launch openreview bot
                 openreviewbot.launch(self.fetch_openreview)
                 if not openreviewbot.summarys: continue
-                self.summary_all[conf][year] = openreviewbot.summarys
+                self.summary_openreview[conf][year] = openreviewbot.summarys
                 if not openreviewbot.keywords: continue
-                self.keywords_all[conf][year] = openreviewbot.keywords
+                self.keywords_openreview[conf][year] = openreviewbot.keywords
                 
                 # launch site bot
-                sitebot.launch(self.fetch_site)
+                if self.fetch_site: sitebot.launch(self.fetch_site)
+                if not sitebot.summary: continue
+                self.summary_site[conf][year] = sitebot.summary
+                
+        if is_save:
+            self.save_summary()
+            self.save_keywords()
