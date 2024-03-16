@@ -28,6 +28,8 @@ class CCBot(sitebot.SiteBot):
             'keywords': os.path.join(self._root_dir, 'keywords'),
         }
         
+        self._title_idx = {}
+        
     def process_card(self, e):
         # process title
         title = e.xpath(".//a[contains(@class,'small-title')]//text()")[0].strip()
@@ -57,17 +59,19 @@ class CCBot(sitebot.SiteBot):
         for e in tqdm(e_papers, leave=False):
             title, author, status = self.process_card(e)
             status = page if not status else status
-        
-            self._paperlist.append({
-                'title': title,
-                'author': author,
-                'status': status,
-                'track': track,
-            })
-    
-    # def save_paperlist(self, path=None):
-    #     path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
-    #     self.summarizer.save_paperlist(path)
+            
+            # update duplicate status
+            if title in self._title_idx:
+                idx = self._title_idx[title]
+                self._paperlist[idx]['status'] = status
+            else:
+                self._paperlist.append({
+                    'title': title,
+                    'author': author,
+                    'status': status,
+                    'track': track,
+                })
+                self._title_idx[title] = len(self._paperlist) - 1
             
     def merge_paperlist(self):
         # merge the two paperlist
@@ -103,9 +107,11 @@ class CCBot(sitebot.SiteBot):
                     
                 # sort paperlist
                 self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])
-                self.summarizer.paperlist = self._paperlist
             else:
                 pass
+            
+            # update paperlist
+            self.summarizer.paperlist = self._paperlist
             
             # update summary
             self._summary_all_tracks[track] = self.summarizer.summarize_paperlist(track)
@@ -123,7 +129,7 @@ class ICLRBot(CCBot):
         # process special cases
         if self._year == 2023:
             status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
-            status = status.split('/')[-1].replace('paper', '').strip()
+            status = status.split('/')[-1].replace('paper', '').replace('accept', '').strip()
         
         return title, author, status
         

@@ -263,10 +263,6 @@ class OpenreviewBot(sitebot.SiteBot):
             self._paperlist.sort(key=lambda x: x['title'])
         pbar.close()
         
-    # def save_paperlist(self, path=None):
-    #     path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
-    #     self.summarizer.save_paperlist(path)
-        
     def launch(self, fetch_site=True):
         if not self._args: 
             print(f'{self._conf} {self._year}: Openreview Not available.')
@@ -293,11 +289,13 @@ class OpenreviewBot(sitebot.SiteBot):
                 
                 # sort paperlist
                 self._paperlist = sorted(self._paperlist, key=lambda x: x['id'])
-                self.summarizer.paperlist = self._paperlist
             else:
                 # load previous
                 self.summarizer.load_summary(os.path.join(self._paths['summary'], f'{self._conf}.json'), self._year, track)
-                self.summarizer.paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'))
+                self._paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'))
+            
+            # update paperlist
+            self.summarizer.paperlist = self._paperlist
             self.summarizer.paperlist_init = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'))
             
             # process and analyze paperlist

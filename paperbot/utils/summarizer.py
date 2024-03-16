@@ -12,14 +12,6 @@ class Summarizer():
         self._paperlist_init = None
         self._keywords = {}
         
-        # self.src = {
-        #     'openreview': {
-        #         # 'tid': [], 
-        #         'total': 0,
-        #         # 'url': f'https://openreview.net/group?id={invitation}/{year}',
-        #         'name': 'OpenReview',
-        #     }
-        # }
         self.src = {}
         self.tier_ids = {} # tier raw name to id
         self.tier_names = {} # tier_id to normalized name
@@ -260,7 +252,7 @@ class Summarizer():
     
     def summarize_paperlist(self, track):
         status = [o['status'] for o in self._paperlist if (not track or o['track'] == track)]
-        return Counter(status)
+        return self.sorted_summary(Counter(status))
         
     
     def summarize(self, is_sort=True):

@@ -90,7 +90,8 @@
             "track": {
                 "main": {
                     "pages": {
-                        "poster": "Poster"
+                        "poster": "Poster",
+                        "oral": "Oral"
                     }
                 }
             }
