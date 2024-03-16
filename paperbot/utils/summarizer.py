@@ -48,29 +48,6 @@ class Summarizer():
     def paperlist_init(self, paperlist):
         self._paperlist_init = paperlist
         
-    def load_paperlist(self, path):
-        if not os.path.exists(path): return
-        with open(path) as f:
-            paperlist = json.load(f)
-            paperlist = sorted(paperlist, key=lambda x: x['id'])
-            self.paperlist = paperlist
-        
-    def load_paperlist_init(self, path):
-        if not os.path.exists(path): return
-        with open(path) as f:
-            paperlist = json.load(f)
-            paperlist = sorted(paperlist, key=lambda x: x['id'])
-            self.paperlist_init = paperlist
-            
-    def save_paperlist(self, path):
-        if not self._paperlist: return
-        with open(path, 'w') as f:
-            json.dump(self._paperlist, f, indent=4)
-            
-    def save_paperlist_init(self, path):
-        if not self._paperlist_init: return
-        with open(path, 'w') as f:
-            json.dump(self._paperlist_init, f, indent=4)
             
     def load_summary(self, path, year, track):
         if not os.path.exists(path): return

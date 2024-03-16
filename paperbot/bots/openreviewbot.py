@@ -263,12 +263,9 @@ class OpenreviewBot(sitebot.SiteBot):
             self._paperlist.sort(key=lambda x: x['title'])
         pbar.close()
         
-    def get_paperlist(self):
-        return self.summarizer.paperlist
-        
-    def save_paperlist(self, path=None):
-        path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
-        self.summarizer.save_paperlist(path)
+    # def save_paperlist(self, path=None):
+    #     path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
+    #     self.summarizer.save_paperlist(path)
         
     def launch(self, fetch_site=True):
         if not self._args: 
@@ -294,13 +291,16 @@ class OpenreviewBot(sitebot.SiteBot):
                     else: 
                         print(f'{url_page} not available.')
                 
-                # process and analyze
-                self.summarizer.paperlist = sorted(self._paperlist, key=lambda x: x['id'])
+                # sort paperlist
+                self._paperlist = sorted(self._paperlist, key=lambda x: x['id'])
+                self.summarizer.paperlist = self._paperlist
             else:
+                # load previous
                 self.summarizer.load_summary(os.path.join(self._paths['summary'], f'{self._conf}.json'), self._year, track)
-                self.summarizer.load_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'))
-            self.summarizer.load_paperlist_init(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'))
+                self.summarizer.paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'))
+            self.summarizer.paperlist_init = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'))
             
+            # process and analyze paperlist
             self.summarizer.get_histogram(self._args['tname'][track], track)
             self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
             

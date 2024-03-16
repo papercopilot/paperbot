@@ -64,13 +64,10 @@ class CCBot(sitebot.SiteBot):
                 'status': status,
                 'track': track,
             })
-            
-    def get_paperlist(self):
-        return self.summarizer.paperlist
     
-    def save_paperlist(self, path=None):
-        path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
-        self.summarizer.save_paperlist(path)
+    # def save_paperlist(self, path=None):
+    #     path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
+    #     self.summarizer.save_paperlist(path)
             
     def merge_paperlist(self):
         # merge the two paperlist
@@ -93,19 +90,27 @@ class CCBot(sitebot.SiteBot):
             print(f'{self._conf} {self._year}: Site Not available.')
             return
         
+        # loop over tracks
         for track in self._tracks:
             pages = self._args['track'][track]['pages'] # pages is tpages
             
-            # loop through pages
-            for k in tqdm(pages.keys()):
-                url_page = f'{self._baseurl}/events/{k}'
-                self.crawl(url_page, k, track)
+            # fetch paperlist
+            if fetch_site:
+                # loop over pages
+                for k in tqdm(pages.keys()):
+                    url_page = f'{self._baseurl}/events/{k}'
+                    self.crawl(url_page, k, track)
+                    
+                # sort paperlist
+                self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])
+                self.summarizer.paperlist = self._paperlist
+            else:
+                pass
+            
+            # update summary
+            self._summary_all_tracks[track] = self.summarizer.summarize_paperlist(track)
                 
-            self.summarizer.paperlist = sorted(self._paperlist, key=lambda x: x['title'])
-            # self._summary_all_tracks = self.summarizer.summarize_paperlist(track)
-                
-            self._summary_all_tracks = self.summarizer.summarize_paperlist(track)
-                
+        # save paperlist for each venue per year
         self.save_paperlist()
                 
         

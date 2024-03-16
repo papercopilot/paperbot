@@ -52,8 +52,8 @@ class Pipeline:
             print(f"Saved keywords for {conf} to {self.paths['openreview']}")
             
     def merge_paperlist(self, openreviewbot, sitebot):
-        if not openreviewbot.summarizer.paperlist: return
-        if not sitebot.summarizer.paperlist: return
+        if not openreviewbot.paperlist: return
+        if not sitebot.paperlist: return
 
     def launch(self, is_save=True):
         

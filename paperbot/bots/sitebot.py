@@ -1,3 +1,5 @@
+import os
+import json
 from ..utils import util, summarizer
 
 class SiteBot:
@@ -51,6 +53,19 @@ class SiteBot:
     @keywords_all_tracks.getter
     def keywords_all_tracks(self):
         return self._keyword_all_tracks
+    
+    def read_paperlist(self, path, key='id'):
+        if not os.path.exists(path): return
+        with open(path) as f:
+            paperlist = json.load(f)
+            paperlist = sorted(paperlist, key=lambda x: x[key])
+            return paperlist
+    
+    def save_paperlist(self, path=None):
+        path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'w') as f:
+            json.dump(self._paperlist, f, indent=4)
     
     def __call__(self):
         pass
