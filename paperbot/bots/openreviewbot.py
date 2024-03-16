@@ -13,23 +13,21 @@ class OpenreviewBot(sitebot.SiteBot):
     def __init__(self, conf='', year=None, root_dir = '../logs/openreview', dump_keywords=False):
         super().__init__(conf, year, root_dir)
         
-        self.summarizer = summarizer.Summarizer()
-        
         # initialization
-        self.summarys = {}
-        self.keywords = {}
         self.dump_keywords = dump_keywords
         
         # focus on openreview
-        if 'openreview' not in self.args: return
-        self.args = self.args['openreview']
+        if 'openreview' not in self._args: return
+        self._args = self._args['openreview'] # select sub-dictionary
+        self._tracks = self._args['track']
         
-        api = self.args['api']
-        invitation = self.args['invitation']['root']
-        self.baseurl = f'https://{api}.openreview.net/notes?invitation={invitation}/{year}'
-        self.tracks = self.args['track']
+        api = self._args['api']
+        invitation = self._args['invitation']['root']
         
-        for track in self.tracks:
+        self._domain = f'{api}.openreview.net'
+        self._baseurl = f'https://{self._domain}/notes?invitation={invitation}/{year}'
+        
+        for track in self._tracks:
             self.summarizer.src = {
                 'openreview': {
                     'total': 0,
@@ -45,10 +43,10 @@ class OpenreviewBot(sitebot.SiteBot):
             'Desk Reject': 'Conference/-/Desk_Rejected_Submission'
         }
         
-        self.paths = {
-            'paperlist': os.path.join(self.root_dir, 'venues'),
-            'summary': os.path.join(self.root_dir, 'summary'),
-            'keywords': os.path.join(self.root_dir, 'keywords'),
+        self._paths = {
+            'paperlist': os.path.join(self._root_dir, 'venues'),
+            'summary': os.path.join(self._root_dir, 'summary'),
+            'keywords': os.path.join(self._root_dir, 'keywords'),
         }
     
     def update_meta_count(self, count, tid, ivt, submission_invitation):
@@ -71,12 +69,12 @@ class OpenreviewBot(sitebot.SiteBot):
 
     def crawl(self, url, tid=None, track='', ivt='', offset=0, batch=1000):
         
-        decision_invitation = self.args['invitation'].get('decision', '')
-        review_invitation = self.args['invitation'].get('review', '')
-        meta_invitation = self.args['invitation'].get('meta', '')
-        tier_name = self.args['tname'][track]
-        review_name = {} if track not in self.args['rname'] else self.args['rname'][track]
-        review_map = {} if ('rmap' not in self.args or track not in self.args['rmap']) else self.args['rmap'][track]
+        decision_invitation = self._args['invitation'].get('decision', '')
+        review_invitation = self._args['invitation'].get('review', '')
+        meta_invitation = self._args['invitation'].get('meta', '')
+        tier_name = self._args['tname'][track]
+        review_name = {} if track not in self._args['rname'] else self._args['rname'][track]
+        review_map = {} if ('rmap' not in self._args or track not in self._args['rmap']) else self._args['rmap'][track]
         
         pbar = tqdm(total=self.summarizer.tier_num[tid], desc=ivt, leave=False)
         while (offset < self.summarizer.tier_num[tid]):
@@ -150,7 +148,7 @@ class OpenreviewBot(sitebot.SiteBot):
                         if 'decision' in reply['content']: status = getstr(reply['content']['decision'])
                         elif 'recommendation' in reply['content']: status = getstr(reply['content']['recommendation'])
                         
-                        if self.conf == 'emnlp':
+                        if self._conf == 'emnlp':
                             # similar to siggraph conference track and journal track, TODO: this needed to be redesigned
                             status = getstr(note['content']['Submission_Type']) + ' ' + getstr(reply['content']['decision'])
                             status = status if 'reject' not in status.lower() else 'Reject'
@@ -222,18 +220,18 @@ class OpenreviewBot(sitebot.SiteBot):
                 status = ivt if not status else status
                 
                 # check redundancy
-                idx = [i for i, x in enumerate(self.paperlist) if x['title'].lower() == title.lower()]
-                if idx and len(self.paperlist[idx[0]]['title']) > 10:
+                idx = [i for i, x in enumerate(self._paperlist) if x['title'].lower() == title.lower()]
+                if idx and len(self._paperlist[idx[0]]['title']) > 10:
                     # some withdraw paper also rename to withdraw or NA or soemthing
                     self.summarizer.update_summary(status, -1)
-                    if rating_avg > self.paperlist[idx[0]]['rating_avg']: del self.paperlist[idx[0]]
+                    if rating_avg > self._paperlist[idx[0]]['rating_avg']: del self._paperlist[idx[0]]
                     else: continue
                     
                 # rename status by tiers if available, this need to be placed after redundancy check to avoid fill renamed status
                 status = status if (not tier_name or status not in tier_name) else tier_name[status]
                 
                 # append
-                self.paperlist.append({
+                self._paperlist.append({
                     'id': id,
                     'title': title,
                     'track': track,
@@ -262,28 +260,31 @@ class OpenreviewBot(sitebot.SiteBot):
             offset += batch
             pbar.update(batch)
             
-            self.paperlist.sort(key=lambda x: x['title'])
+            self._paperlist.sort(key=lambda x: x['title'])
         pbar.close()
         
+    def get_paperlist(self):
+        return self.summarizer.paperlist
+        
     def save_paperlist(self, path=None):
-        path = path if path else os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json')
+        path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
         self.summarizer.save_paperlist(path)
         
     def launch(self, fetch_site=True):
-        if not self.args: 
-            print(f'{self.conf} {self.year}: Openreview Not available.')
+        if not self._args: 
+            print(f'{self._conf} {self._year}: Openreview Not available.')
             return
         
         # loop over tracks
-        for track in self.tracks:
-            submission_invitation = self.tracks[track] # pages is submission_invitation in openreview.py
+        for track in self._tracks:
+            submission_invitation = self._tracks[track] # pages is submission_invitation in openreview.py
             
             # fetch paperlist
             if fetch_site:
                 # loop over pages
                 for ivt in submission_invitation:
                 
-                    url_page = f'{self.baseurl}/{submission_invitation[ivt]}'
+                    url_page = f'{self._baseurl}/{submission_invitation[ivt]}'
                     count = self.ping(f'{url_page}&limit=3')
                     if count:
                         # tid = self.get_tid(ivt)
@@ -294,18 +295,18 @@ class OpenreviewBot(sitebot.SiteBot):
                         print(f'{url_page} not available.')
                 
                 # process and analyze
-                self.summarizer.set_paperlist(self.paperlist, is_sort=True)
+                self.summarizer.paperlist = sorted(self._paperlist, key=lambda x: x['id'])
             else:
-                self.summarizer.load_summary(os.path.join(self.paths['summary'], f'{self.conf}.json'), self.year, track)
-                self.summarizer.load_paperlist(os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json'))
-            self.summarizer.load_paperlist_init(os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.init.json'))
+                self.summarizer.load_summary(os.path.join(self._paths['summary'], f'{self._conf}.json'), self._year, track)
+                self.summarizer.load_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'))
+            self.summarizer.load_paperlist_init(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'))
             
-            self.summarizer.get_histogram(self.args['tname'][track], track)
-            self.summarizer.get_transfer_matrix(self.args['tname'][track], track)
+            self.summarizer.get_histogram(self._args['tname'][track], track)
+            self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
             
             # update summary
-            self.summarys[track] = self.summarizer.summarize()
-            self.keywords[track] = self.summarizer.parse_keywords(track) if self.dump_keywords else {}
+            self._summary_all_tracks[track] = self.summarizer.summarize()
+            self._keyword_all_tracks[track] = self.summarizer.parse_keywords(track) if self.dump_keywords else {}
             
         # save paperlist for each venue per year
         self.save_paperlist()

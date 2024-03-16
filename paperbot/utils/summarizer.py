@@ -8,9 +8,9 @@ import spacy
 class Summarizer():
 
     def __init__(self, paperlist=None):
-        self.paperlist = paperlist
-        self.paperlist_init = None
-        self.keywords = {}
+        self._paperlist = paperlist
+        self._paperlist_init = None
+        self._keywords = {}
         
         # self.src = {
         #     'openreview': {
@@ -32,33 +32,45 @@ class Summarizer():
         # sm/md/lg
         self.nlp = spacy.load('en_core_web_lg')
         
-    def set_paperlist(self, paperlist, key='id', is_sort=False):
-        self.paperlist = sorted(paperlist, key=lambda x: x[key]) if is_sort else paperlist
+    @property
+    def paperlist(self):
+        return self._paperlist
+    
+    @property
+    def paperlist_init(self):
+        return self._paperlist_init
         
-    def set_paperlist_init(self, paperlist, key='id', is_sort=False):
-        self.paperlist_init = sorted(paperlist, key=lambda x: x[key]) if is_sort else paperlist
+    @paperlist.setter
+    def paperlist(self, paperlist):
+        self._paperlist = paperlist
+        
+    @paperlist_init.setter
+    def paperlist_init(self, paperlist):
+        self._paperlist_init = paperlist
         
     def load_paperlist(self, path):
         if not os.path.exists(path): return
         with open(path) as f:
             paperlist = json.load(f)
-            self.set_paperlist(paperlist, is_sort=True)
+            paperlist = sorted(paperlist, key=lambda x: x['id'])
+            self.paperlist = paperlist
         
     def load_paperlist_init(self, path):
         if not os.path.exists(path): return
         with open(path) as f:
             paperlist = json.load(f)
-            self.set_paperlist_init(paperlist, is_sort=True)
+            paperlist = sorted(paperlist, key=lambda x: x['id'])
+            self.paperlist_init = paperlist
             
     def save_paperlist(self, path):
-        if not self.paperlist: return
+        if not self._paperlist: return
         with open(path, 'w') as f:
-            json.dump(self.paperlist, f, indent=4)
+            json.dump(self._paperlist, f, indent=4)
             
     def save_paperlist_init(self, path):
-        if not self.paperlist_init: return
+        if not self._paperlist_init: return
         with open(path, 'w') as f:
-            json.dump(self.paperlist_init, f, indent=4)
+            json.dump(self._paperlist_init, f, indent=4)
             
     def load_summary(self, path, year, track):
         if not os.path.exists(path): return
@@ -103,13 +115,13 @@ class Summarizer():
         # histogram for active will be zero when the decision is out, since all active paper will be moved to each tiers
         k = 'Active'
         tid = self.get_tid(k)
-        hist_sum, hist_str, _ = self.get_hist_rating_avg(self.paperlist, status=k)
+        hist_sum, hist_str, _ = self.get_hist_rating_avg(self._paperlist, status=k)
         self.tier_hist[tid], self.tier_hist_sum[tid] = hist_str, hist_sum
         
         k = 'Withdraw'
         if 'Withdraw' in self.tier_ids:
             tid = self.tier_ids[k]
-            hist_sum, hist_str, _ = self.get_hist_rating_avg(self.paperlist, status=k)
+            hist_sum, hist_str, _ = self.get_hist_rating_avg(self._paperlist, status=k)
             self.tier_hist[tid], self.tier_hist_sum[tid] = hist_str, hist_sum
 
             # if withdraw in thsum is not equal to withdraw in tnum, label the difference as "Post Decision Withdraw"
@@ -131,7 +143,7 @@ class Summarizer():
                 self.tier_names[tid] = tier_name[k]
                 
                 # get histogram
-                hist_sum, hist_str, hist = self.get_hist_rating_avg(self.paperlist, status=tier_name[k], track=track)
+                hist_sum, hist_str, hist = self.get_hist_rating_avg(self._paperlist, status=tier_name[k], track=track)
                 self.tier_hist[tid], self.tier_hist_sum[tid] = hist_str, hist_sum
                 
                 # update active from tiers if necessary
@@ -146,27 +158,26 @@ class Summarizer():
             
         # get histogram over all submissions
         tid = self.get_tid('Total')
-        hist_sum, hist_str, _ = self.get_hist_rating_avg(self.paperlist, track=track)
+        hist_sum, hist_str, _ = self.get_hist_rating_avg(self._paperlist, track=track)
         self.tier_hist[tid], self.tier_hist_sum[tid] = hist_str, hist_sum
         
     
     def get_transfer_matrix(self, tier_name, track):
         
-        if self.paperlist_init is None: return
-        paperlist0 = self.paperlist_init
+        if self._paperlist_init is None: return
+        paperlist0 = self._paperlist_init
         
         # get histogram over all submissions at initial
         tid = self.get_tid('Total0')
         hist_sum, hist_str, _ = self.get_hist_rating_avg(paperlist0)
         self.tier_hist[tid], self.tier_hist_sum[tid] = hist_str, hist_sum
         
-        # self.summary['ttsf'] = {}
-        if len(self.paperlist) == len(paperlist0):
+        if len(self._paperlist) == len(paperlist0):
             
             # rating_avg transfer matrix for total
             rating_avg_transfer = np.zeros((100, 100))
             tid = self.tier_ids['Total']
-            for o, o0 in zip(self.paperlist, paperlist0):
+            for o, o0 in zip(self._paperlist, paperlist0):
                 if o['id'] != o0['id']: continue
                 rating0_avg, rating_avg = o0['rating_avg'], o['rating_avg']
                 # if rating0_avg < 0 or rating_avg < 0: continue
@@ -183,7 +194,7 @@ class Summarizer():
             for k in ['Active', 'Withdraw']:
                 tid = self.tier_ids[k]
                 rating_avg_transfer = np.zeros((100, 100))
-                for o, o0 in zip(self.paperlist, paperlist0):
+                for o, o0 in zip(self._paperlist, paperlist0):
                     if o['id'] != o0['id']: continue
                     if o['status'] != k: continue
                     rating0_avg, rating_avg = o0['rating_avg'], o['rating_avg']
@@ -207,7 +218,7 @@ class Summarizer():
                 if k not in self.tier_ids: continue
                 tid = self.tier_ids[k]
                 rating_avg_transfer = np.zeros((100, 100))
-                for o, o0 in zip(self.paperlist, paperlist0):
+                for o, o0 in zip(self._paperlist, paperlist0):
                     if o['id'] != o0['id']: continue
                     if o['status'] != tier_name[k]: continue
                     rating0_avg, rating_avg = o0['rating_avg'], o['rating_avg']
@@ -241,7 +252,7 @@ class Summarizer():
     def parse_keywords(self, track):
         
         raw_keywords = []
-        for paper in tqdm(self.paperlist, desc='Loading keywords'):
+        for paper in tqdm(self._paperlist, desc='Loading keywords'):
             if paper['track'] != track: continue
             raw_keywords += [k.strip().lower() for k in paper['keywords'].split(';') if k]
             
@@ -271,7 +282,7 @@ class Summarizer():
         return keywords_curr
     
     def summarize_paperlist(self, track):
-        status = [o['status'] for o in self.paperlist if (not track or o['track'] == track)]
+        status = [o['status'] for o in self._paperlist if (not track or o['track'] == track)]
         return Counter(status)
         
     

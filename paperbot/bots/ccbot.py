@@ -15,21 +15,17 @@ class CCBot(sitebot.SiteBot):
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
-        if 'site' not in self.args: return
-        self.args = self.args['site']
-        self.tracks = self.args['track']
-        self.summarizer = summarizer.Summarizer()
-                
-        self.summarys = {}
-        self.paperlist = []
+        if 'site' not in self._args: return
+        self._args = self._args['site'] # select sub-dictionary
+        self._tracks = self._args['track']
             
-        self.domain = self.args['domain']
-        self.baseurl = f'{self.domain}/virtual/{year}'
+        self._domain = self._args['domain']
+        self._baseurl = f'{self._domain}/virtual/{year}'
         
-        self.paths = {
-            'paperlist': os.path.join(self.root_dir, 'venues'),
-            'summary': os.path.join(self.root_dir, 'summary'),
-            'keywords': os.path.join(self.root_dir, 'keywords'),
+        self._paths = {
+            'paperlist': os.path.join(self._root_dir, 'venues'),
+            'summary': os.path.join(self._root_dir, 'summary'),
+            'keywords': os.path.join(self._root_dir, 'keywords'),
         }
         
     def process_card(self, e):
@@ -62,23 +58,25 @@ class CCBot(sitebot.SiteBot):
             title, author, status = self.process_card(e)
             status = page if not status else status
         
-            self.paperlist.append({
+            self._paperlist.append({
                 'title': title,
                 'author': author,
                 'status': status,
                 'track': track,
             })
             
+    def get_paperlist(self):
+        return self.summarizer.paperlist
     
     def save_paperlist(self, path=None):
-        path = path if path else os.path.join(self.paths['paperlist'], f'{self.conf}/{self.conf}{self.year}.json')
+        path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
         self.summarizer.save_paperlist(path)
             
     def merge_paperlist(self):
         # merge the two paperlist
         if self.openreview_dir:
             # locate if paper is in openreview paperlist
-            for e in self.paperlist:
+            for e in self._paperlist:
                 title = e['title']
                 
                 idx = self.find_openreview_id(title)
@@ -91,24 +89,24 @@ class CCBot(sitebot.SiteBot):
             pass
             
     def launch(self, fetch_site=False):
-        if not self.args: 
-            print(f'{self.conf} {self.year}: Site Not available.')
+        if not self._args: 
+            print(f'{self._conf} {self._year}: Site Not available.')
             return
         
-        for track in self.tracks:
-            # self.summary = self.summarys[f'{self.year}'][track] # initialize summary
-            pages = self.args['track'][track]['pages'] # pages is tpages
+        for track in self._tracks:
+            pages = self._args['track'][track]['pages'] # pages is tpages
             
             # loop through pages
             for k in tqdm(pages.keys()):
-                url_page = f'{self.baseurl}/events/{k}'
+                url_page = f'{self._baseurl}/events/{k}'
                 self.crawl(url_page, k, track)
                 
-            self.summarizer.set_paperlist(self.paperlist, key='title', is_sort=True)
-            self.summary = self.summarizer.summarize_paperlist(track)
+            self.summarizer.paperlist = sorted(self._paperlist, key=lambda x: x['title'])
+            # self._summary_all_tracks = self.summarizer.summarize_paperlist(track)
+                
+            self._summary_all_tracks = self.summarizer.summarize_paperlist(track)
                 
         self.save_paperlist()
-        # self.merge_paperlist()
                 
         
 class ICLRBot(CCBot):
@@ -118,7 +116,7 @@ class ICLRBot(CCBot):
         title, author, status = super().process_card(e)
         
         # process special cases
-        if self.year == 2023:
+        if self._year == 2023:
             status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
             status = status.split('/')[-1].replace('paper', '').strip()
         

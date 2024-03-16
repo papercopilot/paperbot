@@ -50,6 +50,10 @@ class Pipeline:
             with open(keywords_path, 'w') as f:
                 json.dump(self.keywords_openreview[conf], f, indent=4)
             print(f"Saved keywords for {conf} to {self.paths['openreview']}")
+            
+    def merge_paperlist(self, openreviewbot, sitebot):
+        if not openreviewbot.summarizer.paperlist: return
+        if not sitebot.summarizer.paperlist: return
 
     def launch(self, is_save=True):
         
@@ -66,15 +70,17 @@ class Pipeline:
                 
                 # launch openreview bot
                 openreviewbot.launch(self.fetch_openreview)
-                if not openreviewbot.summarys: continue
-                self.summary_openreview[conf][year] = openreviewbot.summarys
-                if not openreviewbot.keywords: continue
-                self.keywords_openreview[conf][year] = openreviewbot.keywords
+                if not openreviewbot.summary_all_tracks: continue
+                self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks
+                if not openreviewbot.keywords_all_tracks: continue
+                self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks
                 
                 # launch site bot
                 if self.fetch_site: sitebot.launch(self.fetch_site)
-                if not sitebot.summary: continue
-                self.summary_site[conf][year] = sitebot.summary
+                if not sitebot.summary_all_tracks: continue
+                self.summary_site[conf][year] = sitebot.summary_all_tracks
+                
+                self.merge_paperlist(openreviewbot, sitebot)
                 
         if is_save:
             self.save_summary()
