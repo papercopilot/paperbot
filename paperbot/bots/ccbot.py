@@ -56,12 +56,6 @@ class CCBot(sitebot.SiteBot):
             'Oral': 2,
         }
         return status_priority
-    
-    def find_openreview_id(self, title):
-        for i, p in enumerate(self.paperlist_init):
-            if p['title'].lower() == title.lower():
-                return i
-        return None
         
     def crawl(self, url, page, track):
         response = requests.get(url)
@@ -89,22 +83,7 @@ class CCBot(sitebot.SiteBot):
                 })
                 # use title and first author to index paper, in case of duplicate of title
                 self._paper_idx[paperid] = len(self._paperlist) - 1
-            
-    def merge_paperlist(self):
-        # merge the two paperlist
-        if self.openreview_dir:
-            # locate if paper is in openreview paperlist
-            for e in self._paperlist:
-                title = e['title']
-                
-                idx = self.find_openreview_id(title)
-                if idx:
-                    pass
-                else:
-                    pass
-        else:
-            # fill in paperlist using data from the site
-            pass
+    
             
     def launch(self, fetch_site=False):
         if not self._args: 
@@ -122,8 +101,10 @@ class CCBot(sitebot.SiteBot):
                     url_page = f'{self._baseurl}/events/{k}'
                     self.crawl(url_page, pages[k], track)
             else:
+                # load previous
+                # self.summarizer.load_summary
                 pass
-            
+        
         # sort paperlist after crawling
         self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])
         del self._paper_idx
@@ -139,7 +120,7 @@ class CCBot(sitebot.SiteBot):
         self.save_paperlist()
                 
         
-class ICLRBot(CCBot):
+class CCBotICLR(CCBot):
     
         
     def process_card(self, e, page):
@@ -173,7 +154,7 @@ class ICLRBot(CCBot):
         return status_new
             
         
-class NIPSBot(CCBot):
+class CCBotNIPS(CCBot):
         
     def process_card(self, e, page):
         title, author, paperid = super().process_card(e)
@@ -213,25 +194,25 @@ class NIPSBot(CCBot):
         return status_new
         
             
-class ICMLBot(CCBot):
+class CCBotICML(CCBot):
             
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
         
-class CVPRBot(CCBot):
+class CCBotCVPR(CCBot):
                 
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
         
-class ECCVBot(CCBot):
+class CCBotECCV(CCBot):
                         
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
             
-class ICCVBot(CCBot):
+class CCBotICCV(CCBot):
                             
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)

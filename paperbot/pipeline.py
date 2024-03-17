@@ -1,5 +1,6 @@
 from .bots.ccbot import *
-from .bots.openreviewbot import OpenreviewBot
+from .bots.openreviewbot import *
+from .utils.merger import Merger
 import json
 import os
 
@@ -65,8 +66,9 @@ class Pipeline:
                 
                 # 
                 print('Initializing bots for', conf, year)
-                openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                sitebot = eval(f"{conf.upper()}Bot")(conf, year, root_dir=self.paths['site'])
+                # openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
+                openreviewbot = eval(f"ORBot{conf.upper()}")(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
+                sitebot = eval(f"CCBot{conf.upper()}")(conf, year, root_dir=self.paths['site'])
                 
                 # launch openreview bot
                 openreviewbot.launch(self.fetch_openreview)
@@ -77,7 +79,9 @@ class Pipeline:
                 if self.fetch_site: sitebot.launch(self.fetch_site)
                 self.summary_site[conf][year] = sitebot.summary_all_tracks if sitebot.summary_all_tracks else {}
                 
-                self.merge_paperlist(openreviewbot, sitebot)
+                merger = Merger()
+                merger.paperlist_openreview = openreviewbot.paperlist
+                merger.paperlist_site = sitebot.paperlist
                 
         if is_save:
             self.save_summary()

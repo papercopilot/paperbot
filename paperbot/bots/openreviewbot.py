@@ -69,6 +69,145 @@ class OpenreviewBot(sitebot.SiteBot):
         response = requests.get(url)
         data = response.json()
         return int(data.get('count', 0))
+    
+    def process_note(self, note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation):
+        
+        # value could be string or dict['value']
+        getstr = lambda x: x if not isinstance(x, dict) else x['value']
+        
+        # meta
+        id = note['id']
+        title = getstr(note['content']['title'])
+        keywords = '' if 'keywords' not in note['content'] else getstr(note['content']['keywords'])
+        status = ''
+        
+        # process title
+        title = title.strip().replace('\u200b', ' ') # remove white spaces and \u200b (cannot be split by split()) ZERO WIDTH SPACE at end
+        title = ' '.join(title.split()).strip() # remove consecutive spaces in the middle
+        
+        # init container
+        confidence, confidence_avg = [], 0
+        correctness, correctness_avg = [], 0
+        rating, rating_avg = [], 0
+        novelty, novelty_avg = [], 0
+        novelty_emp, novelty_emp_avg = [], 0
+        presentation, presentation_avg = [], 0
+        
+        # for different decision
+        if decision_invitation == 'in_notes': 
+            # iclr2013/2014 hack: decision in $note['content']['decision']
+            status = note['content']['decision']
+            self.summarizer.update_summary(status)
+        elif decision_invitation == 'in_venue':
+            # icml2023 hack: decision in $note['venue']['value']
+            # iclr 2024, neurips 2023
+            status = note['content']['venue']['value']
+            status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+            self.summarizer.update_summary(status)
+            
+        # check comments
+        for reply in note['details']['directReplies']:
+            # get review comments
+            if 'invitation' in reply: key_invitation = reply['invitation']
+            else: key_invitation = key_invitation = reply['invitations'][0] # iclr2024 and neurips 2023
+            
+            if review_invitation in key_invitation:
+                
+                # get review comments, '0' if not available
+                def getvalue(key, rname, src):
+                    if key not in rname: return '0'
+                    k = rname[key] # get json key, which is updated every year
+                    if k in src: return getstr(src[k])
+                    else: return '0'
+                    
+                # fill empty space with 0
+                def parse(x):
+                    if not x.strip(): return '0' # check if x is empty
+                    x = x.split(':')[0]
+                    x = review_map[x] if x in review_map else x.split()[0]
+                    return x if x.isdigit() else '0'
+                
+                rating.append(parse(getvalue('rating', review_name, reply['content'])))
+                confidence.append(parse(getvalue('confidence', review_name, reply['content'])))
+                correctness.append(parse(getvalue('correctness', review_name, reply['content'])))
+                novelty.append(parse(getvalue('novelty', review_name, reply['content'])))
+                novelty_emp.append(parse(getvalue('novelty_emp', review_name, reply['content'])))
+                presentation.append(parse(getvalue('presentation', review_name, reply['content'])))
+            elif decision_invitation in key_invitation:
+                # decision_invitation: Decision/Acceptance_Decision/acceptance - reply['content']['decision']
+                # decision_invitation: Meta_Review - reply['content']['recommendation']
+                if 'decision' in reply['content']: status = getstr(reply['content']['decision'])
+                elif 'recommendation' in reply['content']: status = getstr(reply['content']['recommendation'])
+                
+                if self._conf == 'emnlp':
+                    # similar to siggraph conference track and journal track, TODO: this needed to be redesigned
+                    status = getstr(note['content']['Submission_Type']) + ' ' + getstr(reply['content']['decision'])
+                    status = status if 'reject' not in status.lower() else 'Reject'
+                self.summarizer.update_summary(status)
+            elif meta_invitation and meta_invitation in key_invitation:
+                # EMNLP2023
+                rating_avg = parse(getvalue('rating', review_name, reply['content']))
+                rating_avg = float(rating_avg) if rating_avg.isdigit() else 0
+                
+        # to numpy
+        list2np = lambda x: np.array(list(filter(None, x))).astype(np.int32)
+        rating = list2np(rating)
+        confidence = list2np(confidence)
+        correctness = list2np(correctness)
+        novelty = list2np(novelty)
+        novelty_emp = list2np(novelty_emp)
+        presentation = list2np(presentation)
+        
+        # get sorting index before clearing empty values
+        idx = rating.argsort()
+        
+        def clean_and_sort(x, idx):
+            cleanup = lambda x: np.array([]) if (x==0).sum() == len(x) else x # empty array when all values are 0
+            sort_by_idx = lambda x, idx: x if not any(x) else x[idx] # sort by idx
+            return sort_by_idx(cleanup(x), idx)
+        
+        rating = clean_and_sort(rating, idx)
+        confidence = clean_and_sort(confidence, idx)
+        correctness = clean_and_sort(correctness, idx)
+        novelty = clean_and_sort(novelty, idx)
+        novelty_emp = clean_and_sort(novelty_emp, idx)
+        presentation = clean_and_sort(presentation, idx)
+        
+        np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+        np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+        np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+        keywords = np2str(keywords)
+        
+        extra = {
+            'rating': {
+                'str': np2str(rating),
+                'avg': rating_avg if rating_avg else np2avg(rating) # if rating_avg is available EMNLP2023,
+            },
+            'confidence': {
+                'str': np2str(confidence),
+                'avg': np2avg(confidence),
+            },
+            'correctness': {
+                'str': np2str(correctness),
+                'avg': np2avg(correctness),
+            },
+            'novelty': {
+                'str': np2str(novelty),
+                'avg': np2avg(novelty),
+            },
+            'novelty_emp': {
+                'str': np2str(novelty_emp),
+                'avg': np2avg(novelty_emp),
+            },
+            'presentation': {
+                'str': np2str(presentation),
+                'avg': np2avg(presentation),
+            },
+            'corr_rating_confidence': np2coef(rating, confidence),
+            'corr_rating_correctness': np2coef(rating, correctness),
+        }
+                
+        return id, title, keywords, status, extra
 
     def crawl(self, url, tid=None, track='', ivt='', offset=0, batch=1000):
         
@@ -88,136 +227,7 @@ class OpenreviewBot(sitebot.SiteBot):
             # process data here
             for note in tqdm(data['notes'], leave=False, desc='Processing'):
                 
-                # value could be string or dict['value']
-                getstr = lambda x: x if not isinstance(x, dict) else x['value']
-                
-                # meta
-                id = note['id']
-                title = getstr(note['content']['title'])
-                keywords = '' if 'keywords' not in note['content'] else getstr(note['content']['keywords'])
-                status = ''
-                
-                # init container
-                confidence, confidence_avg = [], 0
-                correctness, correctness_avg = [], 0
-                rating, rating_avg = [], 0
-                novelty, novelty_avg = [], 0
-                novelty_emp, novelty_emp_avg = [], 0
-                presentation, presentation_avg = [], 0
-                
-                # for different decision
-                if decision_invitation == 'in_notes': 
-                    # iclr2013/2014 hack: decision in $note['content']['decision']
-                    status = note['content']['decision']
-                    self.summarizer.update_summary(status)
-                elif decision_invitation == 'in_venue':
-                    # icml2023 hack: decision in $note['venue']['value']
-                    # iclr 2024, neurips 2023
-                    status = note['content']['venue']['value']
-                    status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
-                    self.summarizer.update_summary(status)
-                    
-                # check comments
-                for reply in note['details']['directReplies']:
-                    # get review comments
-                    if 'invitation' in reply: key_invitation = reply['invitation']
-                    else: key_invitation = key_invitation = reply['invitations'][0] # iclr2024 and neurips 2023
-                    
-                    if review_invitation in key_invitation:
-                        
-                        # get review comments, '0' if not available
-                        def getvalue(key, rname, src):
-                            if key not in rname: return '0'
-                            k = rname[key] # get json key, which is updated every year
-                            if k in src: return getstr(src[k])
-                            else: return '0'
-                            
-                        # fill empty space with 0
-                        def parse(x):
-                            if not x.strip(): return '0' # check if x is empty
-                            x = x.split(':')[0]
-                            x = review_map[x] if x in review_map else x.split()[0]
-                            return x if x.isdigit() else '0'
-                        
-                        rating.append(parse(getvalue('rating', review_name, reply['content'])))
-                        confidence.append(parse(getvalue('confidence', review_name, reply['content'])))
-                        correctness.append(parse(getvalue('correctness', review_name, reply['content'])))
-                        novelty.append(parse(getvalue('novelty', review_name, reply['content'])))
-                        novelty_emp.append(parse(getvalue('novelty_emp', review_name, reply['content'])))
-                        presentation.append(parse(getvalue('presentation', review_name, reply['content'])))
-                    elif decision_invitation in key_invitation:
-                        # decision_invitation: Decision/Acceptance_Decision/acceptance - reply['content']['decision']
-                        # decision_invitation: Meta_Review - reply['content']['recommendation']
-                        if 'decision' in reply['content']: status = getstr(reply['content']['decision'])
-                        elif 'recommendation' in reply['content']: status = getstr(reply['content']['recommendation'])
-                        
-                        if self._conf == 'emnlp':
-                            # similar to siggraph conference track and journal track, TODO: this needed to be redesigned
-                            status = getstr(note['content']['Submission_Type']) + ' ' + getstr(reply['content']['decision'])
-                            status = status if 'reject' not in status.lower() else 'Reject'
-                        self.summarizer.update_summary(status)
-                    elif meta_invitation and meta_invitation in key_invitation:
-                        # EMNLP2023
-                        rating_avg = parse(getvalue('rating', review_name, reply['content']))
-                        rating_avg = float(rating_avg) if rating_avg.isdigit() else 0
-                
-                # to numpy
-                parse = lambda x: np.array(list(filter(None, x))).astype(np.int32)
-                rating = parse(rating)
-                confidence = parse(confidence)
-                correctness = parse(correctness)
-                novelty = parse(novelty)
-                novelty_emp = parse(novelty_emp)
-                presentation = parse(presentation)
-                
-                # get sorting index before clearing empty values
-                idx = rating.argsort()
-                
-                # empty array when all values are 0
-                parse = lambda x: np.array([]) if (x==0).sum() == len(x) else x
-                rating = parse(rating)
-                confidence = parse(confidence)
-                correctness = parse(correctness)
-                novelty = parse(novelty)
-                novelty_emp = parse(novelty_emp)
-                presentation = parse(presentation)
-                
-                # sort by value
-                parse = lambda x, i: x if not any(x) else x[i]
-                rating = parse(rating, idx)
-                confidence = parse(confidence, idx)
-                correctness = parse(correctness, idx)
-                novelty = parse(novelty, idx)
-                novelty_emp = parse(novelty_emp, idx)
-                presentation = parse(presentation, idx)
-                
-                # calculate mean
-                parse = lambda x: 0 if not any(x) else x.mean()
-                rating_avg = rating_avg if rating_avg else parse(rating) # if rating_avg is available EMNLP2023
-                confidence_avg = parse(confidence)
-                correctness_avg = parse(correctness)
-                novelty_avg = parse(novelty)
-                novelty_emp_avg = parse(novelty_emp)
-                presentation_avg = parse(presentation)
-                
-                # calculate corelation coef
-                parse = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1])
-                corr_rating_confidence = parse(rating, confidence)
-                corr_rating_correctness = parse(rating, correctness)
-                
-                # stringfy
-                parse = lambda x: ';'.join([str(y) for y in x])
-                rating_str = parse(rating)
-                confidence_str = parse(confidence)
-                correctness_str = parse(correctness)
-                novelty_str = parse(novelty)
-                novelty_emp_str = parse(novelty_emp)
-                presentation_str = parse(presentation)
-                keywords = parse(keywords)
-                
-                # process title
-                title = title.strip().replace('\u200b', ' ') # remove white spaces and \u200b (cannot be split by split()) ZERO WIDTH SPACE at end
-                title = ' '.join(title.split()).strip() # remove consecutive spaces in the middle
+                id, title, keywords, status, extra = self.process_note(note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation)
                 
                 # fill empty status, this need to be placed before redundancy check to avoid fill empty status
                 status = ivt if not status else status
@@ -227,7 +237,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 if idx and len(self._paperlist[idx[0]]['title']) > 10:
                     # some withdraw paper also rename to withdraw or NA or soemthing
                     self.summarizer.update_summary(status, -1)
-                    if rating_avg > self._paperlist[idx[0]]['rating_avg']: del self._paperlist[idx[0]]
+                    if extra['rating']['avg'] > self._paperlist[idx[0]]['rating_avg']: del self._paperlist[idx[0]]
                     else: continue
                     
                 # rename status by tiers if available, this need to be placed after redundancy check to avoid fill renamed status
@@ -242,22 +252,22 @@ class OpenreviewBot(sitebot.SiteBot):
                     'keywords': keywords,
                     'authors': '',
                     
-                    'rating': rating_str,
-                    'confidence': confidence_str,
-                    'correctness': correctness_str,
-                    'technical_novelty': novelty_str,
-                    'empirical_novelty': novelty_emp_str,
-                    'presentation': presentation_str,
+                    'rating': extra['rating']['str'],
+                    'confidence': extra['confidence']['str'],
+                    'correctness': extra['correctness']['str'],
+                    'technical_novelty': extra['novelty']['str'],
+                    'empirical_novelty': extra['novelty_emp']['str'],
+                    'presentation': extra['presentation']['str'],
                     
-                    'rating_avg': rating_avg,
-                    'confidence_avg': confidence_avg,
-                    'correctness_avg': correctness_avg,
-                    'technical_novelty_avg': novelty_avg,
-                    'empirical_novelty_avg': novelty_emp_avg,
-                    'presentation_avg': presentation_avg,
+                    'rating_avg': extra['rating']['avg'],
+                    'confidence_avg': extra['confidence']['avg'],
+                    'correctness_avg': extra['correctness']['avg'],
+                    'technical_novelty_avg': extra['novelty']['avg'],
+                    'empirical_novelty_avg': extra['novelty_emp']['avg'],
+                    'presentation_avg': extra['presentation']['avg'],
                     
-                    'corr_rating_confidence': corr_rating_confidence,
-                    'corr_rating_correctness': corr_rating_correctness,
+                    'corr_rating_confidence': extra['corr_rating_confidence'],
+                    'corr_rating_correctness': extra['corr_rating_correctness'],
                 })
             
             offset += batch
@@ -318,3 +328,15 @@ class OpenreviewBot(sitebot.SiteBot):
             
         # save paperlist for each venue per year
         self.save_paperlist()
+        
+        # TODO: remove update_summary from the update_meta_count and crawl
+        
+class ORBotICLR(OpenreviewBot):
+    
+    def process_note(self, note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation):
+        return super().process_note(note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation)
+    
+class ORBotNIPS(OpenreviewBot):
+    
+    def process_note(self, note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation):
+        return super().process_note(note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation)

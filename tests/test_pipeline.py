@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     set_arguments()
     args = parser.parse_args()
-    args.confs = ['iclr']
-    # args.years = [2024]
+    args.confs = ['nips']
+    # args.years = [2022]
     
     test_pipeline(args)
