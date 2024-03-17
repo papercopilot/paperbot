@@ -43,9 +43,12 @@ class CCBot(sitebot.SiteBot):
         e_author = e.xpath(".//div[@class='author-str']//text()")
         author = '' if not e_author else e_author[0].strip().replace(' · ', ', ')
         
-        return title, author
+        # paperid
+        paperid = title
+        
+        return title, author, paperid
     
-    def get_highest_status(self, status, status_old):
+    def get_highest_status(self):
         # default status_priority, can be rewrite in subclass
         status_priority = {
             'Poster': 0,
@@ -53,7 +56,7 @@ class CCBot(sitebot.SiteBot):
             'Oral': 2,
         }
         return status_priority
-        
+    
     def find_openreview_id(self, title):
         for i, p in enumerate(self.paperlist_init):
             if p['title'].lower() == title.lower():
@@ -65,12 +68,11 @@ class CCBot(sitebot.SiteBot):
         tree = html.fromstring(response.content)
         e_papers = tree.xpath("//*[contains(@class, 'displaycards touchup-date')]")
         for e in tqdm(e_papers, leave=False):
-            title, author, status = self.process_card(e, page)
-            author_first = author.split(',')[0].strip()
+            title, author, status, paperid = self.process_card(e, page)
             
             # update duplicate status
-            if f'{title};{author_first}' in self._paper_idx:
-                idx = self._paper_idx[f'{title};{author_first}']
+            if paperid in self._paper_idx:
+                idx = self._paper_idx[paperid]
                 status = self.get_highest_status(status, self._paperlist[idx]['status'])
                     
                 # update status
@@ -86,7 +88,7 @@ class CCBot(sitebot.SiteBot):
                     'track': track,
                 })
                 # use title and first author to index paper, in case of duplicate of title
-                self._paper_idx[f'{title};{author_first}'] = len(self._paperlist) - 1
+                self._paper_idx[paperid] = len(self._paperlist) - 1
             
     def merge_paperlist(self):
         # merge the two paperlist
@@ -141,7 +143,7 @@ class ICLRBot(CCBot):
     
         
     def process_card(self, e, page):
-        title, author = super().process_card(e)
+        title, author, paperid = super().process_card(e)
         
         # process special cases
         if self._year == 2023:
@@ -150,14 +152,31 @@ class ICLRBot(CCBot):
             # |-Poster-|-Top-25%-|-Top-5%-|
             status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
             status = status.split('/')[-1].replace('paper', '').replace('accept', '').strip()
+        else:
+            status = page
         
-        return title, author, status
+        return title, author, status, paperid
+    
+    def get_highest_status(self, status_new, status):
+        status_priority = super().get_highest_status()
         
+        if self._year == 2023:
+            status_priority = {
+                'Poster': 0,
+                'top 25%': 1,
+                'top 5%': 2,
+            }
+        
+        status_new = status if not status_new else status_new
+        status_new = status_new if status_priority[status_new] > status_priority[status] else status
+        
+        return status_new
+            
         
 class NIPSBot(CCBot):
         
     def process_card(self, e, page):
-        title, author = super().process_card(e)
+        title, author, paperid = super().process_card(e)
         
         # process special cases
         if self._year == 2023:
@@ -168,31 +187,30 @@ class NIPSBot(CCBot):
             # |-Main Poster-|-Main Oral-|-Data Oral-|-Data Poster-|             'highlighted'
             # status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
             status = page
+            paperid = title + ';' + author.split(',')[0].strip()
         else:
             status = page
             
         
-        return title, author, status
+        return title, author, status, paperid
     
-    def get_highest_status(self, status, status_old):
-        status_priority = super().get_highest_status(status, status_old)
+    def get_highest_status(self, status_new, status):
+        status_priority = super().get_highest_status()
         
         if self._year == 2023:
+            status_new = status_new.replace(' Poster', '')
             status = status.replace(' Poster', '')
-            status_old = status_old.replace(' Poster', '')
         elif self._year == 2022:
             status_priority = {
                 'Poster': 0,
                 'Highlighted': 1,
                 'Journal': 1,
             }
-            status = status_old if not status else status
-        else: 
-            status = status_old if not status else status
         
-        status = status if status_priority[status] > status_priority[status_old] else status_old
+        status_new = status if not status_new else status_new
+        status_new = status_new if status_priority[status_new] > status_priority[status] else status
             
-        return status
+        return status_new
         
             
 class ICMLBot(CCBot):
