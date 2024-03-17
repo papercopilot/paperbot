@@ -15,7 +15,9 @@ class CCBot(sitebot.SiteBot):
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
-        if 'site' not in self._args: return
+        if 'site' not in self._args:
+            self._args = None
+            return
         self._args = self._args['site'] # select sub-dictionary
         self._tracks = self._args['track']
             
@@ -28,7 +30,7 @@ class CCBot(sitebot.SiteBot):
             'keywords': os.path.join(self._root_dir, 'keywords'),
         }
         
-        self._title_idx = {}
+        self._paper_idx = {}
         
     def process_card(self, e):
         # process title
@@ -41,10 +43,16 @@ class CCBot(sitebot.SiteBot):
         e_author = e.xpath(".//div[@class='author-str']//text()")
         author = '' if not e_author else e_author[0].strip().replace(' · ', ', ')
         
-        # status
-        status = None
-        
-        return title, author, status
+        return title, author
+    
+    def get_highest_status(self, status, status_old):
+        # default status_priority, can be rewrite in subclass
+        status_priority = {
+            'Poster': 0,
+            'Spotlight': 1,
+            'Oral': 2,
+        }
+        return status_priority
         
     def find_openreview_id(self, title):
         for i, p in enumerate(self.paperlist_init):
@@ -57,21 +65,28 @@ class CCBot(sitebot.SiteBot):
         tree = html.fromstring(response.content)
         e_papers = tree.xpath("//*[contains(@class, 'displaycards touchup-date')]")
         for e in tqdm(e_papers, leave=False):
-            title, author, status = self.process_card(e)
-            status = page if not status else status
+            title, author, status = self.process_card(e, page)
+            author_first = author.split(',')[0].strip()
             
             # update duplicate status
-            if title in self._title_idx:
-                idx = self._title_idx[title]
+            if f'{title};{author_first}' in self._paper_idx:
+                idx = self._paper_idx[f'{title};{author_first}']
+                status = self.get_highest_status(status, self._paperlist[idx]['status'])
+                    
+                # update status
                 self._paperlist[idx]['status'] = status
+                self._paperlist[idx]['track'] = track
             else:
+                # 
+                status = page if not status else status # normalize status
                 self._paperlist.append({
                     'title': title,
                     'author': author,
                     'status': status,
                     'track': track,
                 })
-                self._title_idx[title] = len(self._paperlist) - 1
+                # use title and first author to index paper, in case of duplicate of title
+                self._paper_idx[f'{title};{author_first}'] = len(self._paperlist) - 1
             
     def merge_paperlist(self):
         # merge the two paperlist
@@ -103,17 +118,19 @@ class CCBot(sitebot.SiteBot):
                 # loop over pages
                 for k in tqdm(pages.keys()):
                     url_page = f'{self._baseurl}/events/{k}'
-                    self.crawl(url_page, k, track)
-                    
-                # sort paperlist
-                self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])
+                    self.crawl(url_page, pages[k], track)
             else:
                 pass
             
-            # update paperlist
-            self.summarizer.paperlist = self._paperlist
+        # sort paperlist after crawling
+        self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])
+        del self._paper_idx
             
-            # update summary
+        # update paperlist
+        self.summarizer.paperlist = self._paperlist
+            
+        # summarize paperlist
+        for track in self._tracks:
             self._summary_all_tracks[track] = self.summarizer.summarize_paperlist(track)
                 
         # save paperlist for each venue per year
@@ -123,11 +140,14 @@ class CCBot(sitebot.SiteBot):
 class ICLRBot(CCBot):
     
         
-    def process_card(self, e):
-        title, author, status = super().process_card(e)
+    def process_card(self, e, page):
+        title, author = super().process_card(e)
         
         # process special cases
         if self._year == 2023:
+            # iclr2023 oral contains only attendence
+            # |---------Main track--------|--Journal--| 'poster' page: 
+            # |-Poster-|-Top-25%-|-Top-5%-|
             status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
             status = status.split('/')[-1].replace('paper', '').replace('accept', '').strip()
         
@@ -136,8 +156,43 @@ class ICLRBot(CCBot):
         
 class NIPSBot(CCBot):
         
-    def __init__(self, conf='', year=None, root_dir=''):
-        super().__init__(conf, year, root_dir)
+    def process_card(self, e, page):
+        title, author = super().process_card(e)
+        
+        # process special cases
+        if self._year == 2023:
+            status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
+        elif self._year == 2022:
+            # neurips2022 need extra status from neurips.cc
+            # |--------Main track-------|--Datasets & Benchmarks--|--Journal--| 'poster'
+            # |-Main Poster-|-Main Oral-|-Data Oral-|-Data Poster-|             'highlighted'
+            # status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
+            status = page
+        else:
+            status = page
+            
+        
+        return title, author, status
+    
+    def get_highest_status(self, status, status_old):
+        status_priority = super().get_highest_status(status, status_old)
+        
+        if self._year == 2023:
+            status = status.replace(' Poster', '')
+            status_old = status_old.replace(' Poster', '')
+        elif self._year == 2022:
+            status_priority = {
+                'Poster': 0,
+                'Highlighted': 1,
+                'Journal': 1,
+            }
+            status = status_old if not status else status
+        else: 
+            status = status_old if not status else status
+        
+        status = status if status_priority[status] > status_priority[status_old] else status_old
+            
+        return status
         
             
 class ICMLBot(CCBot):

@@ -7,8 +7,8 @@ import spacy
 
 class Summarizer():
 
-    def __init__(self, paperlist=None):
-        self._paperlist = paperlist
+    def __init__(self):
+        self._paperlist = None
         self._paperlist_init = None
         self._keywords = {}
         
@@ -40,20 +40,36 @@ class Summarizer():
     def paperlist_init(self, paperlist):
         self._paperlist_init = paperlist
         
+    def clear_summary(self):
+        
+        self._paperlist = None
+        self._paperlist_init = None
+        self._keywords = {}
+        
+        self.src = {}
+        self.tier_ids = {}
+        self.tier_names = {}
+        self.tier_num = {}
+        self.tier_hist = {}
+        self.tier_hist_sum = {}
+        self.tier_tsf = {}
+        self.tier_tsf_sum = {}
+        
             
     def load_summary(self, path, year, track):
         if not os.path.exists(path): return
+        key_str2int = lambda x: {int(k):v for k,v in x.items()}
+        swap_key_value = lambda x: {v:k for k,v in x.items()}
         with open(path) as f:
             summary = json.load(f)[str(year)][track]
             self.src = summary['src']
-            # self.tier_ids = summary['tid']
-            self.tier_num = summary['tnum']
-            self.tier_names = summary['tname']
-            self.tier_hist = summary['thist']
-            self.tier_hist_sum = summary['thsum']
-            self.tier_ids = dict((v,k) for k,v in summary['tid'].items())
-            if 'ttsf' in summary: self.tier_tsf = summary['ttsf']
-            if 'ttsfsum' in summary: self.tier_tsf_sum = summary['ttsfsum']
+            self.tier_num = key_str2int(summary['tnum'])
+            self.tier_names = key_str2int(summary['tname'])
+            self.tier_hist = key_str2int(summary['thist'])
+            self.tier_hist_sum = key_str2int(summary['thsum'])
+            self.tier_ids = swap_key_value(key_str2int(summary['tid']))
+            if 'ttsf' in summary: self.tier_tsf = key_str2int(summary['ttsf'])
+            if 'ttsfsum' in summary: self.tier_tsf_sum = key_str2int(summary['ttsfsum'])
         
     def get_tid(self, key):
         if key not in self.tier_ids:

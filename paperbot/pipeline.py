@@ -70,15 +70,12 @@ class Pipeline:
                 
                 # launch openreview bot
                 openreviewbot.launch(self.fetch_openreview)
-                if not openreviewbot.summary_all_tracks: continue
-                self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks
-                if not openreviewbot.keywords_all_tracks: continue
-                self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks
+                self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks if openreviewbot.summary_all_tracks else {}
+                self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks if openreviewbot.keywords_all_tracks else {}
                 
                 # launch site bot
                 if self.fetch_site: sitebot.launch(self.fetch_site)
-                if not sitebot.summary_all_tracks: continue
-                self.summary_site[conf][year] = sitebot.summary_all_tracks
+                self.summary_site[conf][year] = sitebot.summary_all_tracks if sitebot.summary_all_tracks else {}
                 
                 self.merge_paperlist(openreviewbot, sitebot)
                 

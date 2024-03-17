@@ -47,7 +47,39 @@
             }
         },
         "site": {
-
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight-posters-2023": "Spotlight",
+                        "oral": "Oral"
+                    }
+                },
+                "Datasets & Benchmarks": {
+                    "pages": {
+                        "datasets-benchmarks-2023": "Poster"
+                    }
+                },
+                "Journal": {
+                    "pages": {
+                        "journal_track_2023": "Journal"
+                    }
+                
+                }
+            }
+        },
+        "confirm": {
+            "track": {
+                "main": {
+                    "total": 12345,
+                    "url": "https://blog.neurips.cc/category/2023-conference/"
+                },
+                "Datasets & Benchmarks": {
+                    "total": 985,
+                    "url": "https://blog.neurips.cc/category/2023-conference/"
+                }
+            }
         }
     },
     "2022": {
@@ -93,9 +125,26 @@
             }
         },
         "site": {
-
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "highlighted": "Highlighted"
+                    }
+                },
+                "Datasets & Benchmarks": {
+                    "pages": {
+                        "datasets-benchmarks-2022": "Poster"
+                    }
+                },
+                "Journal": {
+                    "pages": {
+                        "journal_track_2022": "Journal"
+                    }
+                }
+            }
         }
-
     },
     "2021": {
         "openreview": {
@@ -132,7 +181,226 @@
             }
         },
         "site": {
-
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2020": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2019": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2018": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2017": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2016": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2015": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2014": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2013": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2012": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2011": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2010": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2009": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2008": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2007": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2006": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
         }
     }
 }

@@ -17,7 +17,9 @@ class OpenreviewBot(sitebot.SiteBot):
         self.dump_keywords = dump_keywords
         
         # focus on openreview
-        if 'openreview' not in self._args: return
+        if 'openreview' not in self._args:
+            self._args = None
+            return
         self._args = self._args['openreview'] # select sub-dictionary
         self._tracks = self._args['track']
         
@@ -26,15 +28,16 @@ class OpenreviewBot(sitebot.SiteBot):
         
         self._domain = f'{api}.openreview.net'
         self._baseurl = f'https://{self._domain}/notes?invitation={invitation}/{year}'
+        self._src_url = f'https://openreview.net/group?id={invitation}/{year}'
         
-        for track in self._tracks:
-            self.summarizer.src = {
-                'openreview': {
-                    'total': 0,
-                    'url': f'https://openreview.net/group?id={invitation}/{year}',
-                    'name': 'OpenReview',
-                }
-            }
+        # for track in self._tracks:
+        #     self.summarizer.src = {
+        #         'openreview': {
+        #             'total': 0,
+        #             'url': f'https://openreview.net/group?id={invitation}/{year}',
+        #             'name': 'OpenReview',
+        #         }
+        #     }
         
         # TODO: remove maybe?
         self.main_track = {
@@ -271,6 +274,13 @@ class OpenreviewBot(sitebot.SiteBot):
         # loop over tracks
         for track in self._tracks:
             submission_invitation = self._tracks[track] # pages is submission_invitation in openreview.py
+            self.summarizer.clear_summary()
+            self.summarizer.src = {
+                'openreview': {
+                    'total': 0,
+                    'url': self._src_url,
+                }
+            }
             
             # fetch paperlist
             if fetch_site:
