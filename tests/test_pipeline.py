@@ -17,21 +17,23 @@ def set_arguments():
     parser.add_argument('--statistics_dir', type=str, help='directory for summary logs', default='stats')
     
     # 
-    parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview', default=True)
-    parser.add_argument('--fetch_site', action='store_true', help='fetch from site', default=True)
+    parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview', default=False)
+    parser.add_argument('--fetch_site', action='store_true', help='fetch from site', default=False)
     
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
+    
+    parser.add_argument('--save', action='store_true', help='save the results', default=False)
 
 def test_pipeline(args):
     p = paperbot.Pipeline(args)
     assert p is not None
-    p.launch()
+    p.launch(is_save=args.save)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     set_arguments()
     args = parser.parse_args()
-    args.confs = ['nips']
-    # args.years = [2022]
+    args.confs = ['iclr', 'nips']
+    # args.years = [2024]
     
     test_pipeline(args)

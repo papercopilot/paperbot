@@ -131,7 +131,7 @@ class Merger:
                     paper = paper_openreview.copy()
                     
                     paper['authors'] = paper['authors'] if paper['authors'] else paper_site['author']
-                    # paper['status'] = self.get_highest_status(paper['status'], paper_site['status'])
+                    paper['status'] = self.get_highest_status(paper['status'], paper_site['status'])
                     
                     self._paperlist_merged.append(paper)
                     
@@ -160,10 +160,9 @@ class Merger:
                     matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=0.9)
                     if matches:
                         paper_site = self._paperlist_site[paperdict_site[matches[0]]]
-                        # print(paper_openreview['title'], ' | ', paper_site['title'])
                         
                         paper['authors'] = paper['authors'] if paper['authors'] else paper_site['author']
-                        # paper['status'] = self.get_highest_status(paper['status'], paper_site['status'])
+                        paper['status'] = self.get_highest_status(paper['status'], paper_site['status'])
                         
                     self._paperlist_merged.append(paper)
                         
@@ -181,18 +180,15 @@ class Merger:
 
 class MergerICLR(Merger):
     
-    def get_highest_status(self, status_new, status):
-        
-        status_priority = super().get_highest_status()
-        
+    def get_highest_status(self, status_or, status_site):
+        return status_or
+    
+
+class MergerNIPS(Merger):
+    
+    
+    def get_highest_status(self, status_or, status_site):
         if self._year == 2023:
-            status_priority = {
-                'Poster': 0,
-                'top 25%': 1,
-                'top 5%': 2,
-            }
-        
-        status_new = status if not status_new else status_new
-        status_new = status_new if status_priority[status_new] > status_priority[status] else status
-        
-        return status_new
+            return status_or
+        elif self._year == 2022:
+            return status_site
