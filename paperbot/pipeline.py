@@ -1,7 +1,7 @@
 from .bots.sitebot import *
 from .bots.ccbot import *
 from .bots.openreviewbot import *
-from .utils.merger import Merger
+from .utils.merger import *
 import json
 import os
 
@@ -66,29 +66,29 @@ class Pipeline:
             for year in self.years:
                 
                 
-                if self.fetch_openreview:
-                    print('Initializing bots for', conf, year)
+                # if self.fetch_openreview:
+                print('Initializing bots for', conf, year)
+                # openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
+                openreviewbot = eval(f"ORBot{conf.upper()}")(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
+                # launch openreview bot
+                openreviewbot.launch(self.fetch_openreview)
+                self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks if openreviewbot.summary_all_tracks else {}
+                self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks if openreviewbot.keywords_all_tracks else {}
+                # else:
                     # openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                    openreviewbot = eval(f"ORBot{conf.upper()}")(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                    # launch openreview bot
-                    openreviewbot.launch(self.fetch_openreview)
-                    self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks if openreviewbot.summary_all_tracks else {}
-                    self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks if openreviewbot.keywords_all_tracks else {}
-                else:
-                    openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
                     # load from file
                     
-                if self.fetch_site:
-                    sitebot = eval(f"CCBot{conf.upper()}")(conf, year, root_dir=self.paths['site'])
-                    sitebot.launch(self.fetch_site)
-                    self.summary_site[conf][year] = sitebot.summary_all_tracks if sitebot.summary_all_tracks else {}
-                else:
-                    sitebot = SiteBot(conf, year, root_dir=self.paths['site'])
+                # if self.fetch_site:
+                sitebot = eval(f"CCBot{conf.upper()}")(conf, year, root_dir=self.paths['site'])
+                sitebot.launch(self.fetch_site)
+                self.summary_site[conf][year] = sitebot.summary_all_tracks if sitebot.summary_all_tracks else {}
+                # else:
                     # load from file
                 
-                merger = Merger()
+                merger = eval(f"Merger{conf.upper()}")(conf, year, root_dir=self.paths['paperlists'])
                 merger.paperlist_openreview = openreviewbot.paperlist
                 merger.paperlist_site = sitebot.paperlist
+                merger.merge_paperlist()
                 
         if is_save:
             self.save_summary()

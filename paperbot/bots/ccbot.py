@@ -102,8 +102,7 @@ class CCBot(sitebot.SiteBot):
                     self.crawl(url_page, pages[k], track)
         else:
             # load previous
-            # self.summarizer.load_summary
-            pass
+            self._paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), key='title')
         
         # sort paperlist after crawling
         self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])
