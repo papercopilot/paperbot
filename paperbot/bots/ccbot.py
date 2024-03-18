@@ -90,20 +90,20 @@ class CCBot(sitebot.SiteBot):
             print(f'{self._conf} {self._year}: Site Not available.')
             return
         
-        # loop over tracks
-        for track in self._tracks:
-            pages = self._args['track'][track]['pages'] # pages is tpages
-            
-            # fetch paperlist
-            if fetch_site:
+        # fetch paperlist
+        if fetch_site:
+            # loop over tracks
+            for track in self._tracks:
+                pages = self._args['track'][track]['pages'] # pages is tpages
+                
                 # loop over pages
                 for k in tqdm(pages.keys()):
                     url_page = f'{self._baseurl}/events/{k}'
                     self.crawl(url_page, pages[k], track)
-            else:
-                # load previous
-                # self.summarizer.load_summary
-                pass
+        else:
+            # load previous
+            # self.summarizer.load_summary
+            pass
         
         # sort paperlist after crawling
         self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])

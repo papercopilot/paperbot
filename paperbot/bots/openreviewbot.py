@@ -70,6 +70,9 @@ class OpenreviewBot(sitebot.SiteBot):
         data = response.json()
         return int(data.get('count', 0))
     
+    def get_status(self):
+        pass
+    
     def process_note(self, note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation):
         
         # value could be string or dict['value']
@@ -79,7 +82,7 @@ class OpenreviewBot(sitebot.SiteBot):
         id = note['id']
         title = getstr(note['content']['title'])
         keywords = '' if 'keywords' not in note['content'] else getstr(note['content']['keywords'])
-        status = ''
+        status = self.get_status(note, tier_name, decision_invitation)
         
         # process title
         title = title.strip().replace('\u200b', ' ') # remove white spaces and \u200b (cannot be split by split()) ZERO WIDTH SPACE at end
@@ -93,17 +96,17 @@ class OpenreviewBot(sitebot.SiteBot):
         novelty_emp, novelty_emp_avg = [], 0
         presentation, presentation_avg = [], 0
         
-        # for different decision
-        if decision_invitation == 'in_notes': 
-            # iclr2013/2014 hack: decision in $note['content']['decision']
-            status = note['content']['decision']
-            self.summarizer.update_summary(status)
-        elif decision_invitation == 'in_venue':
-            # icml2023 hack: decision in $note['venue']['value']
-            # iclr 2024, neurips 2023
-            status = note['content']['venue']['value']
-            status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
-            self.summarizer.update_summary(status)
+        # # for different decision
+        # if decision_invitation == 'in_notes': 
+        #     # iclr2013/2014 hack: decision in $note['content']['decision']
+        #     status = note['content']['decision']
+        #     self.summarizer.update_summary(status)
+        # elif decision_invitation == 'in_venue':
+        #     # icml2023 hack: decision in $note['venue']['value']
+        #     # iclr 2024, neurips 2023
+        #     status = note['content']['venue']['value']
+        #     status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+        #     self.summarizer.update_summary(status)
             
         # check comments
         for reply in note['details']['directReplies']:
@@ -133,17 +136,17 @@ class OpenreviewBot(sitebot.SiteBot):
                 novelty.append(parse(getvalue('novelty', review_name, reply['content'])))
                 novelty_emp.append(parse(getvalue('novelty_emp', review_name, reply['content'])))
                 presentation.append(parse(getvalue('presentation', review_name, reply['content'])))
-            elif decision_invitation in key_invitation:
-                # decision_invitation: Decision/Acceptance_Decision/acceptance - reply['content']['decision']
-                # decision_invitation: Meta_Review - reply['content']['recommendation']
-                if 'decision' in reply['content']: status = getstr(reply['content']['decision'])
-                elif 'recommendation' in reply['content']: status = getstr(reply['content']['recommendation'])
+            # elif decision_invitation in key_invitation:
+            #     # decision_invitation: Decision/Acceptance_Decision/acceptance - reply['content']['decision']
+            #     # decision_invitation: Meta_Review - reply['content']['recommendation']
+            #     if 'decision' in reply['content']: status = getstr(reply['content']['decision'])
+            #     elif 'recommendation' in reply['content']: status = getstr(reply['content']['recommendation'])
                 
-                if self._conf == 'emnlp':
-                    # similar to siggraph conference track and journal track, TODO: this needed to be redesigned
-                    status = getstr(note['content']['Submission_Type']) + ' ' + getstr(reply['content']['decision'])
-                    status = status if 'reject' not in status.lower() else 'Reject'
-                self.summarizer.update_summary(status)
+            #     if self._conf == 'emnlp':
+            #         # similar to siggraph conference track and journal track, TODO: this needed to be redesigned
+            #         status = getstr(note['content']['Submission_Type']) + ' ' + getstr(reply['content']['decision'])
+            #         status = status if 'reject' not in status.lower() else 'Reject'
+            #     self.summarizer.update_summary(status)
             elif meta_invitation and meta_invitation in key_invitation:
                 # EMNLP2023
                 rating_avg = parse(getvalue('rating', review_name, reply['content']))
@@ -333,10 +336,94 @@ class OpenreviewBot(sitebot.SiteBot):
         
 class ORBotICLR(OpenreviewBot):
     
-    def process_note(self, note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation):
-        return super().process_note(note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation)
+    def get_status(self, note, tier_name, decision_invitation):
+        getstr = lambda x: x if not isinstance(x, dict) else x['value']
+    
+        status = ''
+        if self._year == 2024:
+            status = note['content']['venue']['value']
+            status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+        elif self._year == 2013:
+            status = note['content']['decision']
+        elif self._year == 2014:
+            status = note['content']['decision']
+        else:
+            for reply in note['details']['directReplies']:
+                reply_invitation = reply['invitation'] if 'invitation' in reply else reply['invitations'][0]
+                
+                if decision_invitation in reply_invitation:
+                    # decision_invitation: Decision/Acceptance_Decision/acceptance - reply['content']['decision']
+                    # decision_invitation: Meta_Review - reply['content']['recommendation']
+                    if 'decision' in reply['content']: status = getstr(reply['content']['decision'])
+                    elif 'recommendation' in reply['content']: status = getstr(reply['content']['recommendation'])
+    
+        if status: self.summarizer.update_summary(status)
+        return status
+
     
 class ORBotNIPS(OpenreviewBot):
     
-    def process_note(self, note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation):
-        return super().process_note(note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation)
+    
+    def get_status(self, note, tier_name, decision_invitation):
+        getstr = lambda x: x if not isinstance(x, dict) else x['value']
+    
+        status = ''
+        if self._year == 2023:
+            status = note['content']['venue']['value']
+            status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+        else:
+            for reply in note['details']['directReplies']:
+                reply_invitation = reply['invitation'] if 'invitation' in reply else reply['invitations'][0]
+                
+                if decision_invitation in reply_invitation:
+                    status = getstr(reply['content']['decision'])
+    
+        if status: self.summarizer.update_summary(status)
+        return status
+    
+class ORBotICML(OpenreviewBot):
+    
+    def get_status(self, note, tier_name, decision_invitation):
+    
+        status = ''
+        if self._year == 2023:
+            status = note['content']['venue']['value']
+            status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+    
+        if status: self.summarizer.update_summary(status)
+        return status
+    
+class ORBotCORL(OpenreviewBot):
+    
+    def get_status(self, note, tier_name, decision_invitation):
+    
+        getstr = lambda x: x if not isinstance(x, dict) else x['value']
+        for reply in note['details']['directReplies']:
+            reply_invitation = reply['invitation'] if 'invitation' in reply else reply['invitations'][0]
+            
+            if decision_invitation in reply_invitation:
+                if 'decision' in reply['content']: status = getstr(reply['content']['decision'])
+                elif 'recommendation' in reply['content']: status = getstr(reply['content']['recommendation'])
+
+        if status: self.summarizer.update_summary(status)
+        return status
+class ORBotEMNLP(OpenreviewBot):
+    
+    def get_status(self, note, tier_name, decision_invitation):
+        
+        getstr = lambda x: x if not isinstance(x, dict) else x['value']
+        status = ''
+        if self._year == 2023:
+            # similar to siggraph conference track and journal track, TODO: this needed to be redesigned
+            
+            for reply in note['details']['directReplies']:
+                reply_invitation = reply['invitation'] if 'invitation' in reply else reply['invitations'][0]
+                
+                if decision_invitation in reply_invitation:
+                    # status = getstr(reply['content']['decision'])
+                    
+                    status = getstr(note['content']['Submission_Type']) + ' ' + getstr(reply['content']['decision'])
+                    status = status if 'reject' not in status.lower() else 'Reject'
+    
+        if status: self.summarizer.update_summary(status)
+        return status

@@ -23,7 +23,100 @@
             }
         },
         "site": {
-
+            "domain": "https://icml.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2022": {
+        "site": {
+            "domain": "https://icml.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2021": {
+        "site": {
+            "domain": "https://icml.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2020": {
+        "site": {
+            "domain": "https://icml.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2019": {
+        "site": {
+            "domain": "https://icml.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2018": {
+        "site": {
+            "domain": "https://icml.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
+    "2017": {
+        "site": {
+            "domain": "https://icml.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
         }
     }
 }
