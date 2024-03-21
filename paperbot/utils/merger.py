@@ -175,8 +175,16 @@ class Merger:
             self._paperlist_merged = sorted(self._paperlist_merged, key=lambda x: x['id'])
                         
         elif self._paperlist_site:
-            self._paperlist_merged = sorted(self._paperlist_site, key=lambda x: x['title'])
+            # only site data is available
+            for paper in self._paperlist_site:
+                encoder = hashlib.md5()
+                encoder.update(paper['title'].encode('utf-8'))
+                paper['id'] = 'site_' + encoder.hexdigest()[0:10]
+                paper = {'id': paper.pop('id'), **paper}
+                self._paperlist_merged.append(paper)
+            self._paperlist_merged = sorted(self._paperlist_merged, key=lambda x: x['title'])
         elif self._paperlist_openreview:
+            # only openreview data is available
             self._paperlist_merged = sorted(self._paperlist_openreview, key=lambda x: x['id'])
         else:
             pass
