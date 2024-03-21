@@ -194,9 +194,23 @@ class CCBotNIPS(CCBot):
         
             
 class CCBotICML(CCBot):
-            
-    def __init__(self, conf='', year=None, root_dir=''):
-        super().__init__(conf, year, root_dir)
+    
+    def process_card(self, e, page):
+        title, author, paperid = super().process_card(e)
+        
+        # process special cases
+        status = page
+        
+        return title, author, status, paperid
+        
+    
+    def get_highest_status(self, status_new, status):
+        status_priority = super().get_highest_status()
+        
+        status_new = status if not status_new else status_new
+        status_new = status_new if status_priority[status_new] > status_priority[status] else status
+        
+        return status_new
         
         
 class CCBotCVPR(CCBot):

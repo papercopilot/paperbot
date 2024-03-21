@@ -2,6 +2,7 @@ import json
 import difflib
 import os
 from tqdm import tqdm
+import hashlib
 
 class Merger:
     
@@ -151,7 +152,12 @@ class Merger:
                     self._paperlist_merged.append(self._paperlist_openreview[paperdict_openreview[title]])
             elif not paperdict_openreview and paperdict_site:
                 for title in paperdict_site.keys():
-                    self._paperlist_merged.append(self._paperlist_site[paperdict_site[title]])
+                    paper = self._paperlist_site[paperdict_site[title]]
+                    encoder = hashlib.md5()
+                    encoder.update(title.encode('utf-8'))
+                    paper['id'] = 'site_' + encoder.hexdigest()[0:10]
+                    paper = {'id': paper.pop('id'), **paper}
+                    self._paperlist_merged.append(paper)
             else:
                 for title in tqdm(paperdict_openreview.keys(), desc='Merging leftovers'):
                     paper_openreview = self._paperlist_openreview[paperdict_openreview[title]]
@@ -192,3 +198,8 @@ class MergerNIPS(Merger):
             return status_or
         elif self._year == 2022:
             return status_site
+        
+class MergerICML(Merger):
+    
+    def get_highest_status(self, status_or, status_site):
+        return status_or

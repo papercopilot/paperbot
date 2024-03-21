@@ -1,4 +1,40 @@
 {
+    "2024": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "ICML.cc",
+                "review": "",
+                "decision": "in_venue"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "ICML 2024 OralPoster": "Oral",
+                    "ICML 2024 Poster": "Poster"
+                }
+            },
+            "rname": {
+                "main": {}
+            }
+        },
+        "site": {
+            "domain": "https://icml.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        }
+    },
     "2023": {
         "openreview": {
             "api": "api2",
