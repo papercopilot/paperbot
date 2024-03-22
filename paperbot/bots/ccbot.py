@@ -119,7 +119,7 @@ class CCBot(sitebot.SiteBot):
         self.save_paperlist()
                 
         
-class CCBotICLR(CCBot):
+class StBotICLR(CCBot):
     
         
     def process_card(self, e, page):
@@ -153,7 +153,7 @@ class CCBotICLR(CCBot):
         return status_new
             
         
-class CCBotNIPS(CCBot):
+class StBotNIPS(CCBot):
         
     def process_card(self, e, page):
         title, author, paperid = super().process_card(e)
@@ -193,7 +193,7 @@ class CCBotNIPS(CCBot):
         return status_new
         
             
-class CCBotICML(CCBot):
+class StBotICML(CCBot):
     
     def process_card(self, e, page):
         title, author, paperid = super().process_card(e)
@@ -213,19 +213,19 @@ class CCBotICML(CCBot):
         return status_new
         
         
-class CCBotCVPR(CCBot):
+class StBotCVPR(CCBot):
                 
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
         
-class CCBotECCV(CCBot):
+class StBotECCV(CCBot):
                         
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
             
-class CCBotICCV(CCBot):
+class StBotICCV(CCBot):
                             
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)

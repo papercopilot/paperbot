@@ -211,3 +211,13 @@ class MergerICML(Merger):
     
     def get_highest_status(self, status_or, status_site):
         return status_or
+    
+class MergerCORL(Merger):
+    
+    def get_highest_status(self, status_or, status_site):
+        return status_or
+    
+class MergerEMNLP(Merger):
+    
+    def get_highest_status(self, status_or, status_site):
+        return status_or

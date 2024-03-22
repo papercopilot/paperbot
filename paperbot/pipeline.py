@@ -31,29 +31,29 @@ class Pipeline:
     def __call__(self):
         self.openreviewbot()
         
-    def save_summary(self):
-        for conf in self.confs:
-            summary_path = os.path.join(self.paths['openreview'], f'summary/{conf}.json')
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            with open(summary_path, 'w') as f:
-                json.dump(self.summary_openreview[conf], f, indent=4)
-            print(f"Saved summary for {conf} to {self.paths['openreview']}")
-            
-            summary_path = os.path.join(self.paths['site'], f'summary/{conf}.json')
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            with open(summary_path, 'w') as f:
-                json.dump(self.summary_site[conf], f, indent=4)
+    def save_summary(self, conf):
+        # for conf in self.confs:
+        summary_path = os.path.join(self.paths['openreview'], f'summary/{conf}.json')
+        os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+        with open(summary_path, 'w') as f:
+            json.dump(self.summary_openreview[conf], f, indent=4)
+        print(f"Saved summary for {conf} to {self.paths['openreview']}")
+        
+        summary_path = os.path.join(self.paths['site'], f'summary/{conf}.json')
+        os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+        with open(summary_path, 'w') as f:
+            json.dump(self.summary_site[conf], f, indent=4)
                 
-    def save_keywords(self):
+    def save_keywords(self, conf):
         if not self.dump_keywords:
             print("Saving keywords is disabled. Set --keywords to True to enable.")
             return
-        for conf in self.confs:
-            keywords_path = os.path.join(self.paths['openreview'], f'keywords/{conf}.json')
-            os.makedirs(os.path.dirname(keywords_path), exist_ok=True)
-            with open(keywords_path, 'w') as f:
-                json.dump(self.keywords_openreview[conf], f, indent=4)
-            print(f"Saved keywords for {conf} to {self.paths['openreview']}")
+        # for conf in self.confs:
+        keywords_path = os.path.join(self.paths['openreview'], f'keywords/{conf}.json')
+        os.makedirs(os.path.dirname(keywords_path), exist_ok=True)
+        with open(keywords_path, 'w') as f:
+            json.dump(self.keywords_openreview[conf], f, indent=4)
+        print(f"Saved keywords for {conf} to {self.paths['openreview']}")
             
     def merge_paperlist(self, openreviewbot, sitebot):
         if not openreviewbot.paperlist: return
@@ -86,7 +86,7 @@ class Pipeline:
                 if self.use_site:
                     print('Initializing Site bots for', conf, year)
                     try:
-                        sitebot = eval(f"CCBot{conf.upper()}")(conf, year, root_dir=self.paths['site'])
+                        sitebot = eval(f"StBot{conf.upper()}")(conf, year, root_dir=self.paths['site'])
                         sitebot.launch(self.fetch_site)
                         self.summary_site[conf][year] = sitebot.summary_all_tracks
                     except Exception as e:
@@ -98,6 +98,6 @@ class Pipeline:
                 if sitebot: merger.paperlist_site = sitebot.paperlist
                 merger.merge_paperlist()
                 
-            if is_save:
-                self.save_summary()
-                self.save_keywords()
+                if is_save:
+                    self.save_summary(conf)
+                    self.save_keywords(conf)
