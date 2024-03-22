@@ -15,6 +15,8 @@ class Pipeline:
         self.summary_site = {}
         
         self.dump_keywords = args.parse_keywords
+        self.use_openreview = args.use_openreview
+        self.use_site = args.use_site
         self.fetch_openreview = args.fetch_openreview
         self.fetch_site = args.fetch_site
         
@@ -65,31 +67,37 @@ class Pipeline:
             self.keywords_openreview[conf] = {}
             for year in self.years:
                 
+                openreviewbot = None
+                sitebot = None
+                self.summary_openreview[conf][year] = {}
+                self.keywords_openreview[conf][year] = {}
+                self.summary_site[conf][year] = {}
                 
-                # if self.fetch_openreview:
-                print('Initializing bots for', conf, year)
-                # openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                openreviewbot = eval(f"ORBot{conf.upper()}")(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                # launch openreview bot
-                openreviewbot.launch(self.fetch_openreview)
-                self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks if openreviewbot.summary_all_tracks else {}
-                self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks if openreviewbot.keywords_all_tracks else {}
-                # else:
-                    # openreviewbot = OpenreviewBot(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                    # load from file
-                    
-                # if self.fetch_site:
-                sitebot = eval(f"CCBot{conf.upper()}")(conf, year, root_dir=self.paths['site'])
-                sitebot.launch(self.fetch_site)
-                self.summary_site[conf][year] = sitebot.summary_all_tracks if sitebot.summary_all_tracks else {}
-                # else:
-                    # load from file
+                if self.use_openreview:
+                    print('Initializing Openreview bots for', conf, year)
+                    try:
+                        openreviewbot = eval(f"ORBot{conf.upper()}")(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
+                        openreviewbot.launch(self.fetch_openreview)
+                        self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks
+                        self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks
+                    except Exception as e:
+                        print(f"Error in Openreview for {conf} {year}: {e}")
                 
+                if self.use_site:
+                    print('Initializing Site bots for', conf, year)
+                    try:
+                        sitebot = eval(f"CCBot{conf.upper()}")(conf, year, root_dir=self.paths['site'])
+                        sitebot.launch(self.fetch_site)
+                        self.summary_site[conf][year] = sitebot.summary_all_tracks
+                    except Exception as e:
+                        print(f"Error in Site for {conf} {year}: {e}")
+                
+                print('Merging paperlists for', conf, year)
                 merger = eval(f"Merger{conf.upper()}")(conf, year, root_dir=self.paths['paperlists'])
-                merger.paperlist_openreview = openreviewbot.paperlist
-                merger.paperlist_site = sitebot.paperlist
+                if openreviewbot: merger.paperlist_openreview = openreviewbot.paperlist
+                if sitebot: merger.paperlist_site = sitebot.paperlist
                 merger.merge_paperlist()
                 
-        if is_save:
-            self.save_summary()
-            self.save_keywords()
+            if is_save:
+                self.save_summary()
+                self.save_keywords()

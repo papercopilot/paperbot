@@ -4,6 +4,7 @@ import numpy as np
 import json
 from collections import Counter
 import os
+import pandas as pd
 
 from . import sitebot
 from ..utils import util, summarizer
@@ -29,15 +30,6 @@ class OpenreviewBot(sitebot.SiteBot):
         self._domain = f'{api}.openreview.net'
         self._baseurl = f'https://{self._domain}/notes?invitation={invitation}/{year}'
         self._src_url = f'https://openreview.net/group?id={invitation}/{year}'
-        
-        # for track in self._tracks:
-        #     self.summarizer.src = {
-        #         'openreview': {
-        #             'total': 0,
-        #             'url': f'https://openreview.net/group?id={invitation}/{year}',
-        #             'name': 'OpenReview',
-        #         }
-        #     }
         
         # TODO: remove maybe?
         self.main_track = {
@@ -279,6 +271,9 @@ class OpenreviewBot(sitebot.SiteBot):
             self._paperlist.sort(key=lambda x: x['title'])
         pbar.close()
         
+    def load_csv(self):
+        pass
+        
     def launch(self, fetch_site=True):
         if not self._args: 
             print(f'{self._conf} {self._year}: Openreview Not available.')
@@ -309,6 +304,8 @@ class OpenreviewBot(sitebot.SiteBot):
                         self.crawl(url_page, tid, track, ivt)
                     else: 
                         print(f'{url_page} not available.')
+                        # TODO: remove this to another source bot e.g. formbot
+                        self.load_csv()
                 
                 # sort paperlist
                 self._paperlist = sorted(self._paperlist, key=lambda x: x['id'])
@@ -382,6 +379,63 @@ class ORBotNIPS(OpenreviewBot):
         return status
     
 class ORBotICML(OpenreviewBot):
+    
+    def load_csv(self):
+        # TODO: remove this to another source bot e.g. formbot
+        if self._year == 2024:
+            df = pd.read_csv('/home/jyang/projects/papercopilot/logs/googleform/venues/icml/ICML2024.csv')
+            
+            # process
+            ratings = []
+            confidences = []
+            for index, row in df.iterrows():
+                id = index
+                title = ''
+                keywords = ''
+                status = ''
+
+                rating = row['Initial Ratings'].split(',')
+                confidence = row['Initial Confidence'].split(',')
+
+                ratings.append(rating)
+                confidences.append(confidence)
+                # list to numpy
+                list2np = lambda x: np.array(list(filter(None, x))).astype(np.int32)
+                rating = list2np(rating)
+                confidence = list2np(confidence)
+
+                np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+                np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+                np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+                
+                extra = {
+                    'rating': {
+                        'str': np2str(rating),
+                        'avg': np2avg(rating)
+                    },
+                    'confidence': {
+                        'str': np2str(confidence),
+                        'avg': np2avg(confidence)
+                    },
+                    'corr_rating_confidence': np2coef(rating, confidence),
+                }
+                
+                self._paperlist.append({
+                    'id': id,
+                    'title': title,
+                    'track': 'main',
+                    'status': status,
+                    'keywords': keywords,
+                    'authors': '',
+                    
+                    'rating': extra['rating']['str'],
+                    'confidence': extra['confidence']['str'],
+                    
+                    'rating_avg': extra['rating']['avg'],
+                    'confidence_avg': extra['confidence']['avg'],
+                    
+                    'corr_rating_confidence': extra['corr_rating_confidence'],
+                })
     
     def get_status(self, note, tier_name, decision_invitation):
     
