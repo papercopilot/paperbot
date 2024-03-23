@@ -89,3 +89,13 @@ class StBotEMNLP(SiteBot):
     
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir) 
+        
+class StBotSIGGRAPH(SiteBot):
+    
+    def __init__(self, conf='', year=None, root_dir=''):
+        super().__init__(conf, year, root_dir)
+        
+class StBotSIGGRAPHASIA(SiteBot):
+    
+    def __init__(self, conf='', year=None, root_dir=''):
+        super().__init__(conf, year, root_dir)

@@ -197,9 +197,7 @@ class MergerICLR(Merger):
     def get_highest_status(self, status_or, status_site):
         return status_or
     
-
 class MergerNIPS(Merger):
-    
     
     def get_highest_status(self, status_or, status_site):
         if self._year == 2023:
@@ -218,6 +216,31 @@ class MergerCORL(Merger):
         return status_or
     
 class MergerEMNLP(Merger):
+    
+    def get_highest_status(self, status_or, status_site):
+        return status_or
+    
+class MergerCVPR(Merger):
+    
+    def get_highest_status(self, status_or, status_site):
+        return status_or
+    
+class MergerECCV(Merger):
+    
+    def get_highest_status(self, status_or, status_site):
+        return status_or
+    
+class MergerICCV(Merger):
+    
+    def get_highest_status(self, status_or, status_site):
+        return status_or
+    
+class MergerSIGGRAPH(Merger):
+    
+    def get_highest_status(self, status_or, status_site):
+        return status_or
+    
+class MergerSIGGRAPHASIA(Merger):
     
     def get_highest_status(self, status_or, status_site):
         return status_or

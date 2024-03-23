@@ -1,7 +1,4 @@
-from .bots.sitebot import *
-from .bots.ccbot import *
-from .bots.openreviewbot import *
-from .utils.merger import *
+from .utils.assigner import *
 import json
 import os
 
@@ -72,11 +69,13 @@ class Pipeline:
                 self.summary_openreview[conf][year] = {}
                 self.keywords_openreview[conf][year] = {}
                 self.summary_site[conf][year] = {}
+                assigner_name = f"Assigner{conf.upper()}"
                 
                 if self.use_openreview:
                     print('Initializing Openreview bots for', conf, year)
                     try:
-                        openreviewbot = eval(f"ORBot{conf.upper()}")(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
+                        assigner = eval(assigner_name)('or')
+                        openreviewbot = assigner(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
                         openreviewbot.launch(self.fetch_openreview)
                         self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks
                         self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks
@@ -86,14 +85,16 @@ class Pipeline:
                 if self.use_site:
                     print('Initializing Site bots for', conf, year)
                     try:
-                        sitebot = eval(f"StBot{conf.upper()}")(conf, year, root_dir=self.paths['site'])
+                        assigner = eval(assigner_name)('st', year)
+                        sitebot = assigner(conf, year, root_dir=self.paths['site'])
                         sitebot.launch(self.fetch_site)
                         self.summary_site[conf][year] = sitebot.summary_all_tracks
                     except Exception as e:
                         print(f"Error in Site for {conf} {year}: {e}")
                 
                 print('Merging paperlists for', conf, year)
-                merger = eval(f"Merger{conf.upper()}")(conf, year, root_dir=self.paths['paperlists'])
+                assigner = eval(assigner_name)('merge')
+                merger = assigner(conf, year, root_dir=self.paths['paperlists'])
                 if openreviewbot: merger.paperlist_openreview = openreviewbot.paperlist
                 if sitebot: merger.paperlist_site = sitebot.paperlist
                 merger.merge_paperlist()
