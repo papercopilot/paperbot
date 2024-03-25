@@ -95,6 +95,32 @@ class CCBot(sitebot.SiteBot):
                 # use title and first author to index paper, in case of duplicate of title
                 self._paperlist.append(p)
                 self._paper_idx[paperid] = len(self._paperlist) - 1
+                
+    def crawl_extra(self):
+        # create hashmap for paperlist
+        paper_idx = {p['site']: i for i, p in enumerate(self._paperlist)}
+        
+        # parallel crawl, DONT make pool as a class attribute
+        # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
+        pool = mp.Pool(mp.cpu_count() * 2)
+        rets = mp.Manager().list()
+        pbar = tqdm(total=len(self._paperlist), leave=False)
+        
+        def mpupdate(x):
+            rets.append(x)
+            pbar.update(1)
+        for i in range(pbar.total):
+            pool.apply_async(self.process_url, (self._paperlist[i]['site'],), callback=mpupdate)
+        pool.close()
+        pool.join()
+        
+        for ret in rets:
+            idx = paper_idx[ret['site']]
+            self._paperlist[idx].update(ret)
+            
+    @staticmethod
+    def process_url(url_paper):
+        pass
             
     def launch(self, fetch_site=False):
         if not self._args: 
@@ -112,6 +138,14 @@ class CCBot(sitebot.SiteBot):
                 for k in tqdm(pages.keys()):
                     url_page = f'{self._baseurl}/events/{k}'
                     self.crawl(url_page, pages[k], track)
+            
+            # crawl for extra info if available
+            if self._paperlist and self.process_url(self._paperlist[0]['site']):
+                cprint('info', f'{self._conf} {self._year}: Fetching Extra...')
+                self.crawl_extra()
+            else:
+                cprint('warning', f'{self._conf} {self._year}: Extra Not available.')
+            
         else:
             # load previous
             cprint('info', f'{self._conf} {self._year}: Fetching Skiped.')
@@ -138,6 +172,9 @@ class StBotICLR(CCBot):
     def process_card(self, e):
         title, author, status, paperid, extra = super().process_card(e)
         
+        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
+        extra['site'] = f'{self._domain}{href}'
+        
         # process special cases
         if self._year == 2023:
             # iclr2023 oral contains only attendence
@@ -162,12 +199,38 @@ class StBotICLR(CCBot):
         status_new = status_new if status_priority[status_new] > status_priority[status] else status
         
         return status_new
+    
+    @staticmethod
+    def process_url(url_paper):
+        
+        # open paper url to load status
+        response_paper = requests.get(url_paper)
+        tree_paper = html.fromstring(response_paper.content)
+        
+        # get the div element that contains a <a> element with text 'Abstract'
+        e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
+        if not e_container: return {}
+        
+        e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
+        url_poster = '' if not e_poster else e_poster[0].xpath("./@href")[0]
+        
+        e_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
+        url_openreview = '' if not e_openreview else e_openreview[0].xpath("./@href")[0]
+        
+        return {
+            'site': url_paper,
+            'poster': url_poster,
+            'openreview': url_openreview,
+        }
             
         
 class StBotNIPS(CCBot):
         
     def process_card(self, e):
         title, author, status, paperid, extra = super().process_card(e)
+        
+        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
+        extra['site'] = f'{self._domain}{href}'
         
         # process special cases
         if self._year == 2023:
@@ -200,11 +263,43 @@ class StBotNIPS(CCBot):
             
         return status_new
         
+    
+    @staticmethod
+    def process_url(url_paper):
+        
+        # open paper url to load status
+        response_paper = requests.get(url_paper)
+        tree_paper = html.fromstring(response_paper.content)
+        
+        # get the div element that contains a <a> element with text 'Abstract'
+        e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
+        if not e_container: return {}
+        
+        e_paper = tree_paper.xpath("//a[normalize-space()='Paper']")
+        url_abstract = '' if not e_paper else e_paper[0].xpath("./@href")[0]
+        
+        e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
+        url_poster = '' if not e_poster else e_poster[0].xpath("./@href")[0]
+        
+        e_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
+        url_openreview = '' if not e_openreview else e_openreview[0].xpath("./@href")[0]
+        
+        return {
+            'site': url_paper,
+            'paper': url_abstract,
+            'poster': url_poster,
+            'openreview': url_openreview,
+        }
             
 class StBotICML(CCBot):
     
     def process_card(self, e):
-        return super().process_card(e)
+        title, author, status, paperid, extra = super().process_card(e)
+        
+        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
+        extra['site'] = f'{self._domain}{href}'
+        
+        return title, author, status, paperid, extra
         
     
     def get_highest_status(self, status_new, status):
@@ -217,37 +312,6 @@ class StBotICML(CCBot):
         
         
 class StBotCVPR(CCBot):
-    
-    def crawl(self, url, page, track):
-        super().crawl(url, page, track)
-        
-        if self._year == 2023:
-            self.post_crawl()
-            
-    def post_crawl(self):
-        # parallel crawl, DONT make pool as a class attribute
-        # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
-        
-        # create hashmap for paperlist
-        paper_idx = {p['site']: i for i, p in enumerate(self._paperlist)}
-        
-        pool = mp.Pool(mp.cpu_count() * 2)
-        # pool = mp.Pool(8)
-        rets = mp.Manager().list()
-        pbar = tqdm(total=len(self._paperlist), leave=False)
-        
-        def mpupdate(x):
-            rets.append(x)
-            pbar.update(1)
-        for i in range(pbar.total):
-            pool.apply_async(self.process_url, (self._paperlist[i]['site'],), callback=mpupdate)
-        pool.close()
-        pool.join()
-        
-        for ret in rets:
-            idx = paper_idx[ret['site']]
-            self._paperlist[idx].update(ret)
-        
     
     def process_card(self, e):
         title, author, status, paperid, extra = super().process_card(e)
@@ -288,6 +352,7 @@ class StBotCVPR(CCBot):
         url_pdf = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
         
         return {
+            'status': status,
             'site': url_paper,
             'project': url_project,
             'github': url_github,
