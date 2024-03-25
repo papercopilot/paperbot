@@ -62,7 +62,7 @@ class CCBot(sitebot.SiteBot):
         return status_priority
         
     def crawl(self, url, page, track):
-        response = requests.get(url)
+        response = self.session_request(url)
         tree = html.fromstring(response.content)
         e_papers = tree.xpath("//*[contains(@class, 'displaycards touchup-date')]")
         
@@ -268,7 +268,7 @@ class StBotNIPS(CCBot):
     def process_url(url_paper):
         
         # open paper url to load status
-        response_paper = requests.get(url_paper)
+        response_paper = sitebot.SiteBot.session_request(url_paper)
         tree_paper = html.fromstring(response_paper.content)
         
         # get the div element that contains a <a> element with text 'Abstract'

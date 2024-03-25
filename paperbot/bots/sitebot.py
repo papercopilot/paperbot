@@ -1,5 +1,10 @@
 import os
 import json
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+
 from ..utils import util, summarizer
 from ..utils.util import color_print as cprint
 
@@ -82,7 +87,30 @@ class SiteBot:
     def launch(self, fetch_site=False):
         pass
 
+    @staticmethod
+    def session_request(url, retries=10):
+        # https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests
+        
+        try:
+            # direct request
+            response = requests.get(url)
+        except requests.exceptions.RequestException as e:
+            session = requests.Session()
+            retry = Retry(connect=retries, backoff_factor=0.5)
+            adapter = HTTPAdapter(max_retries=retry)
+            session.mount('http://', adapter)
+            session.mount('https://', adapter)
+            try:
+                # direct request failed, try with session
+                response = session.get(url)
+            except requests.exceptions.RequestException as e:
+                # failed to fetch
+                cprint('warning', f"Failed to fetch {url}.")
+                return None
 
+        return response
+    
+    
 class StBotCORL(SiteBot):
     
     def __init__(self, conf='', year=None, root_dir=''):
