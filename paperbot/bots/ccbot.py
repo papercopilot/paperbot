@@ -6,9 +6,11 @@ from collections import Counter
 from lxml import html
 import spacy
 import os
+import multiprocessing as mp
 
 from . import sitebot
 from ..utils import util, summarizer
+from ..utils.util import color_print as cprint
 
 class CCBot(sitebot.SiteBot):
     
@@ -43,10 +45,12 @@ class CCBot(sitebot.SiteBot):
         e_author = e.xpath(".//div[@class='author-str']//text()")
         author = '' if not e_author else e_author[0].strip().replace(' · ', ', ')
         
-        # paperid
+        # paperid, status, and extra
         paperid = title
+        status = None
+        extra = {}
         
-        return title, author, paperid
+        return title, author, status, paperid, extra
     
     def get_highest_status(self):
         # default status_priority, can be rewrite in subclass
@@ -61,38 +65,46 @@ class CCBot(sitebot.SiteBot):
         response = requests.get(url)
         tree = html.fromstring(response.content)
         e_papers = tree.xpath("//*[contains(@class, 'displaycards touchup-date')]")
+        
+        # parse each card
         for e in tqdm(e_papers, leave=False):
-            title, author, status, paperid = self.process_card(e, page)
+            title, author, status, paperid, extra = self.process_card(e)
+            status = page if not status else status # default status
             
             # update duplicate status
             if paperid in self._paper_idx:
                 idx = self._paper_idx[paperid]
                 status = self.get_highest_status(status, self._paperlist[idx]['status'])
-                    
+                
                 # update status
                 self._paperlist[idx]['status'] = status
                 self._paperlist[idx]['track'] = track
             else:
                 # 
-                status = page if not status else status # normalize status
-                self._paperlist.append({
+                p = {
                     'title': title,
                     'author': author,
                     'status': status,
                     'track': track,
-                })
+                }
+                
+                if extra:
+                    for k, v in extra.items():
+                        p[k] = v
+                
                 # use title and first author to index paper, in case of duplicate of title
+                self._paperlist.append(p)
                 self._paper_idx[paperid] = len(self._paperlist) - 1
-    
             
     def launch(self, fetch_site=False):
         if not self._args: 
-            print(f'{self._conf} {self._year}: Site Not available.')
+            cprint('Info', f'{self._conf} {self._year}: Site Not available.')
             return
         
         # fetch paperlist
         if fetch_site:
             # loop over tracks
+            cprint('info', f'{self._conf} {self._year}: Fetching site...')
             for track in self._tracks:
                 pages = self._args['track'][track]['pages'] # pages is tpages
                 
@@ -102,6 +114,7 @@ class CCBot(sitebot.SiteBot):
                     self.crawl(url_page, pages[k], track)
         else:
             # load previous
+            cprint('info', f'{self._conf} {self._year}: Fetching Skiped.')
             self._paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), key='title')
         
         # sort paperlist after crawling
@@ -122,8 +135,8 @@ class CCBot(sitebot.SiteBot):
 class StBotICLR(CCBot):
     
         
-    def process_card(self, e, page):
-        title, author, paperid = super().process_card(e)
+    def process_card(self, e):
+        title, author, status, paperid, extra = super().process_card(e)
         
         # process special cases
         if self._year == 2023:
@@ -132,10 +145,8 @@ class StBotICLR(CCBot):
             # |-Poster-|-Top-25%-|-Top-5%-|
             status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
             status = status.split('/')[-1].replace('paper', '').replace('accept', '').strip()
-        else:
-            status = page
         
-        return title, author, status, paperid
+        return title, author, status, paperid, extra
     
     def get_highest_status(self, status_new, status):
         status_priority = super().get_highest_status()
@@ -155,8 +166,8 @@ class StBotICLR(CCBot):
         
 class StBotNIPS(CCBot):
         
-    def process_card(self, e, page):
-        title, author, paperid = super().process_card(e)
+    def process_card(self, e):
+        title, author, status, paperid, extra = super().process_card(e)
         
         # process special cases
         if self._year == 2023:
@@ -166,13 +177,10 @@ class StBotNIPS(CCBot):
             # |--------Main track-------|--Datasets & Benchmarks--|--Journal--| 'poster'
             # |-Main Poster-|-Main Oral-|-Data Oral-|-Data Poster-|             'highlighted'
             # status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
-            status = page
             paperid = title + ';' + author.split(',')[0].strip()
-        else:
-            status = page
             
         
-        return title, author, status, paperid
+        return title, author, status, paperid, extra
     
     def get_highest_status(self, status_new, status):
         status_priority = super().get_highest_status()
@@ -195,13 +203,8 @@ class StBotNIPS(CCBot):
             
 class StBotICML(CCBot):
     
-    def process_card(self, e, page):
-        title, author, paperid = super().process_card(e)
-        
-        # process special cases
-        status = page
-        
-        return title, author, status, paperid
+    def process_card(self, e):
+        return super().process_card(e)
         
     
     def get_highest_status(self, status_new, status):
@@ -214,10 +217,83 @@ class StBotICML(CCBot):
         
         
 class StBotCVPR(CCBot):
-                
-    def __init__(self, conf='', year=None, root_dir=''):
-        super().__init__(conf, year, root_dir)
+    
+    def crawl(self, url, page, track):
+        super().crawl(url, page, track)
         
+        if self._year == 2023:
+            self.post_crawl()
+            
+    def post_crawl(self):
+        # parallel crawl, DONT make pool as a class attribute
+        # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
+        
+        # create hashmap for paperlist
+        paper_idx = {p['site']: i for i, p in enumerate(self._paperlist)}
+        
+        pool = mp.Pool(mp.cpu_count() * 2)
+        # pool = mp.Pool(8)
+        rets = mp.Manager().list()
+        pbar = tqdm(total=len(self._paperlist), leave=False)
+        
+        def mpupdate(x):
+            rets.append(x)
+            pbar.update(1)
+        for i in range(pbar.total):
+            pool.apply_async(self.process_url, (self._paperlist[i]['site'],), callback=mpupdate)
+        pool.close()
+        pool.join()
+        
+        for ret in rets:
+            idx = paper_idx[ret['site']]
+            self._paperlist[idx].update(ret)
+        
+    
+    def process_card(self, e):
+        title, author, status, paperid, extra = super().process_card(e)
+        
+        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
+        extra['site'] = f'{self._domain}{href}'
+        
+        return title, author, status, paperid, extra
+    
+    @staticmethod
+    def process_url(url_paper):
+        
+        # open paper url to load status
+        response_paper = requests.get(url_paper)
+        tree_paper = html.fromstring(response_paper.content)
+        
+        # get the div element that contains a <a> element with text 'Abstract'
+        e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
+        if not e_container: return {}
+        
+        # if 'Highlight' is in the first element
+        status = 'Highlight' if 'Highlight' in e_container[0].text_content() else 'Poster'
+
+        # get project page if exist
+        e_project = tree_paper.xpath("//a[normalize-space()='Project Page']")
+        url_project = '' if not e_project else e_project[0].xpath("./@href")[0]
+        
+        # get github link if exist
+        url_github = '' if 'github.com' not in url_project else url_project
+        url_project = '' if 'github.com' in url_project else url_project
+        
+        # find if there is a div with id='after-abstract-media'
+        e_after_abstract_media = tree_paper.xpath("//div[@id='after-abstract-media']")
+        url_youtube = '' if not e_after_abstract_media else f'https://youtu.be/{e_after_abstract_media[0].xpath(".//iframe/@src")[0].split("/")[-1]}'
+        
+        # get pdf url
+        e_url_pdf = tree_paper.xpath("//a[@title='Paper PDF']")
+        url_pdf = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
+        
+        return {
+            'site': url_paper,
+            'project': url_project,
+            'github': url_github,
+            'youtube': url_youtube,
+            'pdf': url_pdf,
+        }
         
 class StBotECCV(CCBot):
                         

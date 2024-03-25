@@ -1,0 +1,28 @@
+{
+    "2024":{
+        "site": {
+            "domain": "https://cvpr2023.thecvf.com",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster"
+                    }
+                }
+            }
+        },
+        "accepted": "https://cvpr.thecvf.com/Conferences/2024/AcceptedPapers"
+    },
+    "2023": {
+        "site": {
+            "domain": "https://cvpr2023.thecvf.com",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster"
+                    }
+                }
+            }
+        },
+        "openaccess": "https://openaccess.thecvf.com/CVPR2023?day=all"
+    }
+}

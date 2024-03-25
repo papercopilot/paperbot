@@ -78,6 +78,8 @@ class AssignerCVPR(Assigner):
                 return ccbot.StBotCVPR
             else:
                 return cvfbot.StBotCVPR
+        elif botname == 'oa':
+            return cvfbot.OABotCVPR
         elif botname == 'merge':
             return merger.MergerCVPR
         else: super().__new__(cls, botname)

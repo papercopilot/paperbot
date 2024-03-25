@@ -5,9 +5,11 @@ import json
 from collections import Counter
 import os
 import pandas as pd
+import re
 
 from . import sitebot
 from ..utils import util, summarizer
+from ..utils.util import color_print as cprint
     
 class OpenreviewBot(sitebot.SiteBot):
     
@@ -276,7 +278,7 @@ class OpenreviewBot(sitebot.SiteBot):
         
     def launch(self, fetch_site=True):
         if not self._args: 
-            print(f'{self._conf} {self._year}: Openreview Not available.')
+            cprint('info', f'{self._conf} {self._year}: Openreview Not available.')
             return
         
         # loop over tracks
@@ -293,6 +295,7 @@ class OpenreviewBot(sitebot.SiteBot):
             # fetch paperlist
             if fetch_site:
                 # loop over pages
+                cprint('info', f'{self._conf} {self._year} {track}: Fetching Openreview...')
                 for ivt in submission_invitation:
                 
                     url_page = f'{self._baseurl}/{submission_invitation[ivt]}'
@@ -303,7 +306,7 @@ class OpenreviewBot(sitebot.SiteBot):
                         self.update_meta_count(count, tid, ivt, submission_invitation)
                         self.crawl(url_page, tid, track, ivt)
                     else: 
-                        print(f'{url_page} not available.')
+                        cprint('info', f'{url_page} not available.')
                         # TODO: remove this to another source bot e.g. formbot
                         self.load_csv()
                 
@@ -311,6 +314,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 self._paperlist = sorted(self._paperlist, key=lambda x: x['id'])
             else:
                 # load previous
+                cprint('info', f'{self._conf} {self._year} {track}: Fetching Skipped.')
                 self.summarizer.load_summary(os.path.join(self._paths['summary'], f'{self._conf}.json'), self._year, track)
                 self._paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'))
             
@@ -393,6 +397,10 @@ class ORBotICML(OpenreviewBot):
                 title = ''
                 keywords = ''
                 status = ''
+                
+                match = re.search('[a-zA-Z]', row['Initial Ratings'])
+                if match: continue
+                if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
 
                 rating = row['Initial Ratings'].split(',')
                 confidence = row['Initial Confidence'].split(',')

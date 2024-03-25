@@ -1,6 +1,7 @@
 import os
 import json
 from ..utils import util, summarizer
+from ..utils.util import color_print as cprint
 
 class SiteBot:
     """SiteBot for paperbot."""
@@ -59,6 +60,7 @@ class SiteBot:
         with open(path) as f:
             paperlist = json.load(f)
             paperlist = sorted(paperlist, key=lambda x: x[key])
+            cprint('io', f"Read paperlist from {path}")
             return paperlist
     
     def save_paperlist(self, path=None):
@@ -66,6 +68,7 @@ class SiteBot:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w') as f:
             json.dump(self._paperlist, f, indent=4)
+        cprint('io', f"Saved paperlist for {self._conf} to {path}")
     
     def __call__(self):
         pass

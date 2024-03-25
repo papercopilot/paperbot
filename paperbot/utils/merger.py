@@ -15,10 +15,14 @@ class Merger:
         
         self._paperlist_openreview = []
         self._paperlist_site = []
+        self._paperlist_openaccess = []
         self._paperlist_merged = []
+        
         self._summary_openreview = {}
         self._summary_site = {}
+        self._summary_openaccess = {}
         self._keywords_openreview = {}
+        
         self._keywords_site = {}
         
         
