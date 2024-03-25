@@ -127,7 +127,7 @@ class Pipeline:
                 if openreviewbot: merger.paperlist_openreview = openreviewbot.paperlist
                 if sitebot: merger.paperlist_site = sitebot.paperlist
                 if openaccessbot: merger.paperlist_openaccess = openaccessbot.paperlist
-                merger.merge_paperlist()
+                merger.launch()
                 
                 
             if is_save: 
