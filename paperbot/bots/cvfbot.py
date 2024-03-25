@@ -24,7 +24,7 @@ class OpenaccessBot(sitebot.SiteBot):
         # load pdf from remote url
         # https://stackoverflow.com/questions/9751197/opening-pdf-urls-with-pypdf
         # https://pypdf2.readthedocs.io/en/3.0.0/user/installation.html
-        response = requests.get(url_pdf, stream=True)
+        response = sitebot.SiteBot.session_request(url_pdf, stream=True)
         try:
             # load pdf from remote url
             response.raise_for_status()

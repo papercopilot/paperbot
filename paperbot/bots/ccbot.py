@@ -62,7 +62,7 @@ class CCBot(sitebot.SiteBot):
         return status_priority
         
     def crawl(self, url, page, track):
-        response = self.session_request(url)
+        response = sitebot.SiteBot.session_request(url)
         tree = html.fromstring(response.content)
         e_papers = tree.xpath("//*[contains(@class, 'displaycards touchup-date')]")
         
@@ -110,7 +110,7 @@ class CCBot(sitebot.SiteBot):
             rets.append(x)
             pbar.update(1)
         for i in range(pbar.total):
-            pool.apply_async(self.process_url, (self._paperlist[i]['site'],), callback=mpupdate)
+            pool.apply_async(self.process_url, (self._paperlist[i]['site'], self._year), callback=mpupdate)
         pool.close()
         pool.join()
         
@@ -140,7 +140,7 @@ class CCBot(sitebot.SiteBot):
                     self.crawl(url_page, pages[k], track)
             
             # crawl for extra info if available
-            if self._paperlist and self.process_url(self._paperlist[0]['site']):
+            if self._paperlist and self.process_url(self._paperlist[0]['site'], self._year):
                 cprint('info', f'{self._conf} {self._year}: Fetching Extra...')
                 self.crawl_extra()
             else:
@@ -201,27 +201,27 @@ class StBotICLR(CCBot):
         return status_new
     
     @staticmethod
-    def process_url(url_paper):
+    def process_url(url_paper, year):
         
         # open paper url to load status
-        response_paper = requests.get(url_paper)
+        response_paper = sitebot.SiteBot.session_request(url_paper)
         tree_paper = html.fromstring(response_paper.content)
+        ret = {'site': url_paper,}
         
         # get the div element that contains a <a> element with text 'Abstract'
         e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
-        if not e_container: return {}
+        if not e_container: return ret
         
         e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
-        url_poster = '' if not e_poster else e_poster[0].xpath("./@href")[0]
+        ret['poster'] = '' if not e_poster else e_poster[0].xpath("./@href")[0]
         
         e_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
-        url_openreview = '' if not e_openreview else e_openreview[0].xpath("./@href")[0]
+        ret['openreview'] = '' if not e_openreview else e_openreview[0].xpath("./@href")[0]
         
-        return {
-            'site': url_paper,
-            'poster': url_poster,
-            'openreview': url_openreview,
-        }
+        ret['slides'] = url_paper
+        ret['video'] = url_paper
+        
+        return ret
             
         
 class StBotNIPS(CCBot):
@@ -265,31 +265,43 @@ class StBotNIPS(CCBot):
         
     
     @staticmethod
-    def process_url(url_paper):
+    def process_url(url_paper, year):
         
         # open paper url to load status
         response_paper = sitebot.SiteBot.session_request(url_paper)
         tree_paper = html.fromstring(response_paper.content)
+        ret = {'site': url_paper,}
         
         # get the div element that contains a <a> element with text 'Abstract'
         e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
-        if not e_container: return {}
+        if not e_container: return ret
         
-        e_paper = tree_paper.xpath("//a[normalize-space()='Paper']")
-        url_abstract = '' if not e_paper else e_paper[0].xpath("./@href")[0]
+        if year == 2023 or year == 2022:
+            e_proceeding = tree_paper.xpath("//a[normalize-space()='Paper']")
+            ret['proceeding'] = '' if not e_proceeding else e_proceeding[0].xpath("./@href")[0]
+            
+            ret['pdf'] = ret['proceeding'].replace('/hash/', '/file/').replace('Abstract-Conference.html', 'Paper-Conference.pdf')
+            
+            e_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
+            ret['openreview'] = '' if not e_openreview else e_openreview[0].xpath("./@href")[0]
+            
+            e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
+            ret['poster'] = '' if not e_poster else e_poster[0].xpath("./@href")[0]
+            
+            ret['slides'] = url_paper
+            ret['video'] = url_paper
+            
+        elif year == 2021:
+            e_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
+            ret['openreview'] = '' if not e_openreview else e_openreview[0].xpath("./@href")[0]
+        elif year == 2020:
+            e_proceeding = tree_paper.xpath("//a[normalize-space()='Paper']")
+            ret['proceeding'] = '' if not e_proceeding else e_proceeding[0].xpath("./@href")[0]
+        else:
+            pass
         
-        e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
-        url_poster = '' if not e_poster else e_poster[0].xpath("./@href")[0]
+        return ret
         
-        e_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
-        url_openreview = '' if not e_openreview else e_openreview[0].xpath("./@href")[0]
-        
-        return {
-            'site': url_paper,
-            'paper': url_abstract,
-            'poster': url_poster,
-            'openreview': url_openreview,
-        }
             
 class StBotICML(CCBot):
     
@@ -309,6 +321,49 @@ class StBotICML(CCBot):
         status_new = status_new if status_priority[status_new] > status_priority[status] else status
         
         return status_new
+    
+    
+    @staticmethod
+    def process_url(url_paper, year):
+        
+        # open paper url to load status
+        response_paper = sitebot.SiteBot.session_request(url_paper)
+        tree_paper = html.fromstring(response_paper.content)
+        ret = {'site': url_paper,}
+        
+        # get the div element that contains a <a> element with text 'Abstract'
+        e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
+        if not e_container: return ret
+        
+        if year == 2023:
+            e_pdf = tree_paper.xpath("//a[normalize-space()='PDF']")
+            ret['pdf'] = '' if not e_pdf else e_pdf[0].xpath("./@href")[0]
+            
+            # replace last '/*.pdf' with '.html'
+            ret['proceeding'] = '' if not ret['pdf'] else ret['pdf'].rsplit('/', 1)[0] + '.html'
+            
+            ret['slides'] = url_paper
+            ret['video'] = url_paper
+            
+        elif year == 2022:
+            e_proceeding = tree_paper.xpath("//a[normalize-space()='Paper PDF']")
+            ret['proceeding'] = '' if not e_proceeding else e_proceeding[0].xpath("./@href")[0]
+            
+            e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
+            ret['poster'] = '' if not e_poster else e_poster[0].xpath("./@href")[0]
+            
+            e_slides = tree_paper.xpath("//a[normalize-space()='Slides']")
+            ret['slides'] = '' if not e_slides else e_slides[0].xpath("./@href")[0]
+        elif year == 2021:
+            e_proceeding = tree_paper.xpath("//a[normalize-space()='Paper']")
+            ret['proceeding'] = '' if not e_proceeding else e_proceeding[0].xpath("./@href")[0]
+            
+            e_slides = tree_paper.xpath("//a[normalize-space()='Slides']")
+            ret['slides'] = '' if not e_slides else e_slides[0].xpath("./@href")[0]
+        else:
+            pass
+        
+        return ret
         
         
 class StBotCVPR(CCBot):
@@ -322,43 +377,42 @@ class StBotCVPR(CCBot):
         return title, author, status, paperid, extra
     
     @staticmethod
-    def process_url(url_paper):
+    def process_url(url_paper, year):
         
         # open paper url to load status
-        response_paper = requests.get(url_paper)
+        response_paper = sitebot.SiteBot.session_request(url_paper)
         tree_paper = html.fromstring(response_paper.content)
+        ret = {'site': url_paper,}
         
         # get the div element that contains a <a> element with text 'Abstract'
         e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
-        if not e_container: return {}
+        if not e_container: return ret
         
-        # if 'Highlight' is in the first element
-        status = 'Highlight' if 'Highlight' in e_container[0].text_content() else 'Poster'
+        if year == 2024:
+            pass
+        elif year == 2023:
+            # if 'Highlight' is in the first element
+            ret['status'] = 'Highlight' if 'Highlight' in e_container[0].text_content() else 'Poster'
 
-        # get project page if exist
-        e_project = tree_paper.xpath("//a[normalize-space()='Project Page']")
-        url_project = '' if not e_project else e_project[0].xpath("./@href")[0]
+            # get project page if exist
+            e_project = tree_paper.xpath("//a[normalize-space()='Project Page']")
+            url_project = '' if not e_project else e_project[0].xpath("./@href")[0]
+            
+            # get github link if exist
+            ret['github'] = '' if 'github.com' not in url_project else url_project
+            ret['project'] = '' if 'github.com' in url_project else url_project
+            
+            # find if there is a div with id='after-abstract-media'
+            e_after_abstract_media = tree_paper.xpath("//div[@id='after-abstract-media']")
+            ret['video'] = '' if not e_after_abstract_media else f'https://youtu.be/{e_after_abstract_media[0].xpath(".//iframe/@src")[0].split("/")[-1]}'
+            
+            # get pdf url
+            e_url_pdf = tree_paper.xpath("//a[@title='Paper PDF']")
+            ret['pdf'] = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
+            
+            ret['proceeding'] = ret['pdf'].replace('/papers/', '/html/').replace('.pdf', '.html')
         
-        # get github link if exist
-        url_github = '' if 'github.com' not in url_project else url_project
-        url_project = '' if 'github.com' in url_project else url_project
-        
-        # find if there is a div with id='after-abstract-media'
-        e_after_abstract_media = tree_paper.xpath("//div[@id='after-abstract-media']")
-        url_youtube = '' if not e_after_abstract_media else f'https://youtu.be/{e_after_abstract_media[0].xpath(".//iframe/@src")[0].split("/")[-1]}'
-        
-        # get pdf url
-        e_url_pdf = tree_paper.xpath("//a[@title='Paper PDF']")
-        url_pdf = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
-        
-        return {
-            'status': status,
-            'site': url_paper,
-            'project': url_project,
-            'github': url_github,
-            'youtube': url_youtube,
-            'pdf': url_pdf,
-        }
+        return ret
         
 class StBotECCV(CCBot):
                         

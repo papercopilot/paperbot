@@ -60,7 +60,7 @@ class OpenreviewBot(sitebot.SiteBot):
             self.summarizer.update_summary(ivt, count)
     
     def ping(self, url=''):
-        response = requests.get(url)
+        response = sitebot.SiteBot.session_request(url)
         data = response.json()
         return int(data.get('count', 0))
     
@@ -218,7 +218,7 @@ class OpenreviewBot(sitebot.SiteBot):
         pbar = tqdm(total=self.summarizer.tier_num[tid], desc=ivt, leave=False)
         while (offset < self.summarizer.tier_num[tid]):
             # get response
-            response = requests.get(f'{url}&limit={batch}&offset={offset}&details=replyCount,directReplies')
+            response = sitebot.SiteBot.session_request(f'{url}&limit={batch}&offset={offset}&details=replyCount,directReplies')
             data = response.json()
             
             # process data here
