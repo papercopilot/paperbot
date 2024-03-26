@@ -283,7 +283,7 @@ class OABotCVPR(OpenaccessBot):
         ret = {'site': url_paper,}
         
         e_author = tree_paper.xpath("//div[@id= 'authors']/b//text()")
-        ret['authors'] = e_author[0].strip().replace(';', '')
+        ret['author'] = e_author[0].strip().replace(';', '')
         
         e_pdf = tree_paper.xpath("//a[contains(., 'pdf')]/@href")
         ret['pdf'] = domain + e_pdf[0]

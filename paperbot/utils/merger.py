@@ -143,7 +143,7 @@ class Merger:
     def merge_paper_site_openreview(self, p1, p2):
         # p1 is site, p2 is openreview
         paper = p2.copy()
-        paper['authors'] = paper['authors'] if paper['authors'] else p1['author']
+        paper['author'] = paper['author'] if paper['author'] else p1['author']
         paper['status'] = paper['status'] if paper['status'] else p1['status']
         paper['site'] = p1['site']
         
@@ -374,7 +374,7 @@ class MergerCVPR(Merger):
             'github': paper['github'],
             'pdf': paper['pdf'],
             'youtube': paper['video'],
-            'authors': paper['author'],
+            'author': paper['author'],
             'aff': paper['aff'],
             'oa': paper['oa'],
             "arxiv": paper['arxiv'],  # from openaccess

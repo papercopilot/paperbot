@@ -247,7 +247,7 @@ class OpenreviewBot(sitebot.SiteBot):
                     'track': track,
                     'status': status,
                     'keywords': keywords,
-                    'authors': '',
+                    'author': '',
                     
                     'rating': extra['rating']['str'],
                     'confidence': extra['confidence']['str'],
@@ -434,7 +434,7 @@ class ORBotICML(OpenreviewBot):
                     'track': 'main',
                     'status': status,
                     'keywords': keywords,
-                    'authors': '',
+                    'author': '',
                     
                     'rating': extra['rating']['str'],
                     'confidence': extra['confidence']['str'],

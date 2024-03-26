@@ -8,9 +8,9 @@
                         "poster": "Poster"
                     }
                 }
-            }
-        },
-        "accepted": "https://cvpr.thecvf.com/Conferences/2024/AcceptedPapers"
+            },
+            "accepted": "https://cvpr.thecvf.com/Conferences/2024/AcceptedPapers"
+        }
     },
     "2023": {
         "site": {

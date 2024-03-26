@@ -7,6 +7,7 @@ from lxml import html
 import spacy
 import os
 import multiprocessing as mp
+import difflib
 
 from . import sitebot
 from ..utils import util, summarizer
@@ -49,6 +50,9 @@ class CCBot(sitebot.SiteBot):
         paperid = title
         status = None
         extra = {}
+        
+        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
+        extra['site'] = f'{self._domain}{href}'
         
         return title, author, status, paperid, extra
     
@@ -97,26 +101,33 @@ class CCBot(sitebot.SiteBot):
                 self._paper_idx[paperid] = len(self._paperlist) - 1
                 
     def crawl_extra(self):
-        # create hashmap for paperlist
-        paper_idx = {p['site']: i for i, p in enumerate(self._paperlist)}
         
-        # parallel crawl, DONT make pool as a class attribute
-        # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
-        pool = mp.Pool(mp.cpu_count() * 2)
-        rets = mp.Manager().list()
-        pbar = tqdm(total=len(self._paperlist), leave=False)
+        if self._paperlist and self.process_url(self._paperlist[0]['site'], self._year):
+            cprint('info', f'{self._conf} {self._year}: Fetching Extra...')
         
-        def mpupdate(x):
-            rets.append(x)
-            pbar.update(1)
-        for i in range(pbar.total):
-            pool.apply_async(self.process_url, (self._paperlist[i]['site'], self._year), callback=mpupdate)
-        pool.close()
-        pool.join()
-        
-        for ret in rets:
-            idx = paper_idx[ret['site']]
-            self._paperlist[idx].update(ret)
+            # create hashmap for paperlist
+            paper_idx = {p['site']: i for i, p in enumerate(self._paperlist)}
+            
+            # parallel crawl, DONT make pool as a class attribute
+            # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
+            pool = mp.Pool(mp.cpu_count() * 2)
+            rets = mp.Manager().list()
+            pbar = tqdm(total=len(self._paperlist), leave=False)
+            
+            def mpupdate(x):
+                rets.append(x)
+                pbar.update(1)
+            for i in range(pbar.total):
+                pool.apply_async(self.process_url, (self._paperlist[i]['site'], self._year), callback=mpupdate)
+            pool.close()
+            pool.join()
+            
+            for ret in rets:
+                idx = paper_idx[ret['site']]
+                self._paperlist[idx].update(ret)
+        else:
+            cprint('warning', f'{self._conf} {self._year}: Extra Not available.')
+            
             
     @staticmethod
     def process_url(url_paper):
@@ -140,11 +151,7 @@ class CCBot(sitebot.SiteBot):
                     self.crawl(url_page, pages[k], track)
             
             # crawl for extra info if available
-            if self._paperlist and self.process_url(self._paperlist[0]['site'], self._year):
-                cprint('info', f'{self._conf} {self._year}: Fetching Extra...')
-                self.crawl_extra()
-            else:
-                cprint('warning', f'{self._conf} {self._year}: Extra Not available.')
+            self.crawl_extra()
             
         else:
             # load previous
@@ -171,9 +178,6 @@ class StBotICLR(CCBot):
         
     def process_card(self, e):
         title, author, status, paperid, extra = super().process_card(e)
-        
-        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
-        extra['site'] = f'{self._domain}{href}'
         
         # process special cases
         if self._year == 2023:
@@ -206,12 +210,12 @@ class StBotICLR(CCBot):
         # open paper url to load status
         response_paper = sitebot.SiteBot.session_request(url_paper)
         tree_paper = html.fromstring(response_paper.content)
-        ret = {'site': url_paper,}
         
         # get the div element that contains a <a> element with text 'Abstract'
         e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
-        if not e_container: return ret
+        if not e_container: return {}
         
+        ret = {'site': url_paper,}
         e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
         ret['poster'] = '' if not e_poster else e_poster[0].xpath("./@href")[0]
         
@@ -229,9 +233,6 @@ class StBotNIPS(CCBot):
     def process_card(self, e):
         title, author, status, paperid, extra = super().process_card(e)
         
-        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
-        extra['site'] = f'{self._domain}{href}'
-        
         # process special cases
         if self._year == 2023:
             status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
@@ -241,7 +242,6 @@ class StBotNIPS(CCBot):
             # |-Main Poster-|-Main Oral-|-Data Oral-|-Data Poster-|             'highlighted'
             # status = e.xpath(".//div[@class='type_display_name_virtual_card']//text()")[0].strip()
             paperid = title + ';' + author.split(',')[0].strip()
-            
         
         return title, author, status, paperid, extra
     
@@ -270,12 +270,12 @@ class StBotNIPS(CCBot):
         # open paper url to load status
         response_paper = sitebot.SiteBot.session_request(url_paper)
         tree_paper = html.fromstring(response_paper.content)
-        ret = {'site': url_paper,}
         
         # get the div element that contains a <a> element with text 'Abstract'
         e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
-        if not e_container: return ret
+        if not e_container: return {}
         
+        ret = {'site': url_paper,}
         if year == 2023 or year == 2022:
             e_proceeding = tree_paper.xpath("//a[normalize-space()='Paper']")
             ret['proceeding'] = '' if not e_proceeding else e_proceeding[0].xpath("./@href")[0]
@@ -306,12 +306,7 @@ class StBotNIPS(CCBot):
 class StBotICML(CCBot):
     
     def process_card(self, e):
-        title, author, status, paperid, extra = super().process_card(e)
-        
-        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
-        extra['site'] = f'{self._domain}{href}'
-        
-        return title, author, status, paperid, extra
+        return super().process_card(e)
         
     
     def get_highest_status(self, status_new, status):
@@ -329,12 +324,12 @@ class StBotICML(CCBot):
         # open paper url to load status
         response_paper = sitebot.SiteBot.session_request(url_paper)
         tree_paper = html.fromstring(response_paper.content)
-        ret = {'site': url_paper,}
         
         # get the div element that contains a <a> element with text 'Abstract'
         e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
-        if not e_container: return ret
+        if not e_container: return {}
         
+        ret = {'site': url_paper,}
         if year == 2023:
             e_pdf = tree_paper.xpath("//a[normalize-space()='PDF']")
             ret['pdf'] = '' if not e_pdf else e_pdf[0].xpath("./@href")[0]
@@ -368,13 +363,104 @@ class StBotICML(CCBot):
         
 class StBotCVPR(CCBot):
     
+    def crawl_extra(self):
+        super().crawl_extra()
+        
+        # TODO: this section is similar to merger function, maybe defined this as another src and merge it 
+        if self._year == 2024:
+            
+            url = self._args['accepted']
+            response = sitebot.SiteBot.session_request(url)
+            tree_page = html.fromstring(response.content)
+            e_papers = tree_page.xpath("//table/tr")
+            
+            paperlist_accept = []
+            for e in tqdm(e_papers):
+                
+                if e.xpath(".//strong//text()"):
+                    title = e.xpath(".//strong//text()")[0].strip()
+                    github = ''
+                elif e.xpath(".//a//text()"):
+                    title = e.xpath(".//a//text()")[0].strip()
+                    github = e.xpath(".//a/@href")[0].strip()
+                else:
+                    continue # skip empty title
+                    
+                authoraffs = e.xpath(".//i//text()")[0].strip()
+                authoraffs = authoraffs.split('·')
+                authors, affs = [], []
+                for authoraff in authoraffs:
+                    author, aff = authoraff.split('(', 1)
+                    author = author.strip()
+                    aff = aff.rsplit(')', 1)[0].strip()
+                    aff = '' if aff == 'None' else aff
+                    
+                    authors.append(author)
+                    affs.append(aff)
+                    
+                # remove redundant affs
+                affs = list(set(affs))
+                affs = list(filter(None, affs))
+                    
+                # remove redundant affs and stringfy
+                authors = ', '.join(authors)
+                affs = '; '.join(list(set(affs)))
+                
+                paperlist_accept.append({
+                    'title': title,
+                    'author': authors,
+                    'aff': affs,
+                    'github': github,
+                })
+            
+            paperdict_site = {paper['title']: i for i, paper in enumerate(self._paperlist)}
+            paperdict_accept = {paper['title']: i for i, paper in enumerate(paperlist_accept)}
+            paperlist_merged = []
+                
+            for title in paperdict_site:
+                if title in paperdict_accept:
+                    paper_accept = paperlist_accept[paperdict_accept[title]]
+                    paper_site = self._paperlist[paperdict_site[title]]
+                    
+                    paper = paper_site.copy()
+                    paper.update(paper_accept)
+                    
+                    paperlist_merged.append(paper)
+                    
+            for paper in paperlist_merged:
+                paperdict_site.pop(paper['title'], None)
+                paperdict_accept.pop(paper['title'], None)
+                
+            # check if there are missing papers
+            if not paperdict_accept and not paperdict_site:
+                pass
+            elif paperdict_accept and not paperdict_site:
+                pass
+            elif not paperdict_accept and paperdict_site:
+                pass
+            else:
+                cprint('warning', f'Accepted papers has {len(paperdict_accept)} left and site has {len(paperdict_site)} left.')
+                total_matches = 0
+                for title in tqdm(paperdict_accept.keys(), desc='Merging leftovers'):
+                    paper_accept = paperlist_accept[paperdict_accept[title]]
+                    
+                    matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=0.9)
+                    if matches:
+                        paper_site = self._paperlist[paperdict_site[matches[0]]]
+                        paper = paper_site.copy()
+                        paper.update(paper_accept)
+                        total_matches += 1
+                    else:
+                        paper = paper_accept
+                
+                paperlist_merged.append(paper)
+                
+            cprint('warning', f'Matched {total_matches} papers.')
+            self._paperlist = paperlist_merged
+                
+                
     def process_card(self, e):
-        title, author, status, paperid, extra = super().process_card(e)
-        
-        href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
-        extra['site'] = f'{self._domain}{href}'
-        
-        return title, author, status, paperid, extra
+        return super().process_card(e)
     
     @staticmethod
     def process_url(url_paper, year):
@@ -382,12 +468,12 @@ class StBotCVPR(CCBot):
         # open paper url to load status
         response_paper = sitebot.SiteBot.session_request(url_paper)
         tree_paper = html.fromstring(response_paper.content)
-        ret = {'site': url_paper,}
         
         # get the div element that contains a <a> element with text 'Abstract'
         e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
-        if not e_container: return ret
+        if not e_container: return {}
         
+        ret = {'site': url_paper,}
         if year == 2024:
             pass
         elif year == 2023:
