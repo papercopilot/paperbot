@@ -13,17 +13,19 @@ def set_arguments():
     parser.add_argument('--root_dir', type=str, help='root directory for logs', default='../logs')
     parser.add_argument('--openreview_dir', type=str, help='directory for openreview logs', default='openreview')
     parser.add_argument('--site_dir', type=str, help='directory for site logs', default='sites')
+    parser.add_argument('--openaccess_dir', type=str, help='directory for openaccess logs', default='openaccess')
     parser.add_argument('--paperlists_dir', type=str, help='directory for site logs', default='paperlists')
     parser.add_argument('--statistics_dir', type=str, help='directory for summary logs', default='stats')
     
     # 
     parser.add_argument('--use_openreview', action='store_true', help='use data from openreview', default=True)
     parser.add_argument('--use_site', action='store_true', help='use data from site', default=True)
-    parser.add_argument('--use_openaccess', action='store_true', help='use data from openaccess', default=False)
-    parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview, disabled automatically when not using openreview data', default=True)
+    parser.add_argument('--use_openaccess', action='store_true', help='use data from openaccess', default=True)
+    parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview, disabled automatically when not using openreview data', default=False)
     parser.add_argument('--fetch_site', action='store_true', help='fetch from site, disabled automatically when not using site data', default=True)
     parser.add_argument('--fetch_openaccess', action='store_true', help='fetch from openaccess, disabled automatically when not using openaccess data ', default=True)
     
+    parser.add_argument('--fetch_extra', action='store_true', help='fetch extra information', default=False)
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
     
     parser.add_argument('--save', action='store_true', help='save the results', default=True)
@@ -38,7 +40,7 @@ if __name__ == "__main__":
     set_arguments()
     args = parser.parse_args()
     # args.confs = ['emnlp', 'corl']
-    # args.confs = ['iclr']
-    # args.years = [2018]
+    args.confs = ['cvpr']
+    args.years = [2023]
     
     test_pipeline(args)

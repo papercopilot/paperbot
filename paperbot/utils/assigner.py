@@ -2,6 +2,7 @@ from ..bots import sitebot
 from ..bots import openreviewbot
 from ..bots import ccbot
 from ..bots import cvfbot
+from ..bots import openaccessbot
 from ..utils import merger
 
 class Assigner:
@@ -79,7 +80,7 @@ class AssignerCVPR(Assigner):
             else:
                 return cvfbot.StBotCVPR
         elif botname == 'oa':
-            return cvfbot.OABotCVPR
+            return openaccessbot.OABotCVPR
         elif botname == 'merge':
             return merger.MergerCVPR
         else: super().__new__(cls, botname)
