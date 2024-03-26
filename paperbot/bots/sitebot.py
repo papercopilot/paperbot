@@ -88,12 +88,12 @@ class SiteBot:
         pass
 
     @staticmethod
-    def session_request(url, retries=10):
+    def session_request(url, retries=10, stream=None):
         # https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests
         
         try:
             # direct request
-            response = requests.get(url)
+            response = requests.get(url, stream=stream)
         except requests.exceptions.RequestException as e:
             session = requests.Session()
             retry = Retry(connect=retries, backoff_factor=0.5)

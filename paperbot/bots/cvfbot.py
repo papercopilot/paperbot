@@ -18,8 +18,23 @@ class OpenaccessBot(sitebot.SiteBot):
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
+        if 'openaccess' not in self._args:
+            self._args = None
+            return
+        self._args = self._args['openaccess']
+        self._tracks = self._args['track']
+            
+        self._domain = self._args['domain']
+        self._baseurl = f'{self._domain}'
         
-    def parse_pdf(self, url_pdf):
+        self._paths = {
+            'paperlist': os.path.join(self._root_dir, 'venues'),
+            'summary': os.path.join(self._root_dir, 'summary'),
+            'keywords': os.path.join(self._root_dir, 'keywords'),
+        }
+        
+    @staticmethod
+    def parse_pdf(url_pdf):
     
         # load pdf from remote url
         # https://stackoverflow.com/questions/9751197/opening-pdf-urls-with-pypdf
@@ -52,8 +67,9 @@ class OpenaccessBot(sitebot.SiteBot):
             # get project page link
             match = re.search("(?P<url>https?://[^\s]+)", page_text)
             url_project = '' if not match else match.group()
-            url_github = '' if 'github.com' not in url_project else url_project
             page_text = page_text if not match else page_text.replace(url_project, '\n')
+            url_github = '' if 'github.com' not in url_project else url_project
+            url_project = '' if 'github.com' in url_project else url_project
             
             # split the text by '\nAbstract\n'
             text_left = page_text.split('\nAbstract\n')[0]
@@ -175,33 +191,46 @@ class OpenaccessBot(sitebot.SiteBot):
     
     def crawl(self, url_paper, page, track):
     
-        page_paper = requests.get(url_paper)
-        if page_paper.status_code != 200: return {}
-        tree_page = html.fromstring(page_paper.content)
+        response = sitebot.SiteBot.session_request(url_paper)
+        tree_page = html.fromstring(response.content)
+        e_papers = tree_page.xpath("//dt/a")
         
-        # get authors
-        authors = tree_page.xpath("//div[@id= 'authors']/b//text()")
-        authors = authors[0].strip().replace(';', '')
+        # parse each entry
+        for e in tqdm(e_papers, leave=False):
+            title = e.text_content().strip()
+            site = os.path.dirname(self._domain) + e.attrib['href']
+            
+            self._paperlist.append({
+                'title': title,
+                'site': site,
+            })
         
-        # 
-        url_pdf = tree_page.xpath("//a[contains(., 'pdf')]/@href")[0]
-        url_pdf = os.path.dirname(args[year][conf]['url_paperlist']) + url_pdf
+    def crawl_extra(self):
         
-        _, authors, aff, url_project, url_github = self.parse_pdf(url_pdf)
+        # create hashmap for paperlist
+        paper_idx = {p['site']: i for i, p in enumerate(self._paperlist)}
         
-        # 
-        arxiv = tree_page.xpath("//a[contains(., 'arXiv')]/@href")
-        if arxiv: arxiv = os.path.basename(arxiv[0])
+        # parallel crawl, DONT make pool as a class attribute
+        # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
+        pool = mp.Pool(mp.cpu_count() * 2)
+        rets = mp.Manager().list()
+        pbar = tqdm(total=len(self._paperlist), leave=False)
         
-        return {
-            'title': title,
-            'authors': authors,
-            'aff': aff,
-            'sess': '',
-            'url_oa': url_paper,
-            'url_pdf': url_pdf,
-            'arxiv': arxiv or '',
-        }
+        def mpupdate(x):
+            rets.append(x)
+            pbar.update(1)
+        for i in range(pbar.total):
+            pool.apply_async(self.process_url, (self._paperlist[i]['site'], self._year), callback=mpupdate)
+        pool.close()
+        pool.join()
+        
+        for ret in rets:
+            idx = paper_idx[ret['site']]
+            self._paperlist[idx].update(ret)
+            
+    @staticmethod
+    def process_url(self, year):
+        pass
     
     def launch(self, fetch_site=False):
         if not self._args: 
@@ -214,32 +243,62 @@ class OpenaccessBot(sitebot.SiteBot):
                 
                 # loop over pages
                 for k in tqdm(pages.keys()):
-                    for url in pages[k]:
-                        url_page = url
-                        self.crawl(url_page, pages[k], track)
+                    url_page = f'{self._baseurl}{pages[k]}'
+                    self.crawl(url_page, k, track)
+                    
+            # crawl for extra info if available
+            if self._paperlist and self.process_url(self._paperlist[0]['site'], self._year):
+                cprint('info', f'{self._conf} {self._year}: Fetching Extra...')
+                self.crawl_extra()
+            else:
+                cprint('warning', f'{self._conf} {self._year}: Extra Not available.')
         else:
             # load previous
-            self._paperlist = self.read_paperlist()
+            self._paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), key='title')
             
         # sort paperlist after crawling
         self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])
-        del self._paper_idx
         
         # update paperlist
-        self.summarizer.paperlist = self._paperlist
+        # self.summarizer.paperlist = self._paperlist
         
-        # summarize paperlist
-        for track in self._tracks:
-            self._summary_all_tracks[track] = self.summarizer.summarize_paperlist(track)
+        # # summarize paperlist
+        # for track in self._tracks:
+        #     self._summary_all_tracks[track] = self.summarizer.summarize_paperlist(track)
                 
         # save paperlist for each venue per year
         self.save_paperlist()
         
         
 class OABotCVPR(OpenaccessBot):
-                
-    def __init__(self, conf='', year=None, root_dir=''):
-        super().__init__(conf, year, root_dir)
+        
+    @staticmethod
+    def process_url(url_paper, year):
+        
+        parsed_url = urlparse(url_paper)
+        domain = f'{parsed_url.scheme}://{parsed_url.netloc}'
+        
+        # open paper url to load status
+        response_paper = sitebot.SiteBot.session_request(url_paper)
+        tree_paper = html.fromstring(response_paper.content)
+        
+        ret = {'site': url_paper,}
+        
+        e_author = tree_paper.xpath("//div[@id= 'authors']/b//text()")
+        ret['authors'] = e_author[0].strip().replace(';', '')
+        
+        e_pdf = tree_paper.xpath("//a[contains(., 'pdf')]/@href")
+        ret['pdf'] = domain + e_pdf[0]
+        
+        _, authors, aff, url_project, url_github = OpenaccessBot.parse_pdf(ret['pdf'])
+        ret['aff'] = aff
+        ret['project'] = url_project
+        ret['github'] = url_github
+        
+        e_arxiv = tree_paper.xpath("//a[contains(., 'arXiv')]/@href")
+        ret['arxiv'] = os.path.basename(e_arxiv[0]) if e_arxiv else ''
+        
+        return ret
         
 class CVFBot(sitebot.SiteBot):
     

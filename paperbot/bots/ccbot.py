@@ -410,7 +410,7 @@ class StBotCVPR(CCBot):
             e_url_pdf = tree_paper.xpath("//a[@title='Paper PDF']")
             ret['pdf'] = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
             
-            ret['proceeding'] = ret['pdf'].replace('/papers/', '/html/').replace('.pdf', '.html')
+            ret['oa'] = ret['pdf'].replace('/papers/', '/html/').replace('.pdf', '.html')
         
         return ret
         

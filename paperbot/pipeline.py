@@ -26,6 +26,7 @@ class Pipeline:
         self.paths = {
             'openreview': os.path.join(self.root_dir, args.openreview_dir),
             'site': os.path.join(self.root_dir, args.site_dir),
+            'openaccess': os.path.join(self.root_dir, args.openaccess_dir),
             'paperlists': os.path.join(self.root_dir, args.paperlists_dir),
             'statistics': os.path.join(self.root_dir, args.statistics_dir),
         }
@@ -113,7 +114,7 @@ class Pipeline:
                         assigner = eval(assigner_name)('oa')
                         openaccessbot = assigner(conf, year, root_dir=self.paths['openaccess'])
                         openaccessbot.launch(self.fetch_openaccess)
-                        self.summary_openaccess[conf][year] = openaccessbot.summary_all_tracks
+                        # self.summary_openaccess[conf][year] = openaccessbot.summary_all_tracks
                     except Exception as e:
                         if type(e) == ValueError:
                             cprint('warning', f'{conf} {year}: Openaccess Not available.')

@@ -23,6 +23,15 @@
                 }
             }
         },
-        "openaccess": "https://openaccess.thecvf.com/CVPR2023?day=all"
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2023",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "?day=all"
+                    }
+                }
+            }
+        }
     }
 }
