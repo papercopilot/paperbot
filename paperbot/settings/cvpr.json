@@ -1,7 +1,7 @@
 {
     "2024":{
         "site": {
-            "domain": "https://cvpr2023.thecvf.com",
+            "domain": "https://cvpr.thecvf.com",
             "track": {
                 "main": {
                     "pages": {
@@ -14,7 +14,7 @@
     },
     "2023": {
         "site": {
-            "domain": "https://cvpr2023.thecvf.com",
+            "domain": "https://cvpr.thecvf.com",
             "track": {
                 "main": {
                     "pages": {
