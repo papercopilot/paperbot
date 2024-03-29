@@ -121,6 +121,11 @@ class StBotEMNLP(SiteBot):
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir) 
         
+class StBotACL(SiteBot):
+        
+        def __init__(self, conf='', year=None, root_dir=''):
+            super().__init__(conf, year, root_dir)
+        
 class StBotSIGGRAPH(SiteBot):
     
     def __init__(self, conf='', year=None, root_dir=''):

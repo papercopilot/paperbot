@@ -489,3 +489,68 @@ class ORBotEMNLP(OpenreviewBot):
     
         if status: self.summarizer.update_summary(status)
         return status
+    
+
+class ORBotACL(OpenreviewBot):
+    
+    def load_csv(self):
+        # TODO: remove this to another source bot e.g. formbot
+        if self._year == 2024:
+            df = pd.read_csv('/home/jyang/projects/papercopilot/logs/googleform/venues/acl/ACL2024.csv')
+            
+            # process
+            ratings = []
+            confidences = []
+            for index, row in df.iterrows():
+                id = index
+                title = ''
+                keywords = ''
+                status = ''
+                
+                match = re.search('[a-zA-Z]', row['Initial Overall Assessment']) # check if there is any alphabet
+                if match: continue
+                if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
+
+                rating = row['Initial Overall Assessment'].split(',')
+                confidence = row['Initial Confidence'].split(',')
+                correctness = row['Initial Soundness'].split(',')
+
+                ratings.append(rating)
+                confidences.append(confidence)
+                # list to numpy
+                list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
+                rating = list2np(rating)
+                confidence = list2np(confidence)
+
+                np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+                np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+                np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+                
+                extra = {
+                    'rating': {
+                        'str': np2str(rating),
+                        'avg': np2avg(rating)
+                    },
+                    'confidence': {
+                        'str': np2str(confidence),
+                        'avg': np2avg(confidence)
+                    },
+                    'corr_rating_confidence': np2coef(rating, confidence),
+                }
+                
+                self._paperlist.append({
+                    'id': id,
+                    'title': title,
+                    'track': 'main',
+                    'status': status,
+                    'keywords': keywords,
+                    'author': '',
+                    
+                    'rating': extra['rating']['str'],
+                    'confidence': extra['confidence']['str'],
+                    
+                    'rating_avg': extra['rating']['avg'],
+                    'confidence_avg': extra['confidence']['avg'],
+                    
+                    'corr_rating_confidence': extra['corr_rating_confidence'],
+                })

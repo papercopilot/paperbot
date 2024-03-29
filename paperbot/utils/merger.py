@@ -355,6 +355,12 @@ class MergerEMNLP(Merger):
         paper = super().merge_paper_site_openreview(p1, p2)
         return paper
     
+class MergerACL(Merger):
+        
+        def merge_paper_site_openreview(self, p1, p2):
+            paper = super().merge_paper_site_openreview(p1, p2)
+            return paper
+    
 class MergerCVPR(Merger):
     
     def merge_paper_site_openaccess(self, p1, p2):

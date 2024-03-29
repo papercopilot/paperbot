@@ -69,6 +69,17 @@ class AssignerEMNLP(Assigner):
         elif botname == 'merge':
             return merger.MergerEMNLP
         else: super().__new__(cls, botname)
+        
+class AssignerACL(Assigner):
+        
+    def __new__(cls, botname, year=0):
+        if botname == 'or':
+            return openreviewbot.ORBotACL
+        elif botname == 'st':
+            return sitebot.StBotACL
+        elif botname == 'merge':
+            return merger.MergerACL
+        else: super().__new__(cls, botname)
             
             
 class AssignerCVPR(Assigner):
