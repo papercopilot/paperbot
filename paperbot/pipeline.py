@@ -17,6 +17,7 @@ class Pipeline:
         self.use_openreview = args.use_openreview
         self.use_site = args.use_site
         self.use_openaccess = args.use_openaccess
+        self.use_gform = args.use_gform
         
         self.fetch_openreview = args.fetch_openreview
         self.fetch_site = args.fetch_site
@@ -27,6 +28,7 @@ class Pipeline:
             'openreview': os.path.join(self.root_dir, args.openreview_dir),
             'site': os.path.join(self.root_dir, args.site_dir),
             'openaccess': os.path.join(self.root_dir, args.openaccess_dir),
+            'gform': os.path.join(self.root_dir, args.gform_dir), 
             'paperlists': os.path.join(self.root_dir, args.paperlists_dir),
             'statistics': os.path.join(self.root_dir, args.statistics_dir),
         }
@@ -89,6 +91,7 @@ class Pipeline:
                         self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks
                     except Exception as e:
                         if type(e) == ValueError:
+                            cprint('warning', e)
                             cprint('warning', f'{conf} {year}: Openreview Not available.')
                         else:
                             cprint('error', f"Openreview for {conf} {year}: {e}")
@@ -120,6 +123,21 @@ class Pipeline:
                             cprint('warning', f'{conf} {year}: Openaccess Not available.')
                         else:
                             cprint('error', f"Openaccess for {conf} {year}: {e}")
+                            raise e
+                        
+                if self.use_gform:
+                    cprint('info', f"Initializing GForm bots for {conf} {year}")
+                    try:
+                        assigner = eval(assigner_name)('gform')
+                        gformbot = assigner(conf, year, root_dir=self.paths['gform'])
+                        gformbot.launch()
+                        self.summary_openreview[conf][year] = gformbot.summary_all_tracks
+                    except Exception as e:
+                        if type(e) == ValueError:
+                            cprint('warning', f'{conf} {year}: GForm Not available.')
+                            raise e
+                        else:
+                            cprint('error', f"GForm for {conf} {year}: {e}")
                             raise e
                 
                 cprint('info', f"Merging paperlists for {conf} {year}")

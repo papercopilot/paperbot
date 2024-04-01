@@ -177,6 +177,7 @@ class Summarizer():
             
             # rating_avg transfer matrix for withdraw and active
             for k in ['Active', 'Withdraw']:
+                if k not in self.tier_ids: continue
                 tid = self.tier_ids[k]
                 rating_avg_transfer = np.zeros((100, 100))
                 for o, o0 in zip(self._paperlist, paperlist0):

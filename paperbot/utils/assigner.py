@@ -3,6 +3,7 @@ from ..bots import openreviewbot
 from ..bots import ccbot
 from ..bots import cvfbot
 from ..bots import openaccessbot
+from ..bots import gformbot
 from ..utils import merger
 
 class Assigner:
@@ -42,6 +43,8 @@ class AssignerICML(Assigner):
             return openreviewbot.ORBotICML
         elif botname == 'st':
             return ccbot.StBotICML
+        elif botname == 'gform':
+            return gformbot.GFormBotICML
         elif botname == 'merge':
             return merger.MergerICML
         else: super().__new__(cls, botname)
@@ -77,6 +80,8 @@ class AssignerACL(Assigner):
             return openreviewbot.ORBotACL
         elif botname == 'st':
             return sitebot.StBotACL
+        elif botname == 'gform':
+            return gformbot.GFormBotACL
         elif botname == 'merge':
             return merger.MergerACL
         else: super().__new__(cls, botname)
