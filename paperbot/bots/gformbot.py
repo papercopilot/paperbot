@@ -3,6 +3,7 @@ import numpy as np
 import re
 
 from . import sitebot
+from ..utils.util import color_print as cprint
 
 class GFormBot(sitebot.SiteBot):
     
@@ -39,12 +40,6 @@ class GFormBotICML(GFormBot):
             keywords = ''
             status = ''
             
-            if mode == 'Rebuttal':
-                # filter out all
-                if pd.isna(row['[Optional] Ratings after Rebuttal']):
-                    continue
-            
-            
             if 'RYR' in self.file_path:
                 match = re.search('[a-zA-Z]', row['Rate Your Reviewer: Ratings'])
                 if match: continue
@@ -53,11 +48,16 @@ class GFormBotICML(GFormBot):
                 rating = row['Rate Your Reviewer: Ratings'].split(',')
                 confidence = row['Rate Your Reviewer: Confidences'].split(',')
             else:
+                # remove invalide response
                 match = re.search('[a-zA-Z]', row['Initial Ratings'])
                 if match: continue
-                if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
                 
                 if mode == 'Rebuttal':
+                
+                    # remove nan data
+                    if pd.isna(row['[Optional] Ratings after Rebuttal']):
+                        continue
+                    
                     if as_init:
                         rating = row['Initial Ratings'].split(',')
                         confidence = row['Initial Confidence'].split(',')
@@ -65,6 +65,9 @@ class GFormBotICML(GFormBot):
                         rating = row['[Optional] Ratings after Rebuttal'].split(',')
                         confidence = row['[Optional] Confidence after Rebuttal'].split(',')
                 else:
+                    # remove redundant data
+                    if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
+                    
                     rating = row['Initial Ratings'].split(',')
                     confidence = row['Initial Confidence'].split(',')
 
@@ -155,11 +158,6 @@ class GFormBotACL(GFormBot):
             keywords = ''
             status = ''
             
-            if mode == 'Rebuttal':
-                # filter out all
-                if pd.isna(row['[Optional] Overall Assessment after Rebuttal']):
-                    continue
-            
             if 'RYR' in self.file_path:
                 match = re.search('[a-zA-Z]', row['Rate Your Reviewer: Ratings']) # check if there is any alphabet
                 if match: continue
@@ -168,11 +166,16 @@ class GFormBotACL(GFormBot):
                 rating = row['Rate Your Reviewer: Ratings'].split(',')
                 confidence = row['Rate Your Reviewer: Confidences'].split(',')
             else:
+                # remove invalide response
                 match = re.search('[a-zA-Z]', row['Initial Overall Assessment']) # check if there is any alphabet
                 if match: continue
-                if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
-
+                
                 if mode == 'Rebuttal':
+
+                    # remove nan data
+                    if pd.isna(row['[Optional] Overall Assessment after Rebuttal']):
+                        continue
+                    
                     if as_init:
                         rating = row['Initial Overall Assessment'].split(',')
                         confidence = row['Initial Confidence'].split(',')
@@ -180,6 +183,9 @@ class GFormBotACL(GFormBot):
                         rating = row['[Optional] Overall Assessment after Rebuttal'].split(',')
                         confidence = row['[Optional] Confidence after Rebuttal'].split(',')
                 else:
+                    # remove redundant data
+                    if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
+                    
                     rating = row['Initial Overall Assessment'].split(',')
                     confidence = row['Initial Confidence'].split(',')
                     correctness = row['Initial Soundness'].split(',')
@@ -195,6 +201,10 @@ class GFormBotACL(GFormBot):
             np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
             np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
             
+            if np2avg(rating) > 5:
+                cprint('warning', f"Rating > 5: {np2avg(rating)}")
+                continue
+                
             extra = {
                 'rating': {
                     'str': np2str(rating),
