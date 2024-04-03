@@ -34,6 +34,24 @@ class GFormBot(sitebot.SiteBot):
             self.df = self.df[1:]
         else:
             self.df = pd.read_csv(self.file_path)
+            
+    def auto_split(self, content):
+        non_digits = set([x for x in content if (not x.isdigit() and x!='.')])
+        if len(non_digits) == 0:
+            # no separator is available, split by digits
+            if '.' in content: return [content]
+            elif content == '10': return [content] # special cases, otherwise it will be split
+            else: return list(content)
+        elif len(non_digits) == 1 and ' ' in non_digits:
+            # space is the separator
+            return content.split(' ')
+        else:
+            if ',' in non_digits:
+                return content.split(',')
+            elif '/' in non_digits:
+                return content.split('/')
+            else:
+                raise ValueError(f"Unknown separator: {non_digits}")
         
     
 class GFormBotICML(GFormBot):
@@ -59,8 +77,8 @@ class GFormBotICML(GFormBot):
                 if match: continue
                 if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
 
-                rating = row['Rate Your Reviewer: Ratings'].split(',')
-                confidence = row['Rate Your Reviewer: Confidences'].split(',')
+                rating = self.auto_split(row['Rate Your Reviewer: Ratings'])
+                confidence = self.auto_split(row['Rate Your Reviewer: Confidences'])
             else:
                 # remove invalide response
                 match = re.search('[a-zA-Z]', row['Initial Ratings'])
@@ -73,17 +91,17 @@ class GFormBotICML(GFormBot):
                         continue
                     
                     if as_init:
-                        rating = row['Initial Ratings'].split(',')
-                        confidence = row['Initial Confidence'].split(',')
+                        rating = self.auto_split(row['Initial Ratings'])
+                        confidence = self.auto_split(row['Initial Confidence'])
                     else:
-                        rating = row['[Optional] Ratings after Rebuttal'].split(',')
-                        confidence = row['[Optional] Confidence after Rebuttal'].split(',')
+                        rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
+                        confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
                 else:
                     # remove redundant data
                     if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
                     
-                    rating = row['Initial Ratings'].split(',')
-                    confidence = row['Initial Confidence'].split(',')
+                    rating = self.auto_split(row['Initial Ratings'])
+                    confidence = self.auto_split(row['Initial Confidence'])
 
             ratings.append(rating)
             confidences.append(confidence)
@@ -95,6 +113,9 @@ class GFormBotICML(GFormBot):
             np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
             np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
             np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+            
+            if len(rating) != len(confidence):
+                raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
             
             extra = {
                 'rating': {
@@ -177,8 +198,8 @@ class GFormBotACL(GFormBot):
                 if match: continue
                 if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
 
-                rating = row['Rate Your Reviewer: Ratings'].split(',')
-                confidence = row['Rate Your Reviewer: Confidences'].split(',')
+                rating = self.auto_split(row['Rate Your Reviewer: Ratings'])
+                confidence = self.auto_split(row['Rate Your Reviewer: Confidences'])
             else:
                 # remove invalide response
                 match = re.search('[a-zA-Z]', row['Initial Overall Assessment']) # check if there is any alphabet
@@ -191,18 +212,18 @@ class GFormBotACL(GFormBot):
                         continue
                     
                     if as_init:
-                        rating = row['Initial Overall Assessment'].split(',')
-                        confidence = row['Initial Confidence'].split(',')
+                        rating = self.auto_split(row['Initial Overall Assessment'])
+                        confidence = self.auto_split(row['Initial Confidence'])
                     else:
-                        rating = row['[Optional] Overall Assessment after Rebuttal'].split(',')
-                        confidence = row['[Optional] Confidence after Rebuttal'].split(',')
+                        rating = self.auto_split(row['[Optional] Overall Assessment after Rebuttal'])
+                        confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
                 else:
                     # remove redundant data
                     if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
                     
-                    rating = row['Initial Overall Assessment'].split(',')
-                    confidence = row['Initial Confidence'].split(',')
-                    correctness = row['Initial Soundness'].split(',')
+                    rating = self.auto_split(row['Initial Overall Assessment'])
+                    confidence = self.auto_split(row['Initial Confidence'])
+                    correctness = self.auto_split(row['Initial Soundness'])
 
             ratings.append(rating)
             confidences.append(confidence)
