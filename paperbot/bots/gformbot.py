@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
 import re
+import gspread
 
 from . import sitebot
+from ..utils import util
 from ..utils.util import color_print as cprint
 
 class GFormBot(sitebot.SiteBot):
@@ -17,9 +19,21 @@ class GFormBot(sitebot.SiteBot):
             return
         self._args = self._args['openreview'] # select sub-dictionary
         self._tracks = self._args['track']
-    
+        
+        self._gform = util.load_settings('gform')[str(self._year)]
+        
     def launch(self, fetch_site=False):
-        self.df = pd.read_csv(self.file_path)
+        if fetch_site:
+            gc = gspread.oauth()
+            sh = gc.open_by_key(self._gform[self._gform_key])
+            response = sh.sheet1.get_all_values() # header is included as row0
+            self.df = pd.DataFrame.from_records(response)
+            
+            # process header
+            self.df.columns = self.df.iloc[0]
+            self.df = self.df[1:]
+        else:
+            self.df = pd.read_csv(self.file_path)
         
     
 class GFormBotICML(GFormBot):
@@ -27,8 +41,8 @@ class GFormBotICML(GFormBot):
     def __init__(self, conf='icml', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
-        self.file_path = '../logs/googleform/venues/icml/ICML2024.csv'
-        # self.file_path = '../logs/googleform/venues/icml/ICML2024RYR.csv'
+        self._gform_key = 'icml'
+        # self._gform_key = 'icml_ryr'
         
     def get_paperlist(self, mode=None, as_init=False):
         paperlist = []
@@ -40,7 +54,7 @@ class GFormBotICML(GFormBot):
             keywords = ''
             status = ''
             
-            if 'RYR' in self.file_path:
+            if 'ryr' in self._gform_key:
                 match = re.search('[a-zA-Z]', row['Rate Your Reviewer: Ratings'])
                 if match: continue
                 if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
@@ -55,7 +69,7 @@ class GFormBotICML(GFormBot):
                 if mode == 'Rebuttal':
                 
                     # remove nan data
-                    if pd.isna(row['[Optional] Ratings after Rebuttal']):
+                    if pd.isna(row['[Optional] Ratings after Rebuttal']) or not row['[Optional] Ratings after Rebuttal']:
                         continue
                     
                     if as_init:
@@ -143,8 +157,8 @@ class GFormBotACL(GFormBot):
     def __init__(self, conf='acl', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
-        self.file_path = '../logs/googleform/venues/acl/ACL2024.csv'
-        # self.file_path = '../logs/googleform/venues/acl/ACL2024RYR.csv'
+        self._gform_key = 'acl'
+        # self._gform_key = 'acl_ryr'
         
     def get_paperlist(self, mode=None, as_init=False):
         
@@ -158,7 +172,7 @@ class GFormBotACL(GFormBot):
             keywords = ''
             status = ''
             
-            if 'RYR' in self.file_path:
+            if 'ryr' in self._gform_key:
                 match = re.search('[a-zA-Z]', row['Rate Your Reviewer: Ratings']) # check if there is any alphabet
                 if match: continue
                 if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
@@ -173,7 +187,7 @@ class GFormBotACL(GFormBot):
                 if mode == 'Rebuttal':
 
                     # remove nan data
-                    if pd.isna(row['[Optional] Overall Assessment after Rebuttal']):
+                    if pd.isna(row['[Optional] Overall Assessment after Rebuttal']) or not row['[Optional] Overall Assessment after Rebuttal']:
                         continue
                     
                     if as_init:

@@ -22,6 +22,7 @@ class Pipeline:
         self.fetch_openreview = args.fetch_openreview
         self.fetch_site = args.fetch_site
         self.fetch_openaccess = args.fetch_openaccess
+        self.fetch_gform = args.fetch_gform
         
         self.root_dir = args.root_dir
         self.paths = {
@@ -92,6 +93,7 @@ class Pipeline:
                     except Exception as e:
                         if type(e) == ValueError:
                             cprint('warning', e)
+                        elif type(e) == NameError:
                             cprint('warning', f'{conf} {year}: Openreview Not available.')
                         else:
                             cprint('error', f"Openreview for {conf} {year}: {e}")
@@ -120,6 +122,8 @@ class Pipeline:
                         # self.summary_openaccess[conf][year] = openaccessbot.summary_all_tracks
                     except Exception as e:
                         if type(e) == ValueError:
+                            raise e
+                        elif type(e) == NameError:
                             cprint('warning', f'{conf} {year}: Openaccess Not available.')
                         else:
                             cprint('error', f"Openaccess for {conf} {year}: {e}")
@@ -130,12 +134,14 @@ class Pipeline:
                     try:
                         assigner = eval(assigner_name)('gform')
                         gformbot = assigner(conf, year, root_dir=self.paths['gform'])
-                        gformbot.launch()
+                        gformbot.launch(self.fetch_gform)
                         self.summary_openreview[conf][year] = gformbot.summary_all_tracks
                     except Exception as e:
                         if type(e) == ValueError:
                             cprint('warning', f'{conf} {year}: GForm Not available.')
                             raise e
+                        elif type(e) == NameError:
+                            cprint('warning', f'{conf} {year}: GForm Not available.')
                         else:
                             cprint('error', f"GForm for {conf} {year}: {e}")
                             raise e

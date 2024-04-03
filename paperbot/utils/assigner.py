@@ -9,7 +9,7 @@ from ..utils import merger
 class Assigner:
         
     def __new__(cls, botname):
-        raise ValueError(f"Unknown botname: {botname}")
+        raise NameError(f"Unknown botname: {botname}")
     
     
 class AssignerICLR(Assigner):
