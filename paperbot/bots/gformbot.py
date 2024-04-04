@@ -48,6 +48,8 @@ class GFormBot(sitebot.SiteBot):
         else:
             if ',' in non_digits:
                 return content.split(',')
+            elif '，' in non_digits:
+                return content.split('，')
             elif '/' in non_digits:
                 return content.split('/')
             else:
