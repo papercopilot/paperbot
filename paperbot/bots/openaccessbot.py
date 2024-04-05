@@ -297,3 +297,33 @@ class OABotCVPR(OpenaccessBot):
         ret['arxiv'] = os.path.basename(e_arxiv[0]) if e_arxiv else ''
         
         return ret
+    
+class OABotICCV(OpenaccessBot):
+            
+        @staticmethod
+        def process_url(url_paper, year):
+            
+            parsed_url = urlparse(url_paper)
+            domain = f'{parsed_url.scheme}://{parsed_url.netloc}'
+            
+            # open paper url to load status
+            response_paper = sitebot.SiteBot.session_request(url_paper)
+            tree_paper = html.fromstring(response_paper.content)
+            
+            ret = {'site': url_paper,}
+            
+            e_author = tree_paper.xpath("//div[@id= 'authors']/b//text()")
+            ret['author'] = e_author[0].strip().replace(';', '')
+            
+            e_pdf = tree_paper.xpath("//a[contains(., 'pdf')]/@href")
+            ret['pdf'] = domain + e_pdf[0]
+            
+            _, authors, aff, url_project, url_github = OpenaccessBot.parse_pdf(ret['pdf'])
+            ret['aff'] = aff
+            ret['project'] = url_project
+            ret['github'] = url_github
+            
+            e_arxiv = tree_paper.xpath("//a[contains(., 'arXiv')]/@href")
+            ret['arxiv'] = os.path.basename(e_arxiv[0]) if e_arxiv else ''
+            
+            return ret
