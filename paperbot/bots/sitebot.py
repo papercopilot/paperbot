@@ -135,3 +135,13 @@ class StBotSIGGRAPHASIA(SiteBot):
     
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
+        
+class StBotKDD(SiteBot):
+    
+    def __init__(self, conf='', year=None, root_dir=''):
+        super().__init__(conf, year, root_dir)
+        
+class StBotUAI(SiteBot):
+    
+    def __init__(self, conf='', year=None, root_dir=''):
+        super().__init__(conf, year, root_dir)
