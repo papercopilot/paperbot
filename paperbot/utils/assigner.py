@@ -116,7 +116,12 @@ class AssignerICCV(Assigner):
         
     def __new__(cls, botname, year=0):
         if botname == 'st':
-            return ccbot.StBotICCV
+            if year >= 2024:
+                return ccbot.StBotICCV
+            else:
+                return cvfbot.StBotICCV
+        elif botname == 'oa':
+            return openaccessbot.OABotICCV
         elif botname == 'merge':
             return merger.MergerICCV
         else: super().__new__(cls, botname)
@@ -139,4 +144,26 @@ class AssignerSIGGRAPHASIA(Assigner):
             return sitebot.StBotSIGGRAPHASIA
         elif botname == 'merge':
             return merger.MergerSIGGRAPHASIA
+        else: super().__new__(cls, botname)
+        
+class AssignerKDD(Assigner):
+        
+    def __new__(cls, botname, year=0):
+        if botname == 'st':
+            return sitebot.StBotKDD
+        elif botname == 'gform':
+            return gformbot.GFormBotKDD
+        elif botname == 'merge':
+            return merger.MergerKDD
+        else: super().__new__(cls, botname)
+        
+class AssignerUAI(Assigner):
+    
+    def __new__(cls, botname, year=0):
+        if botname == 'st':
+            return sitebot.StBotUAI
+        elif botname == 'gform':
+            return gformbot.GFormBotUAI
+        elif botname == 'merge':
+            return merger.MergerUAI
         else: super().__new__(cls, botname)

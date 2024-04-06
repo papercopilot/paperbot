@@ -154,7 +154,8 @@ class Merger:
     
     def merge_paper_site_openaccess(self, p1, p2):
         # p1 is site, p2 is openaccess
-        pass
+        # put the implementaiton for each conf to the subclass
+        raise NotImplementedError
         
     def merge_paperlist(self):
         
@@ -274,24 +275,86 @@ class Merger:
             
     def merge_paperlist_site_openaccess(self):
         
-        paperdict_openaccess = {paper['site']: i for i, paper in enumerate(self._paperlist_openaccess)}
-        paperdict_site = {paper['oa']: i for i, paper in enumerate(self._paperlist_site)}
-        
-        for site in tqdm(paperdict_site.keys(), desc='Merging papers'):
-            if site in paperdict_openaccess:
-                paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[site]]
-                paper_site = self._paperlist_site[paperdict_site[site]]
-                paper_site['type'] = 'site'
-                paper_openaccess['type'] = 'openaccess'
-                paper = self.merge_paper(paper_site, paper_openaccess)
+        if 'oa' in self._paperlist_site[0] and self._paperlist_site[0]['oa']:
+            paperdict_openaccess = {paper['site']: i for i, paper in enumerate(self._paperlist_openaccess)}
+            paperdict_site = {paper['oa']: i for i, paper in enumerate(self._paperlist_site)}
+            
+            for site in tqdm(paperdict_site.keys(), desc='Merging papers'):
+                if site in paperdict_openaccess:
+                    paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[site]]
+                    paper_site = self._paperlist_site[paperdict_site[site]]
+                    paper_site['type'] = 'site'
+                    paper_openaccess['type'] = 'openaccess'
+                    paper = self.merge_paper(paper_site, paper_openaccess)
+                    
+                    self._paperlist_merged.append(paper)
+                    
+            # pop the matched papers
+            for paper in self._paperlist_merged:
+                key = paper['oa']
+                paperdict_openaccess.pop(key)
+                paperdict_site.pop(key)
+        else:
+            # hash paperlist by title
+            paperdict_openaccess = {paper['title']: i for i, paper in enumerate(self._paperlist_openaccess)}
+            paperdict_site = {paper['title']: i for i, paper in enumerate(self._paperlist_site)}
+            
+            # check if title in openreview is in site
+            for title in tqdm(paperdict_openaccess.keys(), desc='Merging papers'):
+                if title in paperdict_site:
+                    # locate paper object
+                    paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[title]]
+                    paper_site = self._paperlist_site[paperdict_site[title]]
+                    paper_site['type'] = 'site'
+                    paper_openaccess['type'] = 'openaccess'
+                    # merge and append
+                    paper = self.merge_paper(paper_site, paper_openaccess)
+                    
+                    self._paperlist_merged.append(paper)
+                    
+                    # TODO: if two papers have the same title, but different content, we should recognize them as different papers
                 
+            # pop the matched papers
+            for paper in self._paperlist_merged:
+                paperdict_openaccess.pop(paper['title'])
+                paperdict_site.pop(paper['title'])
+                
+        # check if there are leftovers
+        if not paperdict_openaccess and not paperdict_site:
+            pass
+        elif paperdict_openaccess and not paperdict_site:
+            for title in paperdict_openaccess.keys():
+                self._paperlist_merged.append(self._paperlist_openaccess[paperdict_openaccess[title]])
+        elif not paperdict_openaccess and paperdict_site:
+            for title in paperdict_site.keys():
+                paper = self._paperlist_site[paperdict_site[title]]
+                encoder = hashlib.md5()
+                encoder.update(title.encode('utf-8'))
+                paper['id'] = 'site_' + encoder.hexdigest()[0:10]
+                paper = {'id': paper.pop('id'), **paper}
                 self._paperlist_merged.append(paper)
+        else:
+            # openreview has more data then site, since withdrawn/rejected papers are not in site
+            cprint('warning', f'Openaccess has {len(paperdict_openaccess)} left and site has {len(paperdict_site)} left.')
+            total_matches = 0
+            for title in tqdm(paperdict_openaccess.keys(), desc='Merging leftovers'):
+                paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[title]]
                 
-        # pop the matched papers
-        for paper in self._paperlist_merged:
-            key = paper['oa']
-            paperdict_openaccess.pop(key)
-            paperdict_site.pop(key)
+                matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=0.9)
+                if matches:
+                    total_matches += 1
+                    paper_site = self._paperlist_site[paperdict_site[matches[0]]]
+                    paper_site['type'] = 'site'
+                    paper_openaccess['type'] = 'openaccess'
+                    paper = self.merge_paper(paper_site, paper_openaccess)
+                else:
+                    paper = paper_openaccess
+
+                self._paperlist_merged.append(paper)
+            cprint('warning', f'Matched {total_matches} papers.')
+            
+            for title in paperdict_site.keys():
+                self._paperlist_merged.append(paper)
         
             
     def launch(self):
@@ -357,9 +420,9 @@ class MergerEMNLP(Merger):
     
 class MergerACL(Merger):
         
-        def merge_paper_site_openreview(self, p1, p2):
-            paper = super().merge_paper_site_openreview(p1, p2)
-            return paper
+    def merge_paper_site_openreview(self, p1, p2):
+        paper = super().merge_paper_site_openreview(p1, p2)
+        return paper
     
 class MergerCVPR(Merger):
     
@@ -391,10 +454,42 @@ class MergerECCV(Merger):
     pass
     
 class MergerICCV(Merger):
-    pass
+
+    def merge_paper_site_openaccess(self, p1, p2):
+        paper = p1.copy()
+        
+        paper['github'] = '' if 'github' not in p2 else p2['github']
+        paper['project'] = '' if 'project' not in p2 else p2['project']
+        paper['aff'] = '' if 'aff' not in p2 else p2['aff']
+        paper['arxiv'] = '' if 'arxiv' not in p2 else p2['arxiv']
+        paper['oa'] = '' if 'site' not in p2 else p2['site']
+        paper['pdf'] = '' if 'pdf' not in p2 else p2['pdf']
+        paper['site'] = ''
+        paper['video'] = ''
+        
+        # return paper
+        return {
+            'title': paper['title'],
+            'status': paper['status'],
+            'site': paper['site'],
+            'project': paper['project'],
+            'github': paper['github'],
+            'pdf': paper['pdf'],
+            'youtube': paper['video'],
+            'author': paper['author'],
+            'aff': paper['aff'],
+            'oa': paper['oa'],
+            "arxiv": paper['arxiv'],  # from openaccess
+        }
     
 class MergerSIGGRAPH(Merger):
     pass
     
 class MergerSIGGRAPHASIA(Merger):
+    pass
+
+class MergerKDD(Merger):
+    pass
+
+class MergerUAI(Merger):
     pass

@@ -1,0 +1,72 @@
+{
+    "2023": {
+        "site": {
+            "domain": "https://iccv2023.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "all": "main.conference.program-107.php"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/ICCV2023",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "?day=all"
+                    }
+                }
+            }
+        }
+    },
+    "2021": {
+        "site": {
+            "domain": "https://iccv2021.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "all": "sites/default/files/2021-10/paper%20list%20per%20session%2010-2.xlsx"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/ICCV2021",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "?day=all"
+                    }
+                }
+            }
+        }
+    },
+    "2019": {
+        "site": {
+            "domain": "https://iccv2019.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "all": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "http://openaccess.thecvf.com/ICCV2019",
+            "track": {
+                "main": {
+                    "pages": {
+                        "all": [
+                            "?day=2019-06-18",
+                            "?day=2019-06-19",
+                            "?day=2019-06-20"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}
