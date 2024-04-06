@@ -3,7 +3,7 @@ from pypdf import PdfReader
 from io import BytesIO
 import re
 import multiprocessing as mp
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 from tqdm import tqdm
 from lxml import html
 import os
@@ -196,7 +196,7 @@ class OpenaccessBot(sitebot.SiteBot):
         # parse each entry
         for e in tqdm(e_papers, leave=False):
             title = e.text_content().strip()
-            site = os.path.dirname(self._domain) + e.attrib['href']
+            site = urljoin(os.path.dirname(self._domain), e.attrib['href'])
             
             self._paperlist.append({
                 'title': title,
@@ -241,8 +241,10 @@ class OpenaccessBot(sitebot.SiteBot):
                 
                 # loop over pages
                 for k in tqdm(pages.keys()):
-                    url_page = f'{self._baseurl}{pages[k]}'
-                    self.crawl(url_page, k, track)
+                    if type(pages[k]) == str: pages[k] = [pages[k]]
+                    for v in tqdm(pages[k], leave=False):
+                        url_page = f'{self._baseurl}{v}'
+                        self.crawl(url_page, k, track)
                     
             # crawl for extra info if available
             if self._paperlist and self.process_url(self._paperlist[0]['site'], self._year):
@@ -316,7 +318,7 @@ class OABotICCV(OpenaccessBot):
             ret['author'] = e_author[0].strip().replace(';', '')
             
             e_pdf = tree_paper.xpath("//a[contains(., 'pdf')]/@href")
-            ret['pdf'] = domain + e_pdf[0]
+            ret['pdf'] = urljoin(domain, e_pdf[0])
             
             _, authors, aff, url_project, url_github = OpenaccessBot.parse_pdf(ret['pdf'])
             ret['aff'] = aff
