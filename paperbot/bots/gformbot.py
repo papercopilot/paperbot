@@ -113,7 +113,7 @@ class GFormBotICML(GFormBot):
             np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
             
             if len(rating) != len(confidence):
-                raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
+                raise ValueError(f"Rating and confidence length mismatch at {index}: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
             
             extra = {
                 'rating': {
@@ -158,6 +158,7 @@ class GFormBotICML(GFormBot):
 
                 # hack to copy total data to active for now
                 hist = self.summarizer.tier_hist[1]
+                hist_conf = self.summarizer.tier_hist_confidence[1]
                 hist_sum = self.summarizer.tier_hist_sum[1]
             
                 # update paperlist
@@ -168,6 +169,7 @@ class GFormBotICML(GFormBot):
             
                 self._summary_all_tracks[track] = self.summarizer.summarize()
                 self._summary_all_tracks[track]['thist'][0] = hist
+                self._summary_all_tracks[track]['thist_conf'][0] = hist_conf
                 self._summary_all_tracks[track]['thsum'][0] = hist_sum
             
             
@@ -276,6 +278,7 @@ class GFormBotACL(GFormBot):
 
                 # hack to copy total data to active for now
                 hist = self.summarizer.tier_hist[1]
+                hist_conf = self.summarizer.tier_hist_confidence[1]
                 hist_sum = self.summarizer.tier_hist_sum[1]
             
                 # update paperlist
@@ -286,6 +289,7 @@ class GFormBotACL(GFormBot):
             
                 self._summary_all_tracks[track] = self.summarizer.summarize()
                 self._summary_all_tracks[track]['thist'][0] = hist
+                self._summary_all_tracks[track]['thist_conf'][0] = hist_conf
                 self._summary_all_tracks[track]['thsum'][0] = hist_sum
                 
 class GFormBotKDD(GFormBot):
@@ -330,11 +334,11 @@ class GFormBotKDD(GFormBot):
                     
                     if as_init:
                         novelty = self.auto_split(row['Initial Novelty'])
-                        tech_quality = self.auto_split(row['Initial Technical Quality'])
+                        tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
                         confidence = self.auto_split(row['Initial Confidence'])
                     else:
                         novelty = self.auto_split(row['[Optional] Novelty after Rebuttal'])
-                        tech_quality = self.auto_split(row['[Optional] Technical Quality after Rebuttal'])
+                        tech_quality = self.auto_split(row['[Optional] Technical Quality (Research Track) / Overall Rating (ADS Track)  after Rebuttal'])
                         confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
                     track = row['Track'].strip()
                 else:
@@ -342,7 +346,7 @@ class GFormBotKDD(GFormBot):
                     if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': continue
                     
                     novelty = self.auto_split(row['Initial Novelty'])
-                    tech_quality = self.auto_split(row['Initial Technical Quality'])
+                    tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
                     confidence = self.auto_split(row['Initial Confidence'])
                     track = row['Track'].strip()
                     
@@ -350,7 +354,7 @@ class GFormBotKDD(GFormBot):
             list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
             novelty = list2np(novelty)
             tech_quality = list2np(tech_quality)
-            rating = 0.5 * novelty + 0.5 * tech_quality
+            rating = 0.5 * novelty + 0.5 * tech_quality if track == 'KDD 2024 Research Track' else tech_quality
             confidence = list2np(confidence)
             
             np2avg = lambda x: 0 if not any(x) else x.mean()
@@ -405,6 +409,7 @@ class GFormBotKDD(GFormBot):
 
                 # hack to copy total data to active for now
                 hist = self.summarizer.tier_hist[1]
+                hist_conf = self.summarizer.tier_hist_confidence[1]
                 hist_sum = self.summarizer.tier_hist_sum[1]
             
                 # update paperlist
@@ -415,6 +420,7 @@ class GFormBotKDD(GFormBot):
             
                 self._summary_all_tracks[track] = self.summarizer.summarize()
                 self._summary_all_tracks[track]['thist'][0] = hist
+                self._summary_all_tracks[track]['thist_conf'][0] = hist_conf
                 self._summary_all_tracks[track]['thsum'][0] = hist_sum
                 
                 
@@ -520,6 +526,7 @@ class GFormBotUAI(GFormBot):
 
                 # hack to copy total data to active for now
                 hist = self.summarizer.tier_hist[1]
+                hist_conf = self.summarizer.tier_hist_confidence[1]
                 hist_sum = self.summarizer.tier_hist_sum[1]
             
                 # update paperlist
@@ -530,4 +537,5 @@ class GFormBotUAI(GFormBot):
             
                 self._summary_all_tracks[track] = self.summarizer.summarize()
                 self._summary_all_tracks[track]['thist'][0] = hist
+                self._summary_all_tracks[track]['thist_conf'][0] = hist_conf
                 self._summary_all_tracks[track]['thsum'][0] = hist_sum
