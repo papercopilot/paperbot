@@ -1,29 +1,9 @@
 {
     "2024": {
-        "openreview": {
-            "api": "api2",
-            "invitation": {
-                "root": "ICML.cc",
-                "review": "",
-                "decision": "in_venue"
-            },
+        "gform": {
             "track": {
-                "main": {
-                    "Active": "Conference/-/Submission"
-                }
-            },
-            "tname": {
-                "KDD 2024 Research Track": {
-                    "ICML 2024 OralPoster": "Oral",
-                    "ICML 2024 Poster": "Poster"
-                },
-                "KDD 2024 Applied Data Science Track": {
-                    "ICML 2024 OralPoster": "Oral",
-                    "ICML 2024 Poster": "Poster"
-                }
-            },
-            "rname": {
-                "main": {}
+                "KDD 2024 Research Track": "kdd",
+                "KDD 2024 Applied Data Science Track": "kdd"
             }
         }
     }

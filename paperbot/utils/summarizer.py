@@ -112,7 +112,7 @@ class Summarizer():
         hist_sum = int(hist.sum())
         return hist_sum, hist_str, hist
         
-    def get_histogram(self, tier_name, track):
+    def get_histogram(self, tier_name={}, track=''):
         
         # tier_name = self.args['tname'][track]
         
@@ -210,7 +210,7 @@ class Summarizer():
         return tsf_sum, tsf_str, tsf
         
     
-    def get_transfer_matrix(self, tier_name, track):
+    def get_transfer_matrix(self, tier_name={}, track=''):
         
         if self._paperlist_init is None: return
         paperlist0 = self._paperlist_init

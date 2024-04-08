@@ -9,8 +9,11 @@ class Pipeline:
         self.confs = [] if args.confs is None else args.confs
         self.years = [] if args.years is None else args.years
         self.summary_openreview = {}
-        self.keywords_openreview = {}
         self.summary_site = {}
+        self.summary_openaccess = {}
+        self.summary_gform = {}
+        
+        self.keywords_openreview = {}
         
         self.dump_keywords = args.parse_keywords
         
@@ -39,17 +42,42 @@ class Pipeline:
         
     def save_summary(self, conf):
         # for conf in self.confs:
-        summary_path = os.path.join(self.paths['openreview'], f'summary/{conf}.json')
-        os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-        with open(summary_path, 'w') as f:
-            json.dump(self.summary_openreview[conf], f, indent=4)
-        cprint('io', f"Saved summary for {conf} to {summary_path}")
+        if conf in self.summary_openreview:
+            summary_path = os.path.join(self.paths['openreview'], f'summary/{conf}.json')
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, 'w') as f:
+                json.dump(self.summary_openreview[conf], f, indent=4)
+            cprint('io', f"Saved summary for {conf} to {summary_path}")
+        else:
+            cprint('info', f"No summary for {conf} in openreview")
         
-        summary_path = os.path.join(self.paths['site'], f'summary/{conf}.json')
-        os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-        with open(summary_path, 'w') as f:
-            json.dump(self.summary_site[conf], f, indent=4)
-        cprint('io', f"Saved summary for {conf} to {summary_path}")
+        if conf in self.summary_site:
+            summary_path = os.path.join(self.paths['site'], f'summary/{conf}.json')
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, 'w') as f:
+                json.dump(self.summary_site[conf], f, indent=4)
+            cprint('io', f"Saved summary for {conf} to {summary_path}")
+        else:
+            cprint('info', f"No summary for {conf} in site")
+        
+        if conf in self.summary_openaccess:
+            summary_path = os.path.join(self.paths['openaccess'], f'summary/{conf}.json')
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, 'w') as f:
+                json.dump(self.summary_openaccess[conf], f, indent=4)
+            cprint('io', f"Saved summary for {conf} to {summary_path}")
+        else:
+            cprint('info', f"No summary for {conf} in openaccess")
+        
+        if conf in self.summary_gform:
+            summary_path = os.path.join(self.paths['gform'], f'summary/{conf}.json')
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, 'w') as f:
+                json.dump(self.summary_gform[conf], f, indent=4)
+            cprint('io', f"Saved summary for {conf} to {summary_path}")
+        else:
+            cprint('info', f"No summary for {conf} in gform")
+        
                 
     def save_keywords(self, conf):
         if not self.dump_keywords:
@@ -71,6 +99,8 @@ class Pipeline:
         for conf in self.confs:
             self.summary_openreview[conf] = {}
             self.summary_site[conf] = {}
+            self.summary_openaccess[conf] = {}
+            self.summary_gform[conf] = {}
             self.keywords_openreview[conf] = {}
             for year in self.years:
                 
@@ -119,7 +149,7 @@ class Pipeline:
                         assigner = eval(assigner_name)('oa')
                         openaccessbot = assigner(conf, year, root_dir=self.paths['openaccess'])
                         openaccessbot.launch(self.fetch_openaccess)
-                        # self.summary_openaccess[conf][year] = openaccessbot.summary_all_tracks
+                        self.summary_openaccess[conf][year] = openaccessbot.summary_all_tracks
                     except Exception as e:
                         if type(e) == ValueError:
                             raise e
@@ -135,7 +165,7 @@ class Pipeline:
                         assigner = eval(assigner_name)('gform')
                         gformbot = assigner(conf, year, root_dir=self.paths['gform'])
                         gformbot.launch(self.fetch_gform)
-                        self.summary_openreview[conf][year] = gformbot.summary_all_tracks
+                        self.summary_gform[conf][year] = gformbot.summary_all_tracks
                     except Exception as e:
                         if type(e) == ValueError:
                             cprint('warning', f'{conf} {year}: GForm Not available.')
@@ -154,6 +184,16 @@ class Pipeline:
                 if openaccessbot: merger.paperlist_openaccess = openaccessbot.paperlist
                 merger.launch()
                 
+                # remove empty years
+                self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}
+                self.summary_site[conf] = {k: v for k, v in self.summary_site[conf].items() if v}
+                self.summary_openaccess[conf] = {k: v for k, v in self.summary_openaccess[conf].items() if v}
+                self.summary_gform[conf] = {k: v for k, v in self.summary_gform[conf].items() if v}
+            # remove empty conferences
+            self.summary_openreview = {k: v for k, v in self.summary_openreview.items() if v}
+            self.summary_site = {k: v for k, v in self.summary_site.items() if v}
+            self.summary_openaccess = {k: v for k, v in self.summary_openaccess.items() if v}
+            self.summary_gform = {k: v for k, v in self.summary_gform.items() if v}
                 
             if is_save: 
                 # save should be done per conference per year

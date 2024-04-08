@@ -1,25 +1,8 @@
 {
     "2024": {
-        "openreview": {
-            "api": "api2",
-            "invitation": {
-                "root": "ICML.cc",
-                "review": "",
-                "decision": "in_venue"
-            },
+        "gform": {
             "track": {
-                "main": {
-                    "Active": "Conference/-/Submission"
-                }
-            },
-            "tname": {
-                "main": {
-                    "ICML 2024 OralPoster": "Oral",
-                    "ICML 2024 Poster": "Poster"
-                }
-            },
-            "rname": {
-                "main": {}
+                "main": "icml"
             }
         },
         "site": {
