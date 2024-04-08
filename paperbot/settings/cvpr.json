@@ -33,5 +33,35 @@
                 }
             }
         }
+    },
+    "2022": {
+        "site": {
+            "domain": "https://cvpr2022.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            "posters-621-am",
+                            "posters-621-pm",
+                            "posters-622-am",
+                            "posters-622-pm",
+                            "posters-623-am",
+                            "posters-623-pm",
+                            "posters-624-am",
+                            "posters-624-pm"
+                        ],
+                        "oral": [
+                            "orals-621-pm",
+                            "orals-622-am",
+                            "orals-622-pm",
+                            "orals-623-am",
+                            "orals-623-pm",
+                            "orals-624-am",
+                            "orals-624-pm"
+                        ]
+                    }
+                }
+            }
+        }
     }
 }

@@ -138,6 +138,8 @@ class Pipeline:
                         self.summary_site[conf][year] = sitebot.summary_all_tracks
                     except Exception as e:
                         if type(e) == ValueError:
+                            raise e
+                        elif type(e) == NameError:
                             cprint('warning', f'{conf} {year}: Site Not available.')
                         else:
                             cprint('error', f"Site for {conf} {year}: {e}")
@@ -182,6 +184,7 @@ class Pipeline:
                 if openreviewbot: merger.paperlist_openreview = openreviewbot.paperlist
                 if sitebot: merger.paperlist_site = sitebot.paperlist
                 if openaccessbot: merger.paperlist_openaccess = openaccessbot.paperlist
+                # if gformbot: merger.paperlist_gform = gformbot.paperlist
                 merger.launch()
                 
                 # remove empty years

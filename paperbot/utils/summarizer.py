@@ -273,7 +273,7 @@ class Summarizer():
                 tsf_rating_sum, tsf_rating_str, tsf_rating, tsf_confidence_str, tsf_confidence = self.get_tsf(self._paperlist, paperlist0, k)
                 if tsf_rating_sum > 0:
                     self.tier_tsf[tid] = tsf_rating_str
-                    self.tier_hist_confidence[tid] = tsf_confidence_str
+                    self.tier_tsf_confidence[tid] = tsf_confidence_str
                     self.tier_tsf_sum[tid] = tsf_rating_sum
             
             # whether to update active from tiers

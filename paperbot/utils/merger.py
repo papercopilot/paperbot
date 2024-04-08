@@ -355,14 +355,23 @@ class Merger:
             
             for title in paperdict_site.keys():
                 self._paperlist_merged.append(paper)
+                
+    def merge_summary(self):
+        pass
         
+    
+    def save_summary(self):
+        pass        
             
     def launch(self):
         self.merge_paperlist()
+        self.merge_summary()
         
         # save
         if self._paperlist_merged:
             self.save_paperlist()
+            self.save_summary()
+            
 
 class MergerICLR(Merger):
     

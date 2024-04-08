@@ -8,7 +8,7 @@ from tqdm import tqdm
 from lxml import html
 import os
 import pandas as pd
-
+import json
 
 from . import sitebot
 from ..utils.util import color_print as cprint
@@ -55,12 +55,14 @@ class CVFBot(sitebot.SiteBot):
         
             for e_sec, e_table in zip(e_secs, e_tables):
                 e_rows = e_table.xpath(xpath['td'])
+                session_cache = '' # cache the session name for the next rows
                 for e_row in e_rows:
                     session, title, authors, pid, status = self.process_row(e_sec, e_row)
+                    session_cache = session if session else session_cache # update the new session name
                 
                     p = {
                         'title': title,
-                        'session': session,
+                        'session': session_cache,
                         'author': authors,
                         'status': status,
                         'track': '',
@@ -69,6 +71,9 @@ class CVFBot(sitebot.SiteBot):
                     self._paperlist.append(p)
         
     def launch(self, fetch_site=False):
+        if not self._args: 
+            cprint('Info', f'{self._conf} {self._year}: Site Not available.')
+            return
     
         for track in self._tracks:
             pages = self._args['track'][track]['pages']
@@ -96,13 +101,41 @@ class StBotCVPR(CVFBot):
     def get_xpath(self):
         xpath = {}
         if self._year == 2022:
-            pass
+            xpath['sec'] = '//h4[text()!="\xa0"]'
+            xpath['tab'] = '//h4[contains(@id, "sessionone")]/following-sibling::table'
+            xpath['td'] = './/tr[position()>1]'
+        else:
+            raise NotImplementedError
         return xpath
     
-    def process_row(self):
-        if self._year == 2022:
-            pass
+    def process_row(self, e_sec, e_row):
         
+        if self._year == 2022:
+            sec_str = e_sec.xpath('//h4[@id="sessionone"]/../../../../../..//h1/span/text()')[0].lower()
+            status = 'Oral' if 'oral' in sec_str else 'Poster' if 'poster' in sec_str else ''
+            
+            if status == 'Oral':
+                session = e_sec.xpath('./text()')[1].split(':')[-1].strip()
+                pid = e_row.xpath('./td[last()-2]/text()')[0]
+                title = e_row.xpath('./td[last()-1]/text()')[0]
+                authors = json.loads(e_row.xpath('./td[last()]/@data-sheets-value')[0])['2']
+            elif status == 'Poster':
+                session = e_row.xpath('./td[1]/text()')[0]
+                pid = e_row.xpath('./td[2]/text()')[0]
+                title = e_row.xpath('./td[3]/text()')[0]
+                authors = json.loads(e_row.xpath('./td[4]/@data-sheets-value')[0])['2']
+            else:
+                raise ValueError(f"Unknown status: {status}")
+        else:
+            raise NotImplementedError
+        
+        session = session.strip()
+        title = title.strip()
+        authors = authors.strip()
+        pid = pid.strip()
+        status = status.strip()
+        
+        return session, title, authors, pid, status
         
 class StBotICCV(CVFBot):
     
@@ -133,6 +166,8 @@ class StBotICCV(CVFBot):
             xpath['sec'] = '//h3[text()="Presentation Schedule"]/following-sibling::a[contains(@name, "poster") or contains(@name, "oral")]'
             xpath['tab'] = '//h3[text()="Presentation Schedule"]/following-sibling::table'
             xpath['td'] = './/tr[position()>2]'
+        else:
+            raise NotImplementedError
         return xpath
     
     def process_row(self, e_sec, e_row):
@@ -156,6 +191,8 @@ class StBotICCV(CVFBot):
         
             if session: self.session_temp = session
             else: session = self.session_temp
+        else:
+            raise NotImplementedError
         
         session = session.strip()
         title = title.strip()
