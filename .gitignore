@@ -2,3 +2,17 @@ dist
 .vscode
 __pycache__/
 .idea
+
+# readthedocs
+*.pyc
+*.egg-info
+_build
+_readthedocs_build
+autoapi
+_build_rtd
+.idea/
+.tox
+.cache
+.python-version
+dist
+tags
