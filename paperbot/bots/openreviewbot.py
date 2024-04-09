@@ -276,7 +276,7 @@ class OpenreviewBot(sitebot.SiteBot):
     def load_csv(self):
         pass
         
-    def launch(self, fetch_site=True):
+    def launch(self, fetch_site=True, fetch_extra=False):
         if not self._args: 
             cprint('info', f'{self._conf} {self._year}: Openreview Not available.')
             return

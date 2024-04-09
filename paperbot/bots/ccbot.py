@@ -8,6 +8,7 @@ import spacy
 import os
 import multiprocessing as mp
 import difflib
+from urllib.parse import urlparse, urljoin
 
 from . import sitebot
 from ..utils import util, summarizer
@@ -133,10 +134,17 @@ class CCBot(sitebot.SiteBot):
     def process_url(url_paper):
         pass
             
-    def launch(self, fetch_site=False):
+    def launch(self, fetch_site=False, fetch_extra=False):
         if not self._args: 
             cprint('Info', f'{self._conf} {self._year}: Site Not available.')
             return
+        
+        self.summarizer.src = {
+            'site' : {
+                'name': urlparse(self._domain).netloc,
+                'url': self._baseurl,
+            }
+        }
         
         # fetch paperlist
         if fetch_site:
@@ -151,7 +159,8 @@ class CCBot(sitebot.SiteBot):
                     self.crawl(url_page, pages[k], track)
             
             # crawl for extra info if available
-            self.crawl_extra()
+            if fetch_extra:
+                self.crawl_extra()
             
         else:
             # load previous

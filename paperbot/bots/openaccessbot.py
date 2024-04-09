@@ -230,7 +230,7 @@ class OpenaccessBot(sitebot.SiteBot):
     def process_url(self, year):
         pass
     
-    def launch(self, fetch_site=False):
+    def launch(self, fetch_site=False, fetch_extra=False):
         if not self._args: 
             cprint('warning', f'{self._conf} {self._year}: Openaccess Not available.')
             return
@@ -247,7 +247,7 @@ class OpenaccessBot(sitebot.SiteBot):
                         self.crawl(url_page, k, track)
                     
             # crawl for extra info if available
-            if self._paperlist and self.process_url(self._paperlist[0]['site'], self._year):
+            if self._paperlist and self.process_url(self._paperlist[0]['site'], self._year) and fetch_extra:
                 cprint('info', f'{self._conf} {self._year}: Fetching Extra...')
                 self.crawl_extra()
             else:

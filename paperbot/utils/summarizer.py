@@ -360,8 +360,25 @@ class Summarizer():
         return keywords_curr
     
     def summarize_paperlist(self, track):
+        
+        # TODO: this function is only used by sitebot, merge to summarize if possible
+        
         status = [o['status'] for o in self._paperlist if (not track or o['track'] == track)]
-        return self.sorted_summary(Counter(status))
+        status = Counter(status)
+        
+        # split status as two dict, one is tier_id and another is tier_num
+        for k in status:
+            self.update_summary(k, status[k])
+            
+        self.tier_names = dict((v,k) for k,v in self.tier_ids.items())
+        
+        summary = {
+            'src': self.src,
+            'tnum': self.tier_num,
+            'tname': self.tier_names,
+        }
+        
+        return self.sorted_summary(summary)
         
     
     def summarize(self, is_sort=True):
