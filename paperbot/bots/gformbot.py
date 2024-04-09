@@ -100,6 +100,7 @@ class GFormBot(sitebot.SiteBot):
             self.summarizer.get_histogram(track=track)
             self.summarizer.get_transfer_matrix(track=track)
         
+            # move data to active
             self._summary_all_tracks[track] = self.summarizer.summarize()
             self._summary_all_tracks[track]['thist'][0] = hist
             self._summary_all_tracks[track]['thist_conf'][0] = hist_conf

@@ -411,7 +411,7 @@ class Merger:
         
         return tier_num
     
-    def update_total(self, s, year, track):
+    def update_total(self, s, year, track, tier_num):
         return s
     
     def get_template(self):
@@ -576,9 +576,7 @@ class Merger:
                     track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
                     cid = f'{self._conf.lower()}{year}{track_alphabet}'
                     
-                    
                     if cid in stats:
-                        pass
                         stats[cid]['s1'] = summary['src']['site']['name']
                         stats[cid]['su1'] = summary['src']['site']['url']
                         self.update_total(s, year, track, tier_num)
@@ -614,12 +612,87 @@ class Merger:
                 for track in self._summary_gform[year]:
                     if track not in self._summary_merged[year]:
                         self._summary_merged[year][track] = {}
+                        
+                    summary = self._summary_gform[year][track]
+                        
+                    # merge gform
                     self._summary_merged[year][track]['gform'] = {
-                        'tid': self._summary_gform[year][track]['tid'],
-                        'tname': self._summary_gform[year][track]['tname'],
-                        'thsum': self._summary_gform[year][track]['thsum'],
+                        'tid': summary['tid'],
+                        'tname': summary['tname'],
+                        'thsum': summary['thsum'],
                     }
                     
+                    # dump
+                    s = self.get_template()
+                    
+                    f = filter(str.isalpha, track[:4])
+                    track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
+                    cid = f'{self._conf.lower()}{year}{track_alphabet}'
+                    
+                    if cid in stats and stats[cid]['s0'] == 'openreview':
+                        # if openreview data is available, gform data is not used
+                        stats[cid]['s3'] = 'Community'
+                    else:
+                        s['conference'] = cid
+                        s['name'] = self._conf.upper()
+                        s['track'] = track
+                        s['s3'] = 'Community'
+                        
+                        tier_id = dict((v,k) for k,v in summary['tid'].items())
+                        if 'Active' in tier_id:
+                            tid = tier_id['Active']
+                            s['active'] = summary['tnum'].get(tid, summary['thsum'][tid])
+                            s['h_active'] = summary['thist'][tid]
+                            s['h_conf_active'] = summary['thist_conf'][tid]
+                        if 'Total' in tier_id:
+                            tid = tier_id['Total']
+                            s['h_total'] = summary['thist'][tid]
+                            s['h_conf_total'] = summary['thist_conf'][tid]
+                        if 'Total0' in tier_id:
+                            tid = tier_id['Total0']
+                            s['h_total0'] = summary['thist'][tid]
+                            s['h_conf_total0'] = summary['thist_conf'][tid]
+                            
+                            if 'Total' in tier_id: 
+                                tid = tier_id['Total']
+                                s['tsf_total'] = summary['ttsf'][tid]
+                                s['tsf_conf_total'] = summary['ttsf_conf'][tid]
+                                s['tsf_active'] = summary['ttsf'][tid]
+                                s['tsf_conf_active'] = summary['ttsf_conf'][tid]
+                    
+                        # load tiers and sort by num
+                        tier_num = {}
+                        tier_hist, tier_tsf = {}, {}
+                        tier_hist_conf, tier_tsf_conf = {}, {}
+                        for k in summary['tname']:
+                            tname = summary['tname'][k]
+                            tier_num[tname] = summary['tnum'][k]
+                            
+                            if 'thist' in summary and k in summary['thist']: 
+                                tier_hist[tname] = summary['thist'][k]
+                            if 'thist_conf' in summary and k in summary['thist_conf']:
+                                tier_hist_conf[tname] = summary['thist_conf'][k]
+                            if 'ttsf' in summary and k in summary['ttsf']:
+                                tier_tsf[tname] = summary['ttsf'][k]
+                            if 'ttsf_conf' in summary and k in summary['ttsf_conf']:
+                                tier_tsf_conf[tname] = summary['ttsf_conf'][k]
+                                
+                        tier_num = self.normalize_tier_num(tier_num)
+                        self.update_total(s, year, track, tier_num)
+                        self.normalize_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
+                        
+                        # split name and num
+                        for i, k in enumerate(tier_num):
+                            s[f'n{i}'] = k
+                            s[f't{i}'] = tier_num[k]
+                            s[f'h{i}'] = '' if k not in tier_hist else tier_hist[k]
+                            s[f'h_conf_{i}'] = '' if k not in tier_hist_conf else tier_hist_conf[k]
+                            s[f'tsf{i}'] = '' if k not in tier_tsf else tier_tsf[k]
+                            s[f'tsf_conf_{i}'] = '' if k not in tier_tsf_conf else tier_tsf_conf[k]
+
+                        stats[s['conference']] = s
+                        
+                                    
         # return stats as list
         stats = dict(sorted(stats.items()))
         return list(stats.values())
@@ -797,6 +870,14 @@ class MergerCORL(Merger):
         paper = super().merge_paper_site_openreview(p1, p2)
         return paper
     
+    def update_total(self, s, year, track, tier_num):
+        if year == 2023: s['total'] = 0
+        elif year == 2022: s['total'] = 504 # https://corl2022.org/
+        elif year == 2021: s['total'] = 0
+        
+        s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
+        s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
+    
 class MergerEMNLP(Merger):
     
     def merge_paper_site_openreview(self, p1, p2):
@@ -821,11 +902,15 @@ class MergerEMNLP(Merger):
             'Short Findings': tier_num.pop('Short Findings'),
             **tier_num
         }
+        return tier_num
         
     def update_total(self, s, year, track, tier_num):
         
+        if year == 2023: 
+            s['total'] = 4909 # https://2023.emnlp.org/downloads/EMNLP-2023-Handbook-Nov-30.pdf
+            s['desk_reject'] = 256
+        
         # get total accepted
-        # s['desk_reject'] = summary['src']['site']['desk_reject']
         s['accept'] = tier_num['Long Main'] + tier_num['Short Main'] + tier_num['Long Findings'] + tier_num['Short Findings']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
     
@@ -859,7 +944,20 @@ class MergerCVPR(Merger):
             'oa': paper['oa'],
             "arxiv": paper['arxiv'],  # from openaccess
         }
-    
+        
+    def update_total(self, s, year, track, tier_num):
+        
+        if year == 2024: 
+            # Openreview
+            s['total'] = 11532
+            tier_num['Poster'] = 2305
+            tier_num['Spotlight'] = 324
+            tier_num['Oral'] = 90
+        elif year == 2023: s['total'] = 9155 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
+        elif year == 2022: s['total'] = 8262 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
+            
+        s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
+        s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
     
 class MergerECCV(Merger):
     pass
@@ -892,7 +990,16 @@ class MergerICCV(Merger):
             'oa': paper['oa'],
             "arxiv": paper['arxiv'],  # from openaccess
         }
+        
+    def update_total(self, s, year, track, tier_num):
     
+        if year == 2023: s['total'] = 8620 # https://iccv2023.thecvf.com/iccv2023.main.conference.program-38--MTE.php
+        if year == 2021: s['total'] = 6152 # https://www.openresearch.org/wiki/ICCV
+        if year == 2019: s['total'] = 4303 # https://www.openresearch.org/wiki/ICCV
+    
+        s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
+        s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
+        
 class MergerSIGGRAPH(Merger):
     pass
     

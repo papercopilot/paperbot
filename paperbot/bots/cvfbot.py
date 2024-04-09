@@ -65,12 +65,12 @@ class CVFBot(sitebot.SiteBot):
                         'session': session_cache,
                         'author': authors,
                         'status': status,
-                        'track': '',
+                        'track': track,
                         'pid': pid,
                     }
                     self._paperlist.append(p)
         
-    def launch(self, fetch_site=False):
+    def launch(self, fetch_site=False, fetch_extra=False):
         if not self._args: 
             cprint('Info', f'{self._conf} {self._year}: Site Not available.')
             return
@@ -153,8 +153,8 @@ class StBotICCV(CVFBot):
                     'title': row['Paper Title '].strip(),
                     'session': row['Session #'].strip(),
                     'author': row['Authors (Corrected)'].strip(),
-                    'status': '',
-                    'track': '',
+                    'status': 'Poster',
+                    'track': track,
                     'pid': row['Paper ID']
                 }
                 self._paperlist.append(p)

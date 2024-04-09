@@ -216,9 +216,10 @@ class Summarizer():
         paperlist0 = self._paperlist_init
         
         # get histogram over all submissions at initial
-        tid = self.get_tid('Total0')
         hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(paperlist0)
-        self.tier_hist[tid], self.tier_hist_sum[tid], self.tier_hist_confidence[tid] = hist_rating_str, hist_sum, hist_confidence_str
+        if hist_sum > 0:
+            tid = self.get_tid('Total0')
+            self.tier_hist[tid], self.tier_hist_sum[tid], self.tier_hist_confidence[tid] = hist_rating_str, hist_sum, hist_confidence_str
         
         if len(self._paperlist) != len(paperlist0):
             toremove = []

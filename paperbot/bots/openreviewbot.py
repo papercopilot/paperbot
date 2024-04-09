@@ -278,7 +278,7 @@ class OpenreviewBot(sitebot.SiteBot):
         
     def launch(self, fetch_site=True, fetch_extra=False):
         if not self._args: 
-            cprint('info', f'{self._conf} {self._year}: Openreview Not available.')
+            cprint('warning', f'{self._conf} {self._year}: Openreview Not available.')
             return
         
         # loop over tracks
@@ -406,6 +406,7 @@ class ORBotCORL(OpenreviewBot):
 
         if status: self.summarizer.update_summary(status)
         return status
+    
 class ORBotEMNLP(OpenreviewBot):
     
     def get_status(self, note, tier_name, decision_invitation):
