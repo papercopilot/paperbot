@@ -86,11 +86,16 @@ class CVFBot(sitebot.SiteBot):
             
         self._paperlist = sorted(self._paperlist, key=lambda x: x['title'])
         
-        # update paperlist
-        self.summarizer.paperlist = self._paperlist
-            
         # summarize paperlist
         for track in self._tracks:
+            self.summarizer.clear_summary()
+            self.summarizer.src = {
+                'site' : {
+                    'name': urlparse(self._domain).netloc,
+                    'url': self._baseurl,
+                }
+            }
+            self.summarizer.paperlist = self._paperlist
             self._summary_all_tracks[track] = self.summarizer.summarize_paperlist(track)
                 
         # save paperlist for each venue per year

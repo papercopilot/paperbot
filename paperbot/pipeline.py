@@ -2,6 +2,7 @@ from .utils.assigner import *
 from .utils.util import color_print as cprint
 import json
 import os
+import pandas as pd
 
 class Pipeline:
     """Pipeline for paperbot."""
@@ -90,6 +91,10 @@ class Pipeline:
             with open(summary_path, 'w') as f:
                 json.dump(self.summary, f, indent=4)
             cprint('io', f"Saved summary for all conferences to {summary_path}")
+            
+            # convert to xls
+            df = pd.DataFrame(self.summary)
+            df.to_excel(summary_path.replace('.json', '.xlsx'), index=False)
         
                 
     def save_keywords(self, conf):

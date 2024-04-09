@@ -390,16 +390,33 @@ class Merger:
             for title in paperdict_site.keys():
                 self._paperlist_merged.append(paper)
                 
-    def rename_openreview_tiers(year, s, tn, th, tt):
+    def normalize_tier_name(self, s, year, track, tn, th, tt, thc, ttc):
         return s
     
-    def rename_site_tiers(year, s, tn, th, tt):
+    def normalize_tier_num(self, tier_num):
+        if 'Reject' not in tier_num: tier_num['Reject'] = 0
+        if 'Poster' not in tier_num: tier_num['Poster'] = 0
+        if 'Spotlight' not in tier_num: tier_num['Spotlight'] = 0
+        if 'Oral' not in tier_num: tier_num['Oral'] = 0
+        tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
+            
+        # adjust position
+        tier_num = {
+            'Reject': tier_num.pop('Reject'), 
+            'Poster': tier_num.pop('Poster'),
+            'Spotlight': tier_num.pop('Spotlight'),
+            'Oral': tier_num.pop('Oral'),
+            **tier_num
+        }
+        
+        return tier_num
+    
+    def update_total(self, s, year, track):
         return s
     
     def get_template(self):
         
-        # table in db
-        return {
+        header = {
             'conference': '',
             'name': '',
             'track': '',
@@ -424,6 +441,9 @@ class Merger:
             'su0': '', 'su1': '', 'su2': '', 'su3': '',
             'city': '', 'country': '',
         }
+        
+        # table in db
+        return header
                 
     def merge_summary(self):
         
@@ -508,8 +528,8 @@ class Merger:
                     tier_hist_conf, tier_tsf_conf = {}, {}
                     for k in summary['tname']:
                         tname = summary['tname'][k]
-                        tnum = summary['tnum'][k]
-                        tier_num[tname] = tnum
+                        tier_num[tname] = summary['tnum'][k]
+                        
                         if 'thist' in summary and k in summary['thist']: 
                             tier_hist[tname] = summary['thist'][k]
                         if 'thist_conf' in summary and k in summary['thist_conf']:
@@ -519,23 +539,9 @@ class Merger:
                         if 'ttsf_conf' in summary and k in summary['ttsf_conf']:
                             tier_tsf_conf[tname] = summary['ttsf_conf'][k]
                             
-                    
-                    if 'Reject' not in tier_num: tier_num['Reject'] = 0
-                    if 'Poster' not in tier_num: tier_num['Poster'] = 0
-                    if 'Spotlight' not in tier_num: tier_num['Spotlight'] = 0
-                    if 'Oral' not in tier_num: tier_num['Oral'] = 0
-                    tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
-                        
-                    # adjust position
-                    tier_num = {
-                        'Reject': tier_num.pop('Reject'), 
-                        'Poster': tier_num.pop('Poster'),
-                        'Spotlight': tier_num.pop('Spotlight'),
-                        'Oral': tier_num.pop('Oral'),
-                        **tier_num
-                    }
-                            
-                    self.rename_openreview_tiers(year, track, s, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
+                    tier_num = self.normalize_tier_num(tier_num)
+                    self.update_total(s, year, track, tier_num)
+                    self.normalize_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
                                 
                     # split name and num
                     for i, k in enumerate(tier_num):
@@ -570,17 +576,33 @@ class Merger:
                     track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
                     cid = f'{self._conf.lower()}{year}{track_alphabet}'
                     
+                    
                     if cid in stats:
                         pass
                         stats[cid]['s1'] = summary['src']['site']['name']
                         stats[cid]['su1'] = summary['src']['site']['url']
+                        self.update_total(s, year, track, tier_num)
                     else:
                         s['conference'] = cid
                         s['name'] = self._conf.upper()
                         s['track'] = track
                         s['s1'] = summary['src']['site']['name']
                         s['su1'] = summary['src']['site']['url']
-
+                        
+                        tier_num = {}
+                        for k in summary['tnum']:
+                            tname = summary['tname'][k]
+                            tier_num[tname] = summary['tnum'][k]
+                            
+                        tier_num = self.normalize_tier_num(tier_num)
+                        self.update_total(s, year, track, tier_num)
+                        
+                        # split name and num
+                        for i, k in enumerate(tier_num):
+                            s[f'n{i}'] = k
+                            s[f't{i}'] = tier_num[k]
+                            
+                        stats[s['conference']] = s
         
         if self._summary_openaccess:
             pass
@@ -597,8 +619,9 @@ class Merger:
                         'tname': self._summary_gform[year][track]['tname'],
                         'thsum': self._summary_gform[year][track]['thsum'],
                     }
-
+                    
         # return stats as list
+        stats = dict(sorted(stats.items()))
         return list(stats.values())
     
     def save_summary(self, path=None):
@@ -621,7 +644,7 @@ class MergerICLR(Merger):
     
         return paper
     
-    def rename_openreview_tiers(self, year, track, s, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
+    def normalize_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
         
         if year == 2024:
             tier_num['Reject'] = tier_num.pop('Pending')
@@ -644,17 +667,17 @@ class MergerICLR(Merger):
             tier_num['Oral'] = tier_num.pop('Talk')
             tier_hist['Oral'] = tier_hist.pop('Talk')
             tier_hist_conf['Oral'] = tier_hist_conf.pop('Talk')
-        elif year == 2014:
-            s['total'] = 0
         elif year == 2013:
-            s['total'] = 0
             tier_num['Spotlight'] = tier_num.pop('Poster Workshop') + tier_num.pop('Oral Workshop')
     
+    def update_total(self, s, year, track, tier_num):
+        if year == 2014: s['total'] = 0
+        elif year == 2013: s['total'] = 0
+        
         # get total accepted
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
         
-        return s
     
 class MergerNIPS(Merger):
     
@@ -681,30 +704,26 @@ class MergerNIPS(Merger):
             cprint('io', f"Read paperlist from {path}")
             return paperlist
     
-    def rename_openreview_tiers(self, year, track, s, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
-        if year >= 2019: s['name'] = 'NeurIPS'
+    def normalize_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
         
-        if year == 2023:
-            # https://blog.neurips.cc/category/2023-conference/ (13330-12345)
-            s['total'] = 12345 if track == 'main' else 985
-        elif year == 2022:
-            # https://www.businesswire.com/news/home/20221130005340/en/Eleven-NTT-Papers-Selected-for-NeurIPS-2022
-            # https://blog.neurips.cc/category/2022-conference/
-            s['total'] = 10411 if track == 'main' else 447
+        if year == 2022:
             s['accept'] = tier_num.pop('Accept')
-            
-            summarizer = Summarizer()
             paperlist = self.read_paperlist(os.path.join(self._paths['paperlists'], 'nips/nips2022.json'))
             tier_name = {
                 'Poster': 'Poster',
                 'Hightlighted': 'Oral'
             }
             for k in tier_name:
-                hist_sum, hist_rating_str, hist_rating, hist_confidence_str, hist_confidence = summarizer.get_hist(paperlist, k, track=track)
+                hist_sum, hist_rating_str, hist_rating, hist_confidence_str, hist_confidence = Summarizer().get_hist(paperlist, k, track=track)
                 tier_num[tier_name[k]] = hist_sum
                 tier_hist[tier_name[k]] = hist_rating_str
                 tier_hist_conf[tier_name[k]] = hist_confidence_str
-                
+        
+    def update_total(self, s, year, track, tier_num):
+        if year >= 2019: s['name'] = 'NeurIPS'
+        
+        if year == 2023: s['total'] = 12345 if track == 'main' else 985 if track == 'Datasets & Benchmarks' else 0 # https://blog.neurips.cc/category/2023-conference/ (13330-12345)
+        elif year == 2022: s['total'] = 10411 if track == 'main' else 447 if track == 'Datasets & Benchmarks' else 0 # https://www.businesswire.com/news/home/20221130005340/en/Eleven-NTT-Papers-Selected-for-NeurIPS-2022, https://blog.neurips.cc/category/2022-conference/
         elif year == 2021: s['total'] = 9122 # https://www.vinai.io/an-overview-of-neurips-2021s-publications/
         elif year == 2020: s['total'] = 9467 # https://syncedreview.com/2020/10/08/google-stanford-mit-top-neurips-2020-accepted-papers-list/
         elif year == 2019: s['total'] = 6743 # https://medium.com/syncedreview/paper-submissions-break-neurips-2019-paper-submission-system-884a60e32a82
@@ -726,17 +745,11 @@ class MergerNIPS(Merger):
         elif year == 2003: s['total'] = 717 # https://www.openresearch.org/wiki/NIPS
         elif year == 2002: s['total'] = 710 # https://www.openresearch.org/wiki/NIPS
         elif year == 2001: s['total'] = 650 # https://www.openresearch.org/wiki/NIPS
-            
+        
         # get total accepted
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
         
-    def rename_site_tiers(self, year, track, s, tier_name, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
-        if year == 2022:
-            tier_name['Oral'] = tier_name.pop('Highlighted')
-            tier_hist['Oral'] = tier_hist.pop('Highlighted')
-            tier_hist_conf['Oral'] = tier_hist_conf.pop('Highlighted')
-    
 class MergerICML(Merger):
     
     def merge_paper_site_openreview(self, p1, p2):
@@ -749,8 +762,7 @@ class MergerICML(Merger):
         
         return paper
     
-    def rename_openreview_tiers(self, year, track, s, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
-        
+    def update_total(self, s, year, track, tier_num):
         if year == 2023: s['total'] = 6538 # https://min.news/en/tech/c1d451087b3b992dafb8ef13c19862ca.html
         elif year == 2022: s['total'] = 5630 # https://www.myhuiban.com/conference/406?page=6&lang=en_us
         elif year == 2021: s['total'] = 5513 # https://www.openresearch.org/wiki/ICML
@@ -779,7 +791,6 @@ class MergerICML(Merger):
         # get total accepted
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
-        
 class MergerCORL(Merger):
     
     def merge_paper_site_openreview(self, p1, p2):
@@ -792,7 +803,7 @@ class MergerEMNLP(Merger):
         paper = super().merge_paper_site_openreview(p1, p2)
         return paper
     
-    def rename_openreview_tiers(self, year, track, s, tier_num, tier_hist, tier_tsf):
+    def normalize_tier_num(self, tier_num):
         
         # long main/short main/long findings/short findings
         if 'Long Main' not in tier_num: tier_num['Long Main'] = 0
@@ -810,6 +821,8 @@ class MergerEMNLP(Merger):
             'Short Findings': tier_num.pop('Short Findings'),
             **tier_num
         }
+        
+    def update_total(self, s, year, track, tier_num):
         
         # get total accepted
         # s['desk_reject'] = summary['src']['site']['desk_reject']
