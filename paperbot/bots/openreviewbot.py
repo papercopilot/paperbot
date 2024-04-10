@@ -342,6 +342,10 @@ class ORBotICLR(OpenreviewBot):
         if self._year == 2024:
             status = note['content']['venue']['value']
             status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+
+            if note['content']['title']['value'] == 'Privileged Sensing Scaffolds Reinforcement Learning':
+                status = 'Spotlight' # update based on the author's response
+            
         elif self._year == 2013:
             status = note['content']['decision']
         elif self._year == 2014:
