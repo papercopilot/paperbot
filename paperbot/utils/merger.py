@@ -390,9 +390,12 @@ class Merger:
             for title in paperdict_site.keys():
                 self._paperlist_merged.append(paper)
                 
-    def normalize_tier_name(self, s, year, track, tn, th, tt, thc, ttc):
+    def normalize_openreview_tier_name(self, s, year, track, tn, th, tt, thc, ttc):
         return s
     
+    def normalize_site_tier_name(self, s, year, track, tn):
+        pass
+        
     def normalize_tier_num(self, tier_num):
         if 'Reject' not in tier_num: tier_num['Reject'] = 0
         if 'Poster' not in tier_num: tier_num['Poster'] = 0
@@ -541,7 +544,7 @@ class Merger:
                             
                     tier_num = self.normalize_tier_num(tier_num)
                     self.update_total(s, year, track, tier_num)
-                    self.normalize_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
+                    self.normalize_openreview_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
                                 
                     # split name and num
                     for i, k in enumerate(tier_num):
@@ -594,7 +597,7 @@ class Merger:
                             
                         tier_num = self.normalize_tier_num(tier_num)
                         self.update_total(s, year, track, tier_num)
-                        self.normalize_tier_name(s, year, track, tier_num)
+                        self.normalize_site_tier_name(s, year, track, tier_num)
                         
                         # split name and num
                         for i, k in enumerate(tier_num):
@@ -680,7 +683,7 @@ class Merger:
                                 
                         tier_num = self.normalize_tier_num(tier_num)
                         self.update_total(s, year, track, tier_num)
-                        self.normalize_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
+                        self.normalize_openreview_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
                         
                         # split name and num
                         for i, k in enumerate(tier_num):
@@ -718,7 +721,7 @@ class MergerICLR(Merger):
     
         return paper
     
-    def normalize_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
+    def normalize_openreview_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
         
         if year == 2024:
             tier_num['Reject'] = tier_num.pop('Pending')
@@ -778,7 +781,7 @@ class MergerNIPS(Merger):
             cprint('io', f"Read paperlist from {path}")
             return paperlist
     
-    def normalize_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
+    def normalize_openreview_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
         
         if year == 2022:
             s['accept'] = tier_num.pop('Accept')
@@ -946,7 +949,7 @@ class MergerCVPR(Merger):
             "arxiv": paper['arxiv'],  # from openaccess
         }
         
-    def normalize_tier_name(self, s, year, track, tier_num):
+    def normalize_site_tier_name(self, s, year, track, tier_num):
         
         if year == 2023:
             tier_num['Spotlight'] = tier_num.pop('Highlight')
