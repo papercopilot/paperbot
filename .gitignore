@@ -16,3 +16,5 @@ _build_rtd
 .python-version
 dist
 tags
+
+gform.json

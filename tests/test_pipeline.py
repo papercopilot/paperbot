@@ -2,7 +2,7 @@ import paperbot
 import argparse
 
 def set_arguments():
-    parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'cvpr'])
+    parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'cvpr', 'iccv', 'acl', 'kdd', 'uai'])
     parser.add_argument('--years', nargs='+', help='years', default=range(2024, 2012, -1))
     
     # 
@@ -16,7 +16,7 @@ def set_arguments():
     parser.add_argument('--openaccess_dir', type=str, help='directory for openaccess logs', default='openaccess')
     parser.add_argument('--gform_dir', type=str, help='directory for google form logs', default='gform')
     parser.add_argument('--paperlists_dir', type=str, help='directory for site logs', default='paperlists')
-    parser.add_argument('--statistics_dir', type=str, help='directory for summary logs', default='stats')
+    parser.add_argument('--statistics_dir', type=str, help='directory for summary logs', default='')
     
     # 
     parser.add_argument('--use_openreview', action='store_true', help='use data from openreview', default=True)
@@ -29,7 +29,9 @@ def set_arguments():
     parser.add_argument('--fetch_openaccess', action='store_true', help='fetch from openaccess, disabled automatically when not using openaccess data ', default=True)
     parser.add_argument('--fetch_gform', action='store_true', help='fetch from google form, disabled automatically when not using google form data', default=True)
     
-    parser.add_argument('--fetch_extra', action='store_true', help='fetch extra information', default=False)
+    parser.add_argument('--fetch_openreview_extra', action='store_true', help='fetch extra information on openreview', default=True)
+    parser.add_argument('--fetch_site_extra', action='store_true', help='fetch extra information on site', default=True)
+    parser.add_argument('--fetch_openaccess_extra', action='store_true', help='fetch extra information on openaccess', default=True)
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
     
     parser.add_argument('--save', action='store_true', help='save the results', default=True)
@@ -43,8 +45,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     set_arguments()
     args = parser.parse_args()
-    # args.confs = ['cvpr'] # web
-    args.confs = ['icml', 'acl'] # google
-    args.years = [2024]
+    # args.confs = ['iclr', 'cvpr', 'iccv', 'acl', 'kdd', 'uai'] # web
+    # args.years = [2019, 2021, 2023]
+    # args.confs = ['cvpr'] # google
+    # args.confs = ['icml', 'kdd', 'uai']
+    args.confs = ['uai']
+    # args.years = [2021]
+    
+    # check iclr 2024/23 summary
+    # check cvpr 2022 site
     
     test_pipeline(args)
