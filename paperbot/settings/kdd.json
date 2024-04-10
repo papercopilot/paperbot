@@ -2,8 +2,8 @@
     "2024": {
         "gform": {
             "track": {
-                "KDD 2024 Research Track": "kdd",
-                "KDD 2024 Applied Data Science Track": "kdd"
+                "main": "kdd",
+                "Applied Data Science": "kdd"
             }
         }
     }

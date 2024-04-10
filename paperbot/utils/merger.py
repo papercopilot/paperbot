@@ -594,6 +594,7 @@ class Merger:
                             
                         tier_num = self.normalize_tier_num(tier_num)
                         self.update_total(s, year, track, tier_num)
+                        self.normalize_tier_name(s, year, track, tier_num)
                         
                         # split name and num
                         for i, k in enumerate(tier_num):
@@ -944,6 +945,11 @@ class MergerCVPR(Merger):
             'oa': paper['oa'],
             "arxiv": paper['arxiv'],  # from openaccess
         }
+        
+    def normalize_tier_name(self, s, year, track, tier_num):
+        
+        if year == 2023:
+            tier_num['Spotlight'] = tier_num.pop('Highlight')
         
     def update_total(self, s, year, track, tier_num):
         

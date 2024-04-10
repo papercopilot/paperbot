@@ -285,7 +285,7 @@ class GFormBotKDD(GFormBot):
                     novelty = self.auto_split(row['[Optional] Novelty after Rebuttal'])
                     tech_quality = self.auto_split(row['[Optional] Technical Quality (Research Track) / Overall Rating (ADS Track)  after Rebuttal'])
                     confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
-                track = row['Track'].strip()
+                track = 'main' if 'Research Track' in row['Track'].strip() else 'Applied Data Science'
             else:
                 # remove redundant data
                 if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
@@ -293,13 +293,13 @@ class GFormBotKDD(GFormBot):
                 novelty = self.auto_split(row['Initial Novelty'])
                 tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
                 confidence = self.auto_split(row['Initial Confidence'])
-                track = row['Track'].strip()
+                track = 'main' if 'Research Track' in row['Track'].strip() else 'Applied Data Science'
                 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
         novelty = list2np(novelty)
         tech_quality = list2np(tech_quality)
-        rating = 0.5 * novelty + 0.5 * tech_quality if track == 'KDD 2024 Research Track' else tech_quality
+        rating = 0.5 * novelty + 0.5 * tech_quality if track == 'main' else tech_quality
         confidence = list2np(confidence)
         
         np2avg = lambda x: 0 if not any(x) else x.mean()

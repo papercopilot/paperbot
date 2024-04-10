@@ -95,6 +95,7 @@ class Pipeline:
             # convert to xls
             df = pd.DataFrame(self.summary)
             df.to_excel(summary_path.replace('.json', '.xlsx'), index=False)
+            df.to_csv(summary_path.replace('.json', '.csv'), index=False)
         
                 
     def save_keywords(self, conf):
