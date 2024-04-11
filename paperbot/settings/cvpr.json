@@ -62,6 +62,16 @@
                     }
                 }
             }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2022",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "?day=all"
+                    }
+                }
+            }
         }
     }
 }

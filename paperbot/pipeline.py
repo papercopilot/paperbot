@@ -215,9 +215,8 @@ class Pipeline:
                     merger.paperlist_openaccess = openaccessbot.paperlist
                 if gformbot: 
                     merger.paperlist_gform = gformbot.paperlist
-                # merger.launch()
-                # merger.merge_paperlist()
-                # merger.save_paperlist()
+                merger.merge_paperlist()
+                merger.save_paperlist()
                 
             # remove empty years
             self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}

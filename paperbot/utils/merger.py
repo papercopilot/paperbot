@@ -151,10 +151,11 @@ class Merger:
             return json.load(f)
     
     def save_paperlist(self, path=None):
-        path = path if path else os.path.join(self._paths['paperlists'], f'{self._conf}/{self._conf}{self._year}.json')
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'w') as f:
-            json.dump(self._paperlist_merged, f, indent=4)
+        if self._paperlist_merged:
+            path = path if path else os.path.join(self._paths['paperlists'], f'{self._conf}/{self._conf}{self._year}.json')
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as f:
+                json.dump(self._paperlist_merged, f, indent=4)
     
     def get_highest_status(self):
         # default status_priority, can be rewrite in subclass
@@ -718,6 +719,10 @@ class MergerICLR(Merger):
         if 'openreview' in p1: paper['openreview'] = p1['openreview']
         if 'slides' in p1: paper['slides'] = p1['slides']
         if 'video' in p1: paper['video'] = p1['video']
+        
+        if self._year == 2024:
+            if paper['title'] == 'Privileged Sensing Scaffolds Reinforcement Learning':
+                paper['status'] = 'Spotlight' # update based on the author and committee's response
     
         return paper
     
@@ -929,10 +934,20 @@ class MergerCVPR(Merger):
     def merge_paper_site_openaccess(self, p1, p2):
         paper = p1.copy()
         
-        if 'github' in p2: paper['github'] = paper['github'] if paper['github'] else p2['github']
-        if 'project' in p2: paper['project'] = paper['project'] if paper['project'] else p2['project']
-        if 'aff' in p2: paper['aff'] = p2['aff']
-        if 'arxiv' in p2: paper['arxiv'] = p2['arxiv']
+        if self._year >= 2023:
+            if 'github' in p2: paper['github'] = paper['github'] if paper['github'] else p2['github']
+            if 'project' in p2: paper['project'] = paper['project'] if paper['project'] else p2['project']
+            if 'aff' in p2: paper['aff'] = p2['aff']
+            if 'arxiv' in p2: paper['arxiv'] = p2['arxiv']
+        else:
+            paper['github'] = '' if 'github' not in p2 else p2['github']
+            paper['project'] = '' if 'project' not in p2 else p2['project']
+            paper['aff'] = '' if 'aff' not in p2 else p2['aff']
+            paper['arxiv'] = '' if 'arxiv' not in p2 else p2['arxiv']
+            paper['oa'] = '' if 'site' not in p2 else p2['site']
+            paper['pdf'] = '' if 'pdf' not in p2 else p2['pdf']
+            paper['site'] = ''
+            paper['video'] = ''
         
         # return paper
         return {

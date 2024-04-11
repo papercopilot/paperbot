@@ -6,6 +6,7 @@ To use gspread with OAuth as an end user, check out [this](https://docs.gspread.
 
 # build
 checkout [this](https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html). More details can be found in [Example projects](https://docs.readthedocs.io/en/stable/examples.html)
+if expired, delete the authenticated user and create a new credential
 
 run the following to use sphinx_rtd_theme
 ```shell
