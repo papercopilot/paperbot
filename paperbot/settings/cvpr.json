@@ -73,5 +73,166 @@
                 }
             }
         }
+    },
+    "2021": {
+        "site": {
+            "domain": "https://cvpr2021.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            "node/179",
+                            "node/168",
+                            "node/169",
+                            "node/170",
+                            "node/171",
+                            "node/172",
+                            "node/173",
+                            "node/174",
+                            "node/175",
+                            "node/176",
+                            "node/177",
+                            "node/178"
+                        ]
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2021",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "?day=all"
+                    }
+                }
+            }
+        }
+    },
+    "2020": {
+        "site": {
+            "domain": "https://cvpr2020.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main-conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2020",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            "?day=2020-06-16",
+                            "?day=2020-06-17",
+                            "?day=2020-06-18"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2019": {
+        "site": {
+            "domain": "http://cvpr2019.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2019",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            "?day=2019-06-18",
+                            "?day=2019-06-19",
+                            "?day=2019-06-20"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2018": {
+        "site": {
+            "domain": "http://cvpr2018.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2018",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            "?day=2018-06-19",
+                            "?day=2018-06-20",
+                            "?day=2018-06-21"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2017": {
+        "site": {
+            "domain": "http://cvpr2017.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2017",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2016": {
+        "site": {
+            "domain": "http://cvpr2016.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2016",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
     }
 }

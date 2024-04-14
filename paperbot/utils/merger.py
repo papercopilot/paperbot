@@ -217,7 +217,7 @@ class Merger:
             # only openreview data is available
             self._paperlist_merged = sorted(self._paperlist_openreview, key=lambda x: x['id'])
         elif self._paperlist_openaccess:
-            pass
+            self._paperlist_merged = sorted(self._paperlist_openaccess, key=lambda x: x['title'])
         
         
     def merge_paperlist_site_openreview(self):
@@ -979,6 +979,21 @@ class MergerCVPR(Merger):
             tier_num['Oral'] = 90
         elif year == 2023: s['total'] = 9155 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
         elif year == 2022: s['total'] = 8262 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
+        elif year == 2021: s['total'] = 0 
+        elif year == 2020: s['total'] = 0 
+        elif year == 2019: s['total'] = 0 
+        elif year == 2018: 
+            s['total'] = 0
+            s['Oral'] = 50 # https://haowang1992.github.io/posts/2019/01/CVPR%202018%20Oral%20Collections/
+            s['Poster'] = 929 # openaccess
+        elif year == 2017: 
+            # https://cvpr2017.thecvf.com/program/main_conference
+            s['total'] = 2680
+            s['desk_reject'] = 60
+        elif year == 2016:
+            s['total'] = 2145
+            s['desk_reject'] = 2145 - 1865
+            
             
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']

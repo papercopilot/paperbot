@@ -69,11 +69,12 @@ class SiteBot:
             return paperlist
     
     def save_paperlist(self, path=None):
-        path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'w') as f:
-            json.dump(self._paperlist, f, indent=4)
-        cprint('io', f"Saved paperlist for {self._conf} to {path}")
+        if self._paperlist:
+            path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as f:
+                json.dump(self._paperlist, f, indent=4)
+            cprint('io', f"Saved paperlist for {self._conf} to {path}")
     
     def __call__(self):
         pass

@@ -32,7 +32,9 @@ class CVFBot(sitebot.SiteBot):
             'keywords': os.path.join(self._root_dir, 'keywords'),
         }
         
-    def get_xpath(self):
+        self._paper_idx = {}
+        
+    def get_xpath(self, key, sec_idx=None):
         raise NotImplementedError
     
     def process_row(self):
@@ -44,31 +46,45 @@ class CVFBot(sitebot.SiteBot):
         
         response = sitebot.SiteBot.session_request(url)
         tree = html.fromstring(response.content)
-        xpath = self.get_xpath()
-        if 'sec' in xpath and 'tab' in xpath:
             
-            e_secs = tree.xpath(xpath['sec'])
-            e_tables = tree.xpath(xpath['tab'])
-        
-            if len(e_secs) != len(e_tables):
-                raise ValueError(f"Number of sections and tables do not match: {len(e_secs)} != {len(e_tables)}")
-        
-            for e_sec, e_table in zip(e_secs, e_tables):
-                e_rows = e_table.xpath(xpath['td'])
-                session_cache = '' # cache the session name for the next rows
-                for e_row in e_rows:
-                    session, title, authors, pid, status = self.process_row(e_sec, e_row)
-                    session_cache = session if session else session_cache # update the new session name
+        if not self.get_xpath('sec') or not self.get_xpath('tab'): return
+        e_secs = tree.xpath(self.get_xpath('sec'))
+        e_tables = tree.xpath(self.get_xpath('tab'))
+    
+        if len(e_secs) != len(e_tables):
+            raise ValueError(f"Number of sections and tables do not match: {len(e_secs)} != {len(e_tables)}")
+    
+        for i, (e_sec, e_table) in enumerate(zip(e_secs, e_tables)):
+            e_rows = e_table.xpath(self.get_xpath('td', i))
+            # print(e_table.xpath('./text()')[0], len(e_rows))
+            session_cache = '' # cache the session name for the next rows
+            status_cache = '' # cache the status for the next rows
+            for e_row in tqdm(e_rows, leave=False):
+                session, title, authors, pid, status = self.process_row(e_sec, e_row)
+                session_cache = session if session else session_cache # update the new session name
+                status_cache = status if status else status_cache # update the new status
+            
                 
+                # find if paper with title already exists
+                if title in self._paper_idx:
+                    idx = self._paper_idx[title]
+                    
+                    # update keys
+                    self._paperlist[idx]['status'] = status_cache
+                    self._paperlist[idx]['session'] = session_cache
+                else: 
+                    
                     p = {
                         'title': title,
                         'session': session_cache,
                         'author': authors,
-                        'status': status,
+                        'status': status_cache,
                         'track': track,
                         'pid': pid,
                     }
+                
                     self._paperlist.append(p)
+                    self._paper_idx[title] = len(self._paperlist) - 1
         
     def launch(self, fetch_site=False, fetch_extra=False):
         if not self._args: 
@@ -103,15 +119,48 @@ class CVFBot(sitebot.SiteBot):
         
 class StBotCVPR(CVFBot):
         
-    def get_xpath(self):
-        xpath = {}
+    def get_xpath(self, key, sec_idx=0):
+        xpath = {
+            'sec': '',
+            'tab': '',
+            'td': '',
+        }
         if self._year == 2022:
             xpath['sec'] = '//h4[text()!="\xa0"]'
             xpath['tab'] = '//h4[contains(@id, "sessionone")]/following-sibling::table'
             xpath['td'] = './/tr[position()>1]'
+        elif self._year == 2021:
+            xpath['sec'] = '//h4[text()!="MAIN CONFERENCE"]'
+            xpath['tab'] = '//h4[text()!="MAIN CONFERENCE"]/following-sibling::table'
+            xpath['td'] = './/tr[position()>1]'
+        elif self._year == 2020:
+            xpath['sec'] = '//p/strong[text()="Session:"]'
+            xpath['tab'] = '//p/strong[text()="Session:"]/../following-sibling::table'
+            xpath['td'] = './/tr[position()>1]'
+        elif self._year == 2019:
+            xpath['sec'] = '//h4'
+            xpath['tab'] = '//h4/following-sibling::table'
+            xpath['td'] = './/tr[position()>1]'
+        elif self._year == 2018:
+            pass # not available
+        elif self._year == 2017:
+            xpath['sec'] = '//h4[contains(@id, "program_schedule")]'
+            xpath['tab'] = '//h4[contains(@id, "program_schedule")]/following-sibling::table'
+            xpath['td'] = './/tr[position()>1]'
+        elif self._year == 2016:
+            xpath['sec'] = '//h4[contains(@class, "program-title")]'
+            xpath['tab'] = '//h4[contains(@class, "program-title")]'
+            # xpath['td'] = './following-sibling::ul[preceding-sibling::h4[1] = following-sibling::h4[1]]'
+            # xpath['td'] = './following-sibling::ul[preceding-sibling::h4][not(following-sibling::h4)]'
+            # xpath['td'] = '//h4[contains(@class, "program-title")][1]/following-sibling::ul[following-sibling::h4[contains(@class, "program-title")][1] = //h4[contains(@class, "program-title")][2]]'
+            # xpath['td'] = './following-sibling::ul[following-sibling::h4[1] = //h4[contains(@class, "program-title")][3]]'
+            # xpath['td'] = './following-sibling::ul[following-sibling::h4[1] = preceding-sibling::h4[contains(@class, "program-title")][last()-1]/following-sibling::h4[contains(@class, "program-title")][1]]'
+            # xpath['td'] = './following-sibling::ul[following-sibling::h4[1] = (./preceding-sibling::h4[contains(@class, "program-title")])[last()-1]/following-sibling::h4[contains(@class, "program-title")][1]]'
+            xpath['td'] = f'./following-sibling::ul[following-sibling::h4[1] = //h4[contains(@class, "program-title")][{sec_idx+2}]]'
+            
         else:
             raise NotImplementedError
-        return xpath
+        return xpath[key]
     
     def process_row(self, e_sec, e_row):
         
@@ -131,6 +180,49 @@ class StBotCVPR(CVFBot):
                 authors = json.loads(e_row.xpath('./td[4]/@data-sheets-value')[0])['2']
             else:
                 raise ValueError(f"Unknown status: {status}")
+        elif self._year == 2021:
+            status = 'Poster'
+            
+            session = ''
+            pid = e_row.xpath('./td[1]/text()')[0]
+            title = e_row.xpath('./td[2]/text()')[0]
+            authors = e_row.xpath('./td[3]/text()')[0]
+        elif self._year == 2020:
+            sec_str = e_sec.xpath('../text()')[0].lower()
+            status, session = sec_str.split('—')
+            status = 'Oral' if 'oral' in sec_str else 'Poster' if 'poster' in sec_str else ''
+            
+            pid = e_row.xpath('./td[6]/text()')[0]
+            title = e_row.xpath('./td[4]/text()')[0]
+            authors = e_row.xpath('./td[5]/text()')[0]
+        elif self._year == 2019:
+            sec_str = e_sec.xpath('./strong/text()')[0].lower()
+            status = 'Oral' if 'oral' in sec_str else 'Poster' if 'poster' in sec_str else ''
+            
+            session = '' if not e_row.xpath('./td[1]/text()') else e_row.xpath('./td[1]/text()')[0]
+            pid = e_row.xpath('./td[6]/text()')[0]
+            title = e_row.xpath('./td[4]/text()')[0]
+            authors = e_row.xpath('./td[5]/text()')[0]
+        elif self._year == 2018:
+            pass # not available
+        elif self._year == 2017:
+            
+            status = '' if not e_row.xpath('./td[5]//text()') else e_row.xpath('./td[5]//text()')[0].lower()
+            status = 'Oral' if 'oral' in status else 'Poster' if 'poster' in status else 'Spotlight' if 'spotlight' in status else ''
+            
+            session = '' if not e_row.xpath('./td[6]/font/text()') else e_row.xpath('./td[6]/font/text()')[0]
+            pid = e_row.xpath('./td[7]/font/text()')[0]
+            title = e_row.xpath('./td[8]//font/text()')[0]
+            authors = e_row.xpath('./td[9]/font/text()')[0]
+        elif self._year == 2016:
+            status = '' if not e_sec.xpath('./@id') else e_sec.xpath('./@id')[0].split('-')[0]
+            status = 'Oral' if 'O' in status else 'Spotlight' if 'S' in status else ''
+            status = 'Poster' if not status else status
+            
+            session = e_sec.xpath('./text()')[0]
+            pid = e_row.xpath('text()')[0]
+            title = e_row.xpath('./strong/text()')[0]
+            authors = e_row.xpath('./p/text()')[0]
         else:
             raise NotImplementedError
         
@@ -161,7 +253,7 @@ class StBotICCV(CVFBot):
         else:
             return super().crawl(url, page, track)
         
-    def get_xpath(self):
+    def get_xpath(self, key, sec_idx=None):
         xpath = {}
         if self._year == 2023:
             xpath['sec'] = '//div[@id="table_program_details"]//h2' # usually the title of the tables
@@ -173,7 +265,7 @@ class StBotICCV(CVFBot):
             xpath['td'] = './/tr[position()>2]'
         else:
             raise NotImplementedError
-        return xpath
+        return xpath[key]
     
     def process_row(self, e_sec, e_row):
         if self._year == 2023:

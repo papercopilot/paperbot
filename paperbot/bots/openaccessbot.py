@@ -288,7 +288,7 @@ class OABotCVPR(OpenaccessBot):
         ret['author'] = e_author[0].strip().replace(';', '')
         
         e_pdf = tree_paper.xpath("//a[contains(., 'pdf')]/@href")
-        ret['pdf'] = domain + e_pdf[0]
+        ret['pdf'] = urljoin(domain, e_pdf[0])
         
         _, authors, aff, url_project, url_github = OpenaccessBot.parse_pdf(ret['pdf'])
         ret['aff'] = aff
