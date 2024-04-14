@@ -995,20 +995,27 @@ class MergerCVPR(Merger):
             tier_num['Oral'] = 90
         elif year == 2023: s['total'] = 9155 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
         elif year == 2022: s['total'] = 8262 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
-        elif year == 2021: s['total'] = 0 
-        elif year == 2020: s['total'] = 0 
-        elif year == 2019: s['total'] = 0 
+        elif year == 2021: 
+            # https://cvpr2021.thecvf.com/CVPRaccepts.html
+            s['total'] = 7500 
+            s['withdraw'] = 7500-5900
+        elif year == 2020: 
+            # https://yassouali.github.io/ml-blog/cvpr2020/
+            s['total'] = 6424
+            s['withdraw'] = 6424-5865
+        elif year == 2019: s['total'] = 5160 # https://cvpr2019.thecvf.com/files/CVPR%202019%20-%20Welcome%20Slides%20Final.pdf
         elif year == 2018: 
-            s['total'] = 0
+            s['total'] = 3300 # https://cvpr2018.thecvf.com/
             s['Oral'] = 50 # https://haowang1992.github.io/posts/2019/01/CVPR%202018%20Oral%20Collections/
             s['Poster'] = 929 # openaccess
         elif year == 2017: 
             # https://cvpr2017.thecvf.com/program/main_conference
             s['total'] = 2680
-            s['desk_reject'] = 60
+            s['withdraw'] = 60
         elif year == 2016:
+            # https://cvpr2016.thecvf.com/program/main_conference
             s['total'] = 2145
-            s['desk_reject'] = 2145 - 1865
+            s['withdraw'] = 2145 - 1865
             
             
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
