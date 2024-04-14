@@ -150,12 +150,6 @@ class StBotCVPR(CVFBot):
         elif self._year == 2016:
             xpath['sec'] = '//h4[contains(@class, "program-title")]'
             xpath['tab'] = '//h4[contains(@class, "program-title")]'
-            # xpath['td'] = './following-sibling::ul[preceding-sibling::h4[1] = following-sibling::h4[1]]'
-            # xpath['td'] = './following-sibling::ul[preceding-sibling::h4][not(following-sibling::h4)]'
-            # xpath['td'] = '//h4[contains(@class, "program-title")][1]/following-sibling::ul[following-sibling::h4[contains(@class, "program-title")][1] = //h4[contains(@class, "program-title")][2]]'
-            # xpath['td'] = './following-sibling::ul[following-sibling::h4[1] = //h4[contains(@class, "program-title")][3]]'
-            # xpath['td'] = './following-sibling::ul[following-sibling::h4[1] = preceding-sibling::h4[contains(@class, "program-title")][last()-1]/following-sibling::h4[contains(@class, "program-title")][1]]'
-            # xpath['td'] = './following-sibling::ul[following-sibling::h4[1] = (./preceding-sibling::h4[contains(@class, "program-title")])[last()-1]/following-sibling::h4[contains(@class, "program-title")][1]]'
             xpath['td'] = f'./following-sibling::ul[following-sibling::h4[1] = //h4[contains(@class, "program-title")][{sec_idx+2}]]'
             
         else:
@@ -219,10 +213,11 @@ class StBotCVPR(CVFBot):
             status = 'Oral' if 'O' in status else 'Spotlight' if 'S' in status else ''
             status = 'Poster' if not status else status
             
-            session = e_sec.xpath('./text()')[0]
-            pid = e_row.xpath('text()')[0]
-            title = e_row.xpath('./strong/text()')[0]
-            authors = e_row.xpath('./p/text()')[0]
+            session = ''.join(e_sec.xpath('./text()'))
+            pid = ''.join(e_row.xpath('text()'))
+            title = ''.join(e_row.xpath('./strong//text()')).strip()
+            title = title if title[-1] != '.' else title[:-1] # remove the last period
+            authors = ''.join(e_row.xpath('./p/text()'))
         else:
             raise NotImplementedError
         

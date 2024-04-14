@@ -309,12 +309,21 @@ class Merger:
                     
             
     def merge_paperlist_site_openaccess(self):
+                
+        # hash paperlist by title
+        paperdict_openaccess = {paper['title']: i for i, paper in enumerate(self._paperlist_openaccess)}
+        paperdict_site = {paper['title']: i for i, paper in enumerate(self._paperlist_site)}
+        total_matched = {}
         
+        # if more accurate keys are available
         if 'oa' in self._paperlist_site[0] and self._paperlist_site[0]['oa']:
             paperdict_openaccess = {paper['site']: i for i, paper in enumerate(self._paperlist_openaccess)}
             paperdict_site = {paper['oa']: i for i, paper in enumerate(self._paperlist_site)}
             
-            for site in tqdm(paperdict_site.keys(), desc='Merging papers'):
+            cutoff = 100/100
+            if cutoff not in total_matched: total_matched[cutoff] = 0
+            
+            for site in tqdm(paperdict_site.keys(), desc='Merging papers by openaccess url'):
                 if site in paperdict_openaccess:
                     paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[site]]
                     paper_site = self._paperlist_site[paperdict_site[site]]
@@ -323,44 +332,58 @@ class Merger:
                     paper = self.merge_paper(paper_site, paper_openaccess)
                     
                     self._paperlist_merged.append(paper)
+                    total_matched[cutoff] += 1
                     
             # pop the matched papers
             for paper in self._paperlist_merged:
                 key = paper['oa']
                 paperdict_openaccess.pop(key)
                 paperdict_site.pop(key)
-        else:
-            # hash paperlist by title
-            paperdict_openaccess = {paper['title']: i for i, paper in enumerate(self._paperlist_openaccess)}
-            paperdict_site = {paper['title']: i for i, paper in enumerate(self._paperlist_site)}
+                
+            # swap keys to title for the following proceeding
+            paperdict_openaccess = {self._paperlist_openaccess[paperdict_openaccess[key]]['title']: paperdict_openaccess[key] for key in paperdict_openaccess}
+            paperdict_site = {self._paperlist_site[paperdict_site[key]]['title']: paperdict_site[key] for key in paperdict_site}
+        
+        for c in tqdm(range(100, 70, -1), desc='Iterative Merging papers by title'):
+            curr_matched = []
+            cutoff = c/100
+            if cutoff not in total_matched: total_matched[cutoff] = 0
             
-            # check if title in openreview is in site
-            for title in tqdm(paperdict_openaccess.keys(), desc='Merging papers'):
-                if title in paperdict_site:
-                    # locate paper object
-                    paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[title]]
-                    paper_site = self._paperlist_site[paperdict_site[title]]
+            for title in paperdict_openaccess.keys():
+                paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[title]]
+                
+                matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=cutoff)
+                if matches:
+                    total_matched[cutoff] += 1
+                    paper_site = self._paperlist_site[paperdict_site[matches[0]]]
                     paper_site['type'] = 'site'
                     paper_openaccess['type'] = 'openaccess'
-                    # merge and append
                     paper = self.merge_paper(paper_site, paper_openaccess)
                     
                     self._paperlist_merged.append(paper)
-                    
-                    # TODO: if two papers have the same title, but different content, we should recognize them as different papers
+                    curr_matched.append({'oa': paper_openaccess['title'], 'site': paper_site['title']})
+                    total_matched[cutoff] += 1
                 
-            # pop the matched papers
-            for paper in self._paperlist_merged:
-                paperdict_openaccess.pop(paper['title'])
-                paperdict_site.pop(paper['title'])
-                
-        # check if there are leftovers
+            # pop the matched papers based on to_pop
+            for p in curr_matched:
+                paperdict_site.pop(p['site'])
+                paperdict_openaccess.pop(p['oa'])
+        
+        # check minimum cutoff
+        total_matched_nonzero = {k: v for k, v in total_matched.items() if v != 0}
+        if total_matched_nonzero:
+            min_cutoff = min(total_matched_nonzero.keys())
+            cprint('warning' if min_cutoff < 0.85 else 'info', f'Matched {total_matched} papers with minimum matched cutoff {min_cutoff}.')
+        
+        # post process
         if not paperdict_openaccess and not paperdict_site:
-            pass
+            cprint('success', 'All papers are matched.')
         elif paperdict_openaccess and not paperdict_site:
+            cprint('warning', f'Openaccess has {len(paperdict_openaccess)} left.')
             for title in paperdict_openaccess.keys():
                 self._paperlist_merged.append(self._paperlist_openaccess[paperdict_openaccess[title]])
         elif not paperdict_openaccess and paperdict_site:
+            cprint('warning', f'Site has {len(paperdict_site)} left.')
             for title in paperdict_site.keys():
                 paper = self._paperlist_site[paperdict_site[title]]
                 encoder = hashlib.md5()
@@ -369,27 +392,20 @@ class Merger:
                 paper = {'id': paper.pop('id'), **paper}
                 self._paperlist_merged.append(paper)
         else:
-            # openreview has more data then site, since withdrawn/rejected papers are not in site
             cprint('warning', f'Openaccess has {len(paperdict_openaccess)} left and site has {len(paperdict_site)} left.')
-            total_matches = 0
-            for title in tqdm(paperdict_openaccess.keys(), desc='Merging leftovers'):
-                paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[title]]
-                
-                matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=0.9)
-                if matches:
-                    total_matches += 1
-                    paper_site = self._paperlist_site[paperdict_site[matches[0]]]
-                    paper_site['type'] = 'site'
-                    paper_openaccess['type'] = 'openaccess'
-                    paper = self.merge_paper(paper_site, paper_openaccess)
-                else:
-                    paper = paper_openaccess
-
-                self._paperlist_merged.append(paper)
-            cprint('warning', f'Matched {total_matches} papers.')
+            cprint('warning', 'Please check the unmatched papers.')
             
+            # append the rest of the papers from site
             for title in paperdict_site.keys():
+                paper = self._paperlist_site[paperdict_site[title]]
                 self._paperlist_merged.append(paper)
+                
+            for title in paperdict_openaccess.keys():
+                paper = self._paperlist_openaccess[paperdict_openaccess[title]]
+                self._paperlist_merged.append(paper)
+        
+        self._paperlist_merged = sorted(self._paperlist_merged, key=lambda x: x['title'])
+                
                 
     def normalize_openreview_tier_name(self, s, year, track, tn, th, tt, thc, ttc):
         return s
