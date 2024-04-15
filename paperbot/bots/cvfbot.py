@@ -38,7 +38,16 @@ class CVFBot(sitebot.SiteBot):
         raise NotImplementedError
     
     def process_row(self):
-        raise NotImplementedError
+        raise NotImplementedError    
+    
+    def get_highest_status(self):
+        # default status_priority, can be rewrite in subclass
+        status_priority = {
+            'Poster': 0,
+            'Spotlight': 1,
+            'Oral': 2,
+        }
+        return status_priority
         
     def crawl(self, url, page, track):
         # usually, the page is organized in several sections with table
@@ -56,7 +65,6 @@ class CVFBot(sitebot.SiteBot):
     
         for i, (e_sec, e_table) in enumerate(zip(e_secs, e_tables)):
             e_rows = e_table.xpath(self.get_xpath('td', i))
-            # print(e_table.xpath('./text()')[0], len(e_rows))
             session_cache = '' # cache the session name for the next rows
             status_cache = '' # cache the status for the next rows
             for e_row in tqdm(e_rows, leave=False):
@@ -68,10 +76,15 @@ class CVFBot(sitebot.SiteBot):
                 # find if paper with title already exists
                 if title in self._paper_idx:
                     idx = self._paper_idx[title]
+                    status = self.get_highest_status(self._paperlist[idx]['status'], status_cache)
                     
                     # update keys
-                    self._paperlist[idx]['status'] = status_cache
-                    self._paperlist[idx]['session'] = session_cache
+                    self._paperlist[idx]['status'] = status
+                    if 'Posters' not in session_cache:
+                        # TODO: make this more general
+                        # CVPR 2019
+                        # ICCV 2017
+                        self._paperlist[idx]['session'] = session_cache
                 else: 
                     
                     p = {
@@ -200,7 +213,6 @@ class StBotCVPR(CVFBot):
         elif self._year == 2018:
             pass # not available
         elif self._year == 2017:
-            
             status = '' if not e_row.xpath('./td[5]//text()') else e_row.xpath('./td[5]//text()')[0].lower()
             status = 'Oral' if 'oral' in status else 'Poster' if 'poster' in status else 'Spotlight' if 'spotlight' in status else ''
             
@@ -228,6 +240,14 @@ class StBotCVPR(CVFBot):
         status = status.strip()
         
         return session, title, authors, pid, status
+    
+    def get_highest_status(self, status_new, status):
+        status_priority = super().get_highest_status()
+        
+        status_new = status if not status_new else status_new
+        status_new = status_new if status_priority[status_new] > status_priority[status] else status
+        
+        return status_new
         
 class StBotICCV(CVFBot):
     
@@ -248,7 +268,7 @@ class StBotICCV(CVFBot):
         else:
             return super().crawl(url, page, track)
         
-    def get_xpath(self, key, sec_idx=None):
+    def get_xpath(self, key, sec_idx=0):
         xpath = {}
         if self._year == 2023:
             xpath['sec'] = '//div[@id="table_program_details"]//h2' # usually the title of the tables
@@ -258,6 +278,14 @@ class StBotICCV(CVFBot):
             xpath['sec'] = '//h3[text()="Presentation Schedule"]/following-sibling::a[contains(@name, "poster") or contains(@name, "oral")]'
             xpath['tab'] = '//h3[text()="Presentation Schedule"]/following-sibling::table'
             xpath['td'] = './/tr[position()>2]'
+        elif self._year == 2017:
+            xpath['sec'] = '//h4[text()="Program Schedule"]'
+            xpath['tab'] = '//h4[text()="Program Schedule"]/following-sibling::table'
+            xpath['td'] = './/tr[position()>1]'
+        elif self._year == 2015:
+            xpath['sec'] = '//td[@colspan="3"]/b[contains(text(), "]")]'
+            xpath['tab'] = '//td[@colspan="3"]/b[contains(text(), "]")]'
+            xpath['td'] = f'../../following-sibling::tr/td/i[../../following-sibling::tr/td[@colspan="3"]/b[contains(text(), "]")] = (//td[@colspan="3"]/b[contains(text(), "]")])[{sec_idx+2}]]'
         else:
             raise NotImplementedError
         return xpath[key]
@@ -283,6 +311,25 @@ class StBotICCV(CVFBot):
         
             if session: self.session_temp = session
             else: session = self.session_temp
+            
+        elif self._year == 2017:
+            status = '' if not e_row.xpath('./td[5]//text()') else ''.join(e_row.xpath('./td[5]//text()')).lower()
+            status = 'Oral' if 'oral' in status else 'Poster' if 'poster' in status else 'Spotlight' if 'spotlight' in status else ''
+            
+            session = '' if not e_row.xpath('./td[6]/font/text()') else ''.join(e_row.xpath('./td[6]/font/text()'))
+            pid = ''.join(e_row.xpath('./td[8]/font/text()'))
+            title = ''.join(e_row.xpath('./td[9]//font/text()')).strip()
+            authors = ''.join(e_row.xpath('./td[10]/font/text()'))
+        elif self._year == 2015:
+            sec_str = e_sec.xpath('./text()')[0].lower()
+            status, session = sec_str.split(' - ')
+            status = 'Oral' if 'oral' in status else 'Poster' if 'poster' in status else 'Poster' # special session
+            
+            pid = ''
+            title = ''.join(e_row.xpath('../a//text()'))
+            authors = ''.join(e_row.xpath('./text()'))
+            oa = ''.join(e_row.xpath('../a/@href'))
+            
         else:
             raise NotImplementedError
         
@@ -293,3 +340,11 @@ class StBotICCV(CVFBot):
         status = status.strip()
         
         return session, title, authors, pid, status
+    
+    def get_highest_status(self, status_new, status):
+        status_priority = super().get_highest_status()
+        
+        status_new = status if not status_new else status_new
+        status_new = status_new if status_priority[status_new] > status_priority[status] else status
+        
+        return status_new

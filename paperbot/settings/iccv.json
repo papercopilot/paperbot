@@ -69,5 +69,53 @@
                 }
             }
         }
+    },
+    "2017": {
+        "site": {
+            "domain": "http://iccv2017.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "all": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "http://openaccess.thecvf.com/ICCV2017",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2015": {
+        "site": {
+            "domain": "http://iccv2015.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "all": "program.php"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "http://openaccess.thecvf.com/ICCV2015",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
     }
 }

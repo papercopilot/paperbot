@@ -1006,8 +1006,8 @@ class MergerCVPR(Merger):
         elif year == 2019: s['total'] = 5160 # https://cvpr2019.thecvf.com/files/CVPR%202019%20-%20Welcome%20Slides%20Final.pdf
         elif year == 2018: 
             s['total'] = 3300 # https://cvpr2018.thecvf.com/
-            s['Oral'] = 50 # https://haowang1992.github.io/posts/2019/01/CVPR%202018%20Oral%20Collections/
-            s['Poster'] = 929 # openaccess
+            tier_num['Poster'] = 929 # poster, openaccess
+            tier_num['Oral'] = 50 # oral, https://haowang1992.github.io/posts/2019/01/CVPR%202018%20Oral%20Collections/
         elif year == 2017: 
             # https://cvpr2017.thecvf.com/program/main_conference
             s['total'] = 2680
@@ -1058,6 +1058,8 @@ class MergerICCV(Merger):
         if year == 2023: s['total'] = 8620 # https://iccv2023.thecvf.com/iccv2023.main.conference.program-38--MTE.php
         if year == 2021: s['total'] = 6152 # https://www.openresearch.org/wiki/ICCV
         if year == 2019: s['total'] = 4303 # https://www.openresearch.org/wiki/ICCV
+        if year == 2017: s['total'] = 2143 # https://www.openresearch.org/wiki/ICCV_2017
+        if year == 2015: s['total'] = 1698
     
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
