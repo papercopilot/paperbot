@@ -54,6 +54,7 @@ class CCBot(sitebot.SiteBot):
         
         href = e.xpath(".//a[contains(@class,'small-title')]/@href")[0].strip()
         extra['site'] = f'{self._domain}{href}'
+        extra['id'] = urlparse(extra['site']).path.split('/')[-1]
         
         return title, author, status, paperid, extra
     

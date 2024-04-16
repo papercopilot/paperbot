@@ -222,13 +222,21 @@ class Merger:
         
     def merge_paperlist_site_openreview(self):
         
+        # hash paperlist by title
+        paperdict_openreview = {paper['title']: i for i, paper in enumerate(self._paperlist_openreview) if (paper['status'] != 'Withdraw' and paper['status'] != 'Reject')}
+        paperdict_site = {paper['title']: i for i, paper in enumerate(self._paperlist_site)}
+        total_matched = {}
+        
         if 'openreview' in self._paperlist_site[0] and self._paperlist_site[0]['openreview']:
             # has paperlist by openreview id
-            paperdict_openreview = {paper['id']: i for i, paper in enumerate(self._paperlist_openreview)}
+            paperdict_openreview = {paper['id']: i for i, paper in enumerate(self._paperlist_openreview) if (paper['status'] != 'Withdraw' and paper['status'] != 'Reject')}
             paperdict_site = {paper['openreview'].split('forum?id=')[-1]: i for i, paper in enumerate(self._paperlist_site)}
             
+            cutoff = 100/100
+            if cutoff not in total_matched: total_matched[cutoff] = 0
+            
             # check if id in openreview is in site
-            for id in tqdm(paperdict_openreview.keys(), desc='Merging papers'):
+            for id in tqdm(paperdict_openreview.keys(), desc='Merging papers by openreview url'):
                 if id in paperdict_site:
                     # locate paper object
                     paper_openreview = self._paperlist_openreview[paperdict_openreview[id]]
@@ -236,76 +244,81 @@ class Merger:
                     paper_openreview['type'] = 'openreview'
                     paper_site['type'] = 'site'
                     # merge and append
-                    paper = self.merge_paper(paper_site, paper_openreview)
-                    
-                    self._paperlist_merged.append(paper)
+                    self._paperlist_merged.append(self.merge_paper(paper_site, paper_openreview))
                     
             # pop the matched papers
             for paper in self._paperlist_merged:
                 paperdict_openreview.pop(paper['id'])
                 paperdict_site.pop(paper['id'])
+                
+            # swap keys to title for the following proceeding
+            paperdict_openreview = {self._paperlist_openreview[paperdict_openreview[key]]['title']: paperdict_openreview[key] for key in paperdict_openreview}
+            paperdict_site = {self._paperlist_site[paperdict_site[key]]['title']: paperdict_site[key] for key in paperdict_site}
         
-        else:
-            # hash paperlist by title
-            paperdict_openreview = {paper['title']: i for i, paper in enumerate(self._paperlist_openreview)}
-            paperdict_site = {paper['title']: i for i, paper in enumerate(self._paperlist_site)}
+        # check if title in openreview is in site
+        for c in tqdm(range(100, 70, -1), desc='Iterative Merging papers by title'):
+            curr_matched = []
+            cutoff = c/100
+            if cutoff not in total_matched: total_matched[cutoff] = 0
             
-            # check if title in openreview is in site
-            for title in tqdm(paperdict_openreview.keys(), desc='Merging papers'):
-                if title in paperdict_site:
-                    # locate paper object
-                    paper_openreview = self._paperlist_openreview[paperdict_openreview[title]]
-                    paper_site = self._paperlist_site[paperdict_site[title]]
+            for title in paperdict_openreview.keys():
+                paper_openreview = self._paperlist_openreview[paperdict_openreview[title]]
+                
+                matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=cutoff)
+                if matches:
+                    total_matched[cutoff] += 1
+                    paper_site = self._paperlist_site[paperdict_site[matches[0]]]
+                    curr_matched.append({'or': paper_openreview['title'], 'site': paper_site['title']})
+                    
                     paper_site['type'] = 'site'
                     paper_openreview['type'] = 'openreview'
-                    # merge and append
-                    paper = self.merge_paper(paper_site, paper_openreview)
-                    
-                    self._paperlist_merged.append(paper)
+                    self._paperlist_merged.append(self.merge_paper(paper_site, paper_openreview))
                     
                     # TODO: if two papers have the same title, but different content, we should recognize them as different papers
                 
             # pop the matched papers
-            for paper in self._paperlist_merged:
-                paperdict_openreview.pop(paper['title'])
-                paperdict_site.pop(paper['title'])
+            for p in curr_matched:
+                paperdict_site.pop(p['site'])
+                paperdict_openreview.pop(p['or'])
+        
+        # check minimum cutoff
+        total_matched_nonzero = {k: v for k, v in total_matched.items() if v != 0}
+        if total_matched_nonzero:
+            min_cutoff = min(total_matched_nonzero.keys())
+            cprint('warning' if min_cutoff < 0.85 else 'info', f'Matched {total_matched} papers with minimum matched cutoff {min_cutoff}.')
         
         # check if there are leftovers
         if not paperdict_openreview and not paperdict_site:
-            pass
+            cprint('success', 'All papers are matched.')
         elif paperdict_openreview and not paperdict_site:
+            cprint('warning', f'Openreview has {len(paperdict_openreview)} left.')
             for title in paperdict_openreview.keys():
                 self._paperlist_merged.append(self._paperlist_openreview[paperdict_openreview[title]])
         elif not paperdict_openreview and paperdict_site:
+            cprint('warning', f'Site has {len(paperdict_site)} left.')
             for title in paperdict_site.keys():
                 paper = self._paperlist_site[paperdict_site[title]]
-                encoder = hashlib.md5()
-                encoder.update(title.encode('utf-8'))
-                paper['id'] = 'site_' + encoder.hexdigest()[0:10]
-                paper = {'id': paper.pop('id'), **paper}
+                if 'id' not in paper:
+                    encoder = hashlib.md5()
+                    encoder.update(title.encode('utf-8'))
+                    paper['id'] = 'site_' + encoder.hexdigest()[0:10]
+                    paper = {'id': paper.pop('id'), **paper}
                 self._paperlist_merged.append(paper)
         else:
-            # openreview has more data then site, since withdrawn/rejected papers are not in site
             cprint('warning', f'Openreview has {len(paperdict_openreview)} left and site has {len(paperdict_site)} left.')
-            total_matches = 0
-            for title in tqdm(paperdict_openreview.keys(), desc='Merging leftovers'):
-                paper_openreview = self._paperlist_openreview[paperdict_openreview[title]]
-                
-                matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=0.9)
-                if matches:
-                    total_matches += 1
-                    paper_site = self._paperlist_site[paperdict_site[matches[0]]]
-                    paper_site['type'] = 'site'
-                    paper_openreview['type'] = 'openreview'
-                    paper = self.merge_paper(paper_site, paper_openreview)
-                else:
-                    paper = paper_openreview
-
-                self._paperlist_merged.append(paper)
-            cprint('warning', f'Matched {total_matches} papers.')
+            cprint('warning', 'Please check the unmatched papers.')
             
             for title in paperdict_site.keys():
+                paper = self._paperlist_site[paperdict_site[title]]
                 self._paperlist_merged.append(paper)
+                
+            for title in paperdict_openreview.keys():
+                paper = self._paperlist_openreview[paperdict_openreview[title]]
+                self._paperlist_merged.append(paper)
+                
+        # get back the withdrawn and rejected papers and sort by title
+        self._paperlist_merged += [paper for paper in self._paperlist_openreview if paper['status'] == 'Withdraw' or paper['status'] == 'Reject']
+        self._paperlist_merged = sorted(self._paperlist_merged, key=lambda x: x['title'])
                     
             
     def merge_paperlist_site_openaccess(self):
@@ -356,13 +369,11 @@ class Merger:
                 if matches:
                     total_matched[cutoff] += 1
                     paper_site = self._paperlist_site[paperdict_site[matches[0]]]
+                    curr_matched.append({'oa': paper_openaccess['title'], 'site': paper_site['title']})
+                    
                     paper_site['type'] = 'site'
                     paper_openaccess['type'] = 'openaccess'
-                    paper = self.merge_paper(paper_site, paper_openaccess)
-                    
-                    self._paperlist_merged.append(paper)
-                    curr_matched.append({'oa': paper_openaccess['title'], 'site': paper_site['title']})
-                    total_matched[cutoff] += 1
+                    self._paperlist_merged.append(self.merge_paper(paper_site, paper_openaccess))
                 
             # pop the matched papers based on to_pop
             for p in curr_matched:
@@ -379,17 +390,18 @@ class Merger:
         if not paperdict_openaccess and not paperdict_site:
             cprint('success', 'All papers are matched.')
         elif paperdict_openaccess and not paperdict_site:
-            cprint('warning', f'Openaccess has {len(paperdict_openaccess)} left.')
+            cprint('success', f'Openaccess has {len(paperdict_openaccess)} left.')
             for title in paperdict_openaccess.keys():
                 self._paperlist_merged.append(self._paperlist_openaccess[paperdict_openaccess[title]])
         elif not paperdict_openaccess and paperdict_site:
             cprint('warning', f'Site has {len(paperdict_site)} left.')
             for title in paperdict_site.keys():
                 paper = self._paperlist_site[paperdict_site[title]]
-                encoder = hashlib.md5()
-                encoder.update(title.encode('utf-8'))
-                paper['id'] = 'site_' + encoder.hexdigest()[0:10]
-                paper = {'id': paper.pop('id'), **paper}
+                if 'id' not in paper:
+                    encoder = hashlib.md5()
+                    encoder.update(title.encode('utf-8'))
+                    paper['id'] = 'site_' + encoder.hexdigest()[0:10]
+                    paper = {'id': paper.pop('id'), **paper}
                 self._paperlist_merged.append(paper)
         else:
             cprint('warning', f'Openaccess has {len(paperdict_openaccess)} left and site has {len(paperdict_site)} left.')
@@ -745,11 +757,12 @@ class MergerICLR(Merger):
     def normalize_openreview_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
         
         if year == 2024:
-            tier_num['Reject'] = tier_num.pop('Pending')
-            tier_hist['Reject'] = tier_hist.pop('Pending')
-            tier_tsf['Reject'] = tier_tsf.pop('Pending')
-            tier_hist_conf['Reject'] = tier_hist_conf.pop('Pending')
-            tier_tsf_conf['Reject'] = tier_tsf_conf.pop('Pending')
+            pass
+            # tier_num['Reject'] = tier_num.pop('Pending')
+            # tier_hist['Reject'] = tier_hist.pop('Pending')
+            # tier_tsf['Reject'] = tier_tsf.pop('Pending')
+            # tier_hist_conf['Reject'] = tier_hist_conf.pop('Pending')
+            # tier_tsf_conf['Reject'] = tier_tsf_conf.pop('Pending')
         if year == 2023:
             tier_num['Spotlight'] = tier_num.pop('Top-25%')
             tier_hist['Spotlight'] = tier_hist.pop('Top-25%')
