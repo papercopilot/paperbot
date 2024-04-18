@@ -223,13 +223,13 @@ class Merger:
     def merge_paperlist_site_openreview(self):
         
         # hash paperlist by title
-        paperdict_openreview = {paper['title']: i for i, paper in enumerate(self._paperlist_openreview) if (paper['status'] != 'Withdraw' and paper['status'] != 'Reject')}
+        paperdict_openreview = {paper['title']: i for i, paper in enumerate(self._paperlist_openreview) if (paper['status'] != 'Withdraw' and paper['status'] != 'Reject' and paper['status'] != 'Desk Reject')}
         paperdict_site = {paper['title']: i for i, paper in enumerate(self._paperlist_site)}
         total_matched = {}
         
         if 'openreview' in self._paperlist_site[0] and self._paperlist_site[0]['openreview']:
             # has paperlist by openreview id
-            paperdict_openreview = {paper['id']: i for i, paper in enumerate(self._paperlist_openreview) if (paper['status'] != 'Withdraw' and paper['status'] != 'Reject')}
+            paperdict_openreview = {paper['id']: i for i, paper in enumerate(self._paperlist_openreview) if (paper['status'] != 'Withdraw' and paper['status'] != 'Reject' and paper['status'] != 'Desk Reject')}
             paperdict_site = {paper['openreview'].split('forum?id=')[-1]: i for i, paper in enumerate(self._paperlist_site)}
             
             cutoff = 100/100
@@ -317,7 +317,7 @@ class Merger:
                 self._paperlist_merged.append(paper)
                 
         # get back the withdrawn and rejected papers and sort by title
-        self._paperlist_merged += [paper for paper in self._paperlist_openreview if paper['status'] == 'Withdraw' or paper['status'] == 'Reject']
+        self._paperlist_merged += [paper for paper in self._paperlist_openreview if paper['status'] == 'Withdraw' or paper['status'] == 'Reject' or paper['status'] == 'Desk Reject']
         self._paperlist_merged = sorted(self._paperlist_merged, key=lambda x: x['title'])
                     
             
@@ -636,7 +636,35 @@ class Merger:
                         stats[s['conference']] = s
         
         if self._summary_openaccess:
-            pass
+            
+            for year in self._summary_site:
+                if year not in self._summary_merged: 
+                    self._summary_merged[year] = {}
+                
+                if year not in self._summary_openaccess:
+                    continue
+                    
+                for track in self._summary_openaccess[year]:
+                    if track not in self._summary_merged[year]:
+                        self._summary_merged[year][track] = {}
+                        
+                    summary = self._summary_openaccess[year][track]
+                    
+                    f = filter(str.isalpha, track[:4])
+                    track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
+                    cid = f'{self._conf.lower()}{year}{track_alphabet}'
+                    
+                    
+                    if cid in stats:
+                        stats[cid]['s2'] = summary['src']['openaccess']['name']
+                        stats[cid]['su2'] = summary['src']['openaccess']['url']
+                    else:
+                        s['s2'] = summary['src']['openaccess']['name']
+                        s['su2'] = summary['src']['openaccess']['url']
+                        
+                        stats[s['conference']] = s
+                        
+                    
         if self._summary_gform:
             
             for year in self._summary_gform:

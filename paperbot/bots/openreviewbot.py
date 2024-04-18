@@ -325,7 +325,7 @@ class OpenreviewBot(sitebot.SiteBot):
             self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
             
             # update summary
-            self._summary_all_tracks[track] = self.summarizer.summarize()
+            self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
             self._keyword_all_tracks[track] = self.summarizer.parse_keywords(track) if self.dump_keywords else {}
             
         # save paperlist for each venue per year

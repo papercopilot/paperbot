@@ -175,7 +175,7 @@ class CCBot(sitebot.SiteBot):
                 }
             }
             self.summarizer.paperlist = self._paperlist
-            self._summary_all_tracks[track] = self.summarizer.summarize_paperlist(track)
+            self._summary_all_tracks[track] = self.summarizer.summarize_site_paperlist(track)
                 
         # save paperlist for each venue per year
         self.save_paperlist()

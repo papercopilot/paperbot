@@ -41,7 +41,7 @@
                 "main": {
                     "pages": {
                         "poster": "Poster",
-                        "spotlight": "Spotlight",
+                        "spotlight-posters": "Spotlight",
                         "oral": "Oral"
                     }
                 }

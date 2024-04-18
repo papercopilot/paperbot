@@ -360,7 +360,7 @@ class Summarizer():
         keywords_curr = ';'.join([f'{k}:{v}' for k, v in sorted(phrase_counts.most_common(n_phrase))])
         return keywords_curr
     
-    def summarize_paperlist(self, track):
+    def summarize_site_paperlist(self, track):
         
         # TODO: this function is only used by sitebot, merge to summarize if possible
         
@@ -382,7 +382,7 @@ class Summarizer():
         return self.sorted_summary(summary)
         
     
-    def summarize(self, is_sort=True):
+    def summarize_openreview_paperlist(self, is_sort=True):
         
         summary = {
             'src': self.src,
@@ -404,3 +404,16 @@ class Summarizer():
             return self.sorted_summary(summary)
         else:
             return summary
+        
+    def summarize_openaccess_paperlist(self, track):
+        
+        self.update_summary('Poster', len(self._paperlist))
+        self.tier_names = dict((v,k) for k,v in self.tier_ids.items())
+            
+        summary = {
+            'src': self.src,
+            'tnum': self.tier_num,
+            'tname': self.tier_names,
+        }
+        
+        return self.sorted_summary(summary)
