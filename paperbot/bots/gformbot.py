@@ -81,6 +81,8 @@ class GFormBot(sitebot.SiteBot):
         
         for track in self._tracks:
             
+            self.summarizer.clear_summary()
+            
             if fetch_site:
                 self.df = self.crawl(track)
             else:

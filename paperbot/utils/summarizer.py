@@ -216,7 +216,7 @@ class Summarizer():
         paperlist0 = self._paperlist_init
         
         # get histogram over all submissions at initial
-        hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(paperlist0)
+        hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(paperlist0, track=track)
         if hist_sum > 0:
             tid = self.get_tid('Total0')
             self.tier_hist[tid], self.tier_hist_sum[tid], self.tier_hist_confidence[tid] = hist_rating_str, hist_sum, hist_confidence_str
@@ -246,7 +246,7 @@ class Summarizer():
             #     self.tier_tsf[tid] = ';'.join(np.char.mod('%d', rating_avg_transfer.flatten()))
             #     self.tier_tsf_sum[tid] = int(rating_avg_transfer.sum())
             
-            tsf_rating_sum, tsf_rating_str, tsf_rating, tsf_confidence_str, tsf_confidence = self.get_tsf(self._paperlist, paperlist0)
+            tsf_rating_sum, tsf_rating_str, tsf_rating, tsf_confidence_str, tsf_confidence = self.get_tsf(self._paperlist, paperlist0, track=track)
             if tsf_rating_sum > 0:
                 self.tier_tsf[tid] = tsf_rating_str
                 self.tier_tsf_confidence[tid] = tsf_confidence_str
@@ -271,7 +271,7 @@ class Summarizer():
                 #     self.tier_tsf[tid] = ';'.join(np.char.mod('%d', rating_avg_transfer.flatten()))
                 #     self.tier_tsf_sum[tid] = int(rating_avg_transfer.sum())
                 
-                tsf_rating_sum, tsf_rating_str, tsf_rating, tsf_confidence_str, tsf_confidence = self.get_tsf(self._paperlist, paperlist0, k)
+                tsf_rating_sum, tsf_rating_str, tsf_rating, tsf_confidence_str, tsf_confidence = self.get_tsf(self._paperlist, paperlist0, k, track=track)
                 if tsf_rating_sum > 0:
                     self.tier_tsf[tid] = tsf_rating_str
                     self.tier_tsf_confidence[tid] = tsf_confidence_str
@@ -303,7 +303,7 @@ class Summarizer():
                 #     self.tier_tsf[tid] = ';'.join(np.char.mod('%d', rating_avg_transfer.flatten()))
                 #     self.tier_tsf_sum[tid] = int(rating_avg_transfer.sum())
                     
-                tsf_rating_sum, tsf_rating_str, tsf_rating, tsf_confidence_str, tsf_confidence = self.get_tsf(self._paperlist, paperlist0, tier_name[k])
+                tsf_rating_sum, tsf_rating_str, tsf_rating, tsf_confidence_str, tsf_confidence = self.get_tsf(self._paperlist, paperlist0, tier_name[k], track=track)
                 if tsf_rating_sum > 0:
                     self.tier_tsf[tid] = tsf_rating_str
                     self.tier_tsf_confidence[tid] = tsf_confidence_str
