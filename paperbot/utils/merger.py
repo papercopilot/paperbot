@@ -219,6 +219,15 @@ class Merger:
         elif self._paperlist_openaccess:
             self._paperlist_merged = sorted(self._paperlist_openaccess, key=lambda x: x['title'])
         
+    def process_unmatched_paperlist_site_openreview(self, paperdict_openreview, paperdict_site):
+        
+        for title in paperdict_site.keys():
+            paper = self._paperlist_site[paperdict_site[title]]
+            self._paperlist_merged.append(paper)
+            
+        for title in paperdict_openreview.keys():
+            paper = self._paperlist_openreview[paperdict_openreview[title]]
+            self._paperlist_merged.append(paper)
         
     def merge_paperlist_site_openreview(self):
         
@@ -308,13 +317,7 @@ class Merger:
             cprint('warning', f'Openreview has {len(paperdict_openreview)} left and site has {len(paperdict_site)} left.')
             cprint('warning', 'Please check the unmatched papers.')
             
-            for title in paperdict_site.keys():
-                paper = self._paperlist_site[paperdict_site[title]]
-                self._paperlist_merged.append(paper)
-                
-            for title in paperdict_openreview.keys():
-                paper = self._paperlist_openreview[paperdict_openreview[title]]
-                self._paperlist_merged.append(paper)
+            self.process_unmatched_paperlist_site_openreview(paperdict_openreview, paperdict_site)
                 
         # get back the withdrawn and rejected papers and sort by title
         self._paperlist_merged += [paper for paper in self._paperlist_openreview if paper['status'] == 'Withdraw' or paper['status'] == 'Reject' or paper['status'] == 'Desk Reject']
@@ -781,6 +784,13 @@ class MergerICLR(Merger):
                 paper['status'] = 'Spotlight' # update based on the author and committee's response
     
         return paper
+        
+    def process_unmatched_paperlist_site_openreview(self, paperdict_openreview, paperdict_site):
+        # for ICLR, we don't need to process unmatched papers on site
+            
+        for title in paperdict_openreview.keys():
+            paper = self._paperlist_openreview[paperdict_openreview[title]]
+            self._paperlist_merged.append(paper)
     
     def normalize_openreview_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
         
@@ -991,7 +1001,9 @@ class MergerCVPR(Merger):
     def merge_paper_site_openaccess(self, p1, p2):
         paper = p1.copy()
         
-        if self._year >= 2023:
+        if self._year >= 2024:
+            pass
+        elif self._year == 2023:
             if 'github' in p2: paper['github'] = paper['github'] if paper['github'] else p2['github']
             if 'project' in p2: paper['project'] = paper['project'] if paper['project'] else p2['project']
             if 'aff' in p2: paper['aff'] = p2['aff']

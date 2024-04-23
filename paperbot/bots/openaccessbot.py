@@ -69,6 +69,31 @@ class OpenaccessBot(sitebot.SiteBot):
             url_github = '' if 'github.com' not in url_project else url_project
             url_project = '' if 'github.com' in url_project else url_project
             
+            # match = re.search("(?P<url>https?[^\s]+)", page_text) # pdf could split on ':'
+            # url = '' if not match else match.group()
+            
+            # # if the last character is not an alphabet, the url is not complete
+            # if not url[-1].isalpha():
+            #     next_eol = page_text.find('\n', match.end()+1) # next end of line
+            #     match_next = re.search("(?P<url>https?[^ ]+)", page_text[match.start():next_eol])
+            #     url = '' if not match_next else match_next.group()
+            #     # page_text = page_text if not match else page_text.replace(url, '\n') # remove the url from the text
+                
+            #     response = sitebot.SiteBot.session_request(url)
+            #     if response.status_code == 200:
+            #         page_text = page_text if not match else page_text.replace(url, '\n') # remove the url from the text
+            #         url = url.replace('\n', '') # remove '\n' in the url
+            #     elif response.status_code == 404:
+            #         url = url.split('\n')[0] # remove '\n' in the url
+            #         page_text = page_text if not match else page_text.replace(url, '\n')
+            #     # TODO: could even wrap in the next line
+            # else:
+            #     # the url is complete and remove it from the text
+            #     page_text = page_text if not match else page_text.replace(url, '\n')
+                
+            # url_github = '' if 'github.com' not in url else url
+            # url_project = '' if 'github.com' in url else url
+            
             # split the text by '\nAbstract\n'
             text_left = page_text.split('\nAbstract\n')[0]
             
