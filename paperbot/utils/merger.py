@@ -857,10 +857,10 @@ class MergerNIPS(Merger):
         
         if year == 2022:
             s['accept'] = tier_num.pop('Accept')
-            paperlist = self.read_paperlist(os.path.join(self._paths['paperlists'], 'nips/nips2022.json'))
+            paperlist = self.read_paperlist(os.path.join(self._paths['paperlists'], 'nips/nips2022.json')) # reload the merged paperlist
             tier_name = {
                 'Poster': 'Poster',
-                'Hightlighted': 'Oral'
+                'Highlighted': 'Oral'
             }
             for k in tier_name:
                 hist_sum, hist_rating_str, hist_rating, hist_confidence_str, hist_confidence = Summarizer().get_hist(paperlist, k, track=track)
