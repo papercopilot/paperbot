@@ -219,6 +219,22 @@ class Merger:
         elif self._paperlist_openaccess:
             self._paperlist_merged = sorted(self._paperlist_openaccess, key=lambda x: x['title'])
         
+    def process_unmatched_paperlist_openreview(self, paperdict_openreview):
+        
+        for title in paperdict_openreview.keys():
+            self._paperlist_merged.append(self._paperlist_openreview[paperdict_openreview[title]])
+        
+    def process_unmatched_paperlist_site(self, paperdict_site):
+        
+        for title in paperdict_site.keys():
+            paper = self._paperlist_site[paperdict_site[title]]
+            if 'id' not in paper:
+                encoder = hashlib.md5()
+                encoder.update(title.encode('utf-8'))
+                paper['id'] = 'site_' + encoder.hexdigest()[0:10]
+                paper = {'id': paper.pop('id'), **paper}
+            self._paperlist_merged.append(paper)
+        
     def process_unmatched_paperlist_site_openreview(self, paperdict_openreview, paperdict_site):
         
         for title in paperdict_site.keys():
@@ -294,29 +310,20 @@ class Merger:
         total_matched_nonzero = {k: v for k, v in total_matched.items() if v != 0}
         if total_matched_nonzero:
             min_cutoff = min(total_matched_nonzero.keys())
-            cprint('warning' if min_cutoff < 0.85 else 'info', f'Matched {total_matched} papers with minimum matched cutoff {min_cutoff}.')
+            cprint('warning' if min_cutoff < 0.85 else 'info' if min_cutoff < 1.0 else 'success', f'Matched {total_matched} papers with minimum matched cutoff {min_cutoff}.')
         
         # check if there are leftovers
         if not paperdict_openreview and not paperdict_site:
             cprint('success', 'All papers are matched.')
         elif paperdict_openreview and not paperdict_site:
             cprint('warning', f'Openreview has {len(paperdict_openreview)} left.')
-            for title in paperdict_openreview.keys():
-                self._paperlist_merged.append(self._paperlist_openreview[paperdict_openreview[title]])
+            self.process_unmatched_paperlist_openreview(paperdict_openreview)
         elif not paperdict_openreview and paperdict_site:
             cprint('warning', f'Site has {len(paperdict_site)} left.')
-            for title in paperdict_site.keys():
-                paper = self._paperlist_site[paperdict_site[title]]
-                if 'id' not in paper:
-                    encoder = hashlib.md5()
-                    encoder.update(title.encode('utf-8'))
-                    paper['id'] = 'site_' + encoder.hexdigest()[0:10]
-                    paper = {'id': paper.pop('id'), **paper}
-                self._paperlist_merged.append(paper)
+            self.process_unmatched_paperlist_site(paperdict_site)
         else:
             cprint('warning', f'Openreview has {len(paperdict_openreview)} left and site has {len(paperdict_site)} left.')
             cprint('warning', 'Please check the unmatched papers.')
-            
             self.process_unmatched_paperlist_site_openreview(paperdict_openreview, paperdict_site)
                 
         # get back the withdrawn and rejected papers and sort by title
@@ -784,10 +791,12 @@ class MergerICLR(Merger):
                 paper['status'] = 'Spotlight' # update based on the author and committee's response
     
         return paper
+    
+    def process_unmatched_paperlist_site(self, paperdict_site):
+        pass
         
     def process_unmatched_paperlist_site_openreview(self, paperdict_openreview, paperdict_site):
         # for ICLR, we don't need to process unmatched papers on site
-            
         for title in paperdict_openreview.keys():
             paper = self._paperlist_openreview[paperdict_openreview[title]]
             self._paperlist_merged.append(paper)

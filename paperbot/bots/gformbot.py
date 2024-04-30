@@ -146,6 +146,8 @@ class GFormBotICML(GFormBot):
             # remove invalide response
             match = re.search('[a-zA-Z]', row['Initial Ratings'])
             if match: return ret
+            match = re.search('[a-zA-Z]', row['Initial Confidence'])
+            if match: return ret
             
             if mode == 'Rebuttal':
             
@@ -239,7 +241,7 @@ class GFormBotACL(GFormBot):
         np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
         
         if np2avg(rating) > 5:
-            cprint('warning', f"Rating > 5: {np2avg(rating)}")
+            cprint('warning', f"Rating > 5: {np2avg(rating)}, skipping")
             return ret
             
         ret = {
