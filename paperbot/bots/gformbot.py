@@ -126,6 +126,8 @@ class GFormBot(sitebot.SiteBot):
                 return content.split('，')
             elif '/' in non_digits:
                 return content.split('/')
+            elif '-' in non_digits:
+                return content.split('-')
             else:
                 raise ValueError(f"Unknown separator: {non_digits}")
         
