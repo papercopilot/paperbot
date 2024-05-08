@@ -159,6 +159,12 @@
                     "Active": "Conference/-/Blind_Submission",
                     "Withdraw": "Conference/-/Withdrawn_Submission",
                     "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                },
+                "Datasets & Benchmarks": {
+                    "Active": [
+                        "Track/Datasets_and_Benchmarks/Round1/-/Submission",
+                        "Track/Datasets_and_Benchmarks/Round2/-/Submission"
+                    ]
                 }
             },
             "tname": {
@@ -166,6 +172,10 @@
                     "Accept (Spotlight)": "Spotlight",
                     "Accept (Poster)": "Poster",
                     "Accept (Oral)": "Oral",
+                    "Reject": "Reject"
+                },
+                "Datasets & Benchmarks": {
+                    "Accept": "Poster",
                     "Reject": "Reject"
                 }
             },

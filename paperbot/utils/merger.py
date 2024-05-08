@@ -882,7 +882,7 @@ class MergerNIPS(Merger):
         
         if year == 2023: s['total'] = 12345 if track == 'main' else 985 if track == 'Datasets & Benchmarks' else 0 # https://blog.neurips.cc/category/2023-conference/ (13330-12345)
         elif year == 2022: s['total'] = 10411 if track == 'main' else 447 if track == 'Datasets & Benchmarks' else 0 # https://www.businesswire.com/news/home/20221130005340/en/Eleven-NTT-Papers-Selected-for-NeurIPS-2022, https://blog.neurips.cc/category/2022-conference/
-        elif year == 2021: s['total'] = 9122 # https://www.vinai.io/an-overview-of-neurips-2021s-publications/
+        elif year == 2021: s['total'] = 9122 if track == 'main' else 0 if track == 'Datasets & Benchmarks' else 0 # https://www.vinai.io/an-overview-of-neurips-2021s-publications/
         elif year == 2020: s['total'] = 9467 # https://syncedreview.com/2020/10/08/google-stanford-mit-top-neurips-2020-accepted-papers-list/
         elif year == 2019: s['total'] = 6743 # https://medium.com/syncedreview/paper-submissions-break-neurips-2019-paper-submission-system-884a60e32a82
         elif year == 2018: s['total'] = 4856 # https://www.openresearch.org/wiki/NIPS
@@ -921,6 +921,9 @@ class MergerICML(Merger):
         return paper
     
     def update_total(self, s, year, track, tier_num):
+        if year == 2024: 
+            s['total'] = 9653 # https://twitter.com/zicokolter/status/1753398445216604588
+            tier_num['Poster'] = 2609
         if year == 2023: s['total'] = 6538 # https://min.news/en/tech/c1d451087b3b992dafb8ef13c19862ca.html
         elif year == 2022: s['total'] = 5630 # https://www.myhuiban.com/conference/406?page=6&lang=en_us
         elif year == 2021: s['total'] = 5513 # https://www.openresearch.org/wiki/ICML

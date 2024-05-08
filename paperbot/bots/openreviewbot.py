@@ -297,16 +297,19 @@ class OpenreviewBot(sitebot.SiteBot):
                 # loop over pages
                 cprint('info', f'{self._conf} {self._year} {track}: Fetching Openreview...')
                 for ivt in submission_invitation:
-                
-                    url_page = f'{self._baseurl}/{submission_invitation[ivt]}'
-                    count = self.ping(f'{url_page}&limit=3')
-                    if count:
-                        # tid = self.get_tid(ivt)
-                        tid = self.summarizer.get_tid(ivt)
-                        self.update_meta_count(count, tid, ivt, submission_invitation)
-                        self.crawl(url_page, tid, track, ivt)
-                    else: 
-                        cprint('info', f'{url_page} not available.')
+                        
+                    rounds = submission_invitation[ivt]
+                    if type(submission_invitation[ivt]) is str: rounds = [submission_invitation[ivt]]
+                    for v in rounds:
+                        url_page = f'{self._baseurl}/{v}'
+                        count = self.ping(f'{url_page}&limit=3')
+                        if count:
+                            # tid = self.get_tid(ivt)
+                            tid = self.summarizer.get_tid(ivt)
+                            self.update_meta_count(count, tid, ivt, submission_invitation)
+                            self.crawl(url_page, tid, track, ivt)
+                        else: 
+                            cprint('info', f'{url_page} not available.')
                 
                 # sort paperlist
                 self._paperlist = sorted(self._paperlist, key=lambda x: x['id'])

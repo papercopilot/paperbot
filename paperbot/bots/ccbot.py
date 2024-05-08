@@ -125,6 +125,9 @@ class CCBot(sitebot.SiteBot):
             pool.join()
             
             for ret in rets:
+                if not ret: 
+                    cprint('warning', f'{self._conf} {self._year}: Empty return.')
+                    continue
                 idx = paper_idx[ret['site']]
                 self._paperlist[idx].update(ret)
         else:
@@ -398,13 +401,17 @@ class StBotCVPR(CCBot):
                 authoraffs = authoraffs.split('·')
                 authors, affs = [], []
                 for authoraff in authoraffs:
-                    author, aff = authoraff.split('(', 1)
-                    author = author.strip()
-                    aff = aff.rsplit(')', 1)[0].strip()
-                    aff = '' if aff == 'None' else aff
+                    try:
+                        author, aff = authoraff.split('(', 1)
+                        author = author.strip()
+                        aff = aff.rsplit(')', 1)[0].strip()
+                        aff = '' if aff == 'None' else aff
+                        
+                        authors.append(author)
+                        affs.append(aff)
+                    except:
+                        cprint('warning', f'Error in parsing author and aff: {authoraff}')
                     
-                    authors.append(author)
-                    affs.append(aff)
                     
                 # remove redundant affs
                 affs = list(set(affs))
