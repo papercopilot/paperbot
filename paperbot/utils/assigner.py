@@ -109,6 +109,8 @@ class AssignerECCV(Assigner):
             return ccbot.StBotECCV
         elif botname == 'merge':
             return merger.MergerECCV
+        elif botname == 'gform':
+            return gformbot.GFormBotECCV
         else: super().__new__(cls, botname)
         
 

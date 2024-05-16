@@ -47,28 +47,43 @@ class GFormBot(sitebot.SiteBot):
         
     def get_paperlist(self, track='', mode=None, as_init=False):
         
+        paper_idx = {}
+        
         paperlist = []
         for index, row in self.df.iterrows():
             
-            ret = self.process_row(row, track, mode, as_init)
+            ret = self.process_row(index, row, track, mode, as_init)
             if not ret: continue
             
-            paperlist.append({
-                'id': index,
-                'title': '',
-                'track': ret['track'],
-                'status': '',
-                'keywords': '',
-                'author': '',
+            paper_id = ret['id']
+            if paper_id not in paper_idx:
+                paperlist.append({
+                    'id': paper_id,
+                    'title': '',
+                    'track': ret['track'],
+                    'status': '',
+                    'keywords': '',
+                    'author': '',
+                    
+                    'rating': ret['rating']['str'],
+                    'confidence': ret['confidence']['str'],
+                    
+                    'rating_avg': ret['rating']['avg'],
+                    'confidence_avg': ret['confidence']['avg'],
+                    
+                    'corr_rating_confidence': ret['corr_rating_confidence'],
+                })
+                paper_idx[paper_id] = len(paperlist) - 1
+            else:
+                # update duplicate data
+                cprint('warning', f'Duplicate paper id: {paper_id}')
+                idx = paper_idx[paper_id]
+                paperlist[idx]['rating'] = ret['rating']['str']
+                paperlist[idx]['confidence'] = ret['confidence']['str']
+                paperlist[idx]['rating_avg'] = ret['rating']['avg']
+                paperlist[idx]['confidence_avg'] = ret['confidence']['avg']
+                paperlist[idx]['corr_rating_confidence'] = ret['corr_rating_confidence']
                 
-                'rating': ret['rating']['str'],
-                'confidence': ret['confidence']['str'],
-                
-                'rating_avg': ret['rating']['avg'],
-                'confidence_avg': ret['confidence']['avg'],
-                
-                'corr_rating_confidence': ret['corr_rating_confidence'],
-            })
         return paperlist
     
     def process_row(self, mode=None, as_init=False):
@@ -128,13 +143,15 @@ class GFormBot(sitebot.SiteBot):
                 return content.split('/')
             elif '-' in non_digits:
                 return content.split('-')
+            elif ';' in non_digits:
+                return content.split(';')
             else:
                 raise ValueError(f"Unknown separator: {non_digits}")
         
     
 class GFormBotICML(GFormBot):
         
-    def process_row(self, row, track, mode=None, as_init=False):
+    def process_row(self, index, row, track, mode=None, as_init=False):
             
         ret = {}
         if 'ryr' in self._conf:
@@ -182,6 +199,7 @@ class GFormBotICML(GFormBot):
             raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
         
         ret = {
+            'id': index,
             'track': track,
             'rating': {
                 'str': np2str(rating),
@@ -199,7 +217,7 @@ class GFormBotICML(GFormBot):
             
 class GFormBotACL(GFormBot):
         
-    def process_row(self, row, track, mode=None, as_init=False):
+    def process_row(self, index, row, track, mode=None, as_init=False):
             
         ret = {}
         if 'ryr' in self._conf:
@@ -247,6 +265,7 @@ class GFormBotACL(GFormBot):
             return ret
             
         ret = {
+            'id': index,
             'track': track,
             'rating': {
                 'str': np2str(rating),
@@ -263,7 +282,7 @@ class GFormBotACL(GFormBot):
                 
 class GFormBotKDD(GFormBot):
         
-    def process_row(self, row, track, mode=None, as_init=False):
+    def process_row(self, index, row, track, mode=None, as_init=False):
         
         ret = {}
         if 'ryr' in self._conf:
@@ -319,6 +338,7 @@ class GFormBotKDD(GFormBot):
             raise ValueError(f"Rating > 6: {np2avg(rating)}")
         
         ret = {
+            'id': index,
             'track': track,
             'rating': {
                 'str': np2str(rating),
@@ -336,7 +356,7 @@ class GFormBotKDD(GFormBot):
                 
 class GFormBotUAI(GFormBot):
     
-    def process_row(self, row, track, mode=None, as_init=False):
+    def process_row(self, index, row, track, mode=None, as_init=False):
         
         ret = {}
         if 'ryr' in self._conf:
@@ -382,6 +402,7 @@ class GFormBotUAI(GFormBot):
             raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
         
         ret = {
+            'id': index,
             'track': track,
             'rating': {
                 'str': np2str(rating),
@@ -396,3 +417,74 @@ class GFormBotUAI(GFormBot):
             
         return ret
         
+        
+class GFormBotECCV(GFormBot):
+    
+    
+    def process_row(self, index, row, track, mode=None, as_init=False):
+        
+        ret = {}
+        if 'ryr' in self._conf:
+            match = re.search('[a-zA-Z]', row['Rate Your Reviewer: Ratings'])
+            if match: return ret
+            if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
+
+            rating = self.auto_split(row['Rate Your Reviewer: Ratings'])
+            # confidence = self.auto_split(row['Rate Your Reviewer: Confidences'])
+        else:
+            # remove invalide response
+            match = re.search('[a-zA-Z]', row['Initial Ratings'])
+            if match: return ret
+            
+            if mode == 'Rebuttal':
+            
+                # remove nan data
+                if pd.isna(row['[Optional] Ratings after Rebuttal']) or not row['[Optional] Ratings after Rebuttal']: return ret
+                paper_id = row['Paper ID']
+                
+                if as_init:
+                    rating = self.auto_split(row['Initial Ratings'])
+                    # confidence = self.auto_split(row['Initial Confidence'])
+                else:
+                    rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
+                    # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+            else:
+                # remove redundant data
+                # if row['Paper ID']: return ret
+                
+                rating = self.auto_split(row['Initial Ratings'])
+                paper_id = row['Paper ID']
+                # confidence = self.auto_split(row['Initial Confidence'])
+
+        # list to numpy
+        list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
+        rating = list2np(rating)
+        # confidence = list2np(confidence)
+        confidence = np.zeros_like(rating)
+
+        np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+        np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+        np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+        
+        # if len(rating) != len(confidence):
+            # raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
+        
+        if np2avg(rating) > 5:
+            cprint('warning', f"Rating > 5: {np2avg(rating)}, skipping")
+            return ret
+        
+        ret = {
+            'id': paper_id,
+            'track': track,
+            'rating': {
+                'str': np2str(rating),
+                'avg': np2avg(rating)
+            },
+            'confidence': {
+                'str': np2str(confidence),
+                'avg': np2avg(confidence)
+            },
+            'corr_rating_confidence': np2coef(rating, confidence),
+        }
+            
+        return ret
