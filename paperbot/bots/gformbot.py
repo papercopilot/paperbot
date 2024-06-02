@@ -433,14 +433,15 @@ class GFormBotECCV(GFormBot):
             # confidence = self.auto_split(row['Rate Your Reviewer: Confidences'])
         else:
             # remove invalide response
-            match = re.search('[a-zA-Z]', row['Initial Ratings'])
+            # https://stackoverflow.com/questions/9576384/use-regular-expression-to-match-any-chinese-character-in-utf-8-encoding
+            match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Ratings']) # \u4E00-\u9FFF chinese
             if match: return ret
             
             if mode == 'Rebuttal':
             
                 # remove nan data
                 if pd.isna(row['[Optional] Ratings after Rebuttal']) or not row['[Optional] Ratings after Rebuttal']: return ret
-                paper_id = row['Paper ID']
+                paper_id = row['Paper ID (hash it if you prefer more anonymity)']
                 
                 if as_init:
                     rating = self.auto_split(row['Initial Ratings'])
@@ -453,7 +454,7 @@ class GFormBotECCV(GFormBot):
                 # if row['Paper ID']: return ret
                 
                 rating = self.auto_split(row['Initial Ratings'])
-                paper_id = row['Paper ID']
+                paper_id = row['Paper ID (hash it if you prefer more anonymity)']
                 # confidence = self.auto_split(row['Initial Confidence'])
 
         # list to numpy
