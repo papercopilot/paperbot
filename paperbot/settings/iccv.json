@@ -117,5 +117,29 @@
                 }
             }
         }
+    },
+    "2013": {
+        "site": {
+            "domain": "https://pamitc.org/iccv13.html",
+            "track": {
+                "main": {
+                    "pages": {
+                        "all": "program.php"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "http://openaccess.thecvf.com/ICCV2013",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
     }
 }

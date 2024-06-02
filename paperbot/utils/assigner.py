@@ -106,7 +106,12 @@ class AssignerECCV(Assigner):
         
     def __new__(cls, botname, year=0):
         if botname == 'st':
-            return ccbot.StBotECCV
+            if year >= 2024:
+                return ccbot.StBotECCV
+            else:
+                return cvfbot.StBotECCV
+        elif botname == 'oa':
+            return openaccessbot.OABotECCV
         elif botname == 'merge':
             return merger.MergerECCV
         elif botname == 'gform':
@@ -126,6 +131,17 @@ class AssignerICCV(Assigner):
             return openaccessbot.OABotICCV
         elif botname == 'merge':
             return merger.MergerICCV
+        else: super().__new__(cls, botname)
+        
+class AssignerWACV(Assigner):
+    
+    def __new__(cls, botname, year=0):
+        if botname == 'st':
+            return cvfbot.StBotWACV
+        elif botname == 'oa':
+            return openaccessbot.OABotWACV
+        elif botname == 'merge':
+            return merger.MergerWACV
         else: super().__new__(cls, botname)
         
 

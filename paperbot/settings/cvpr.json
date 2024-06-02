@@ -234,5 +234,77 @@
                 }
             }
         }
+    },
+    "2015": {
+        "site": {
+            "domain": "http://cvpr2015.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2015",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2014": {
+        "site": {
+            "domain": "http://cvpr2014.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2014",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2013": {
+        "site": {
+            "domain": "http://cvpr2013.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/CVPR2013",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
     }
 }

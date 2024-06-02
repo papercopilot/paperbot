@@ -1,0 +1,112 @@
+{
+    "2024": {
+        "site": {
+            "domain": "https://wacv2024.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/WACV2024",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2023": {
+        "site": {
+            "domain": "https://wacv2023.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/WACV2023",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2022": {
+        "site": {
+            "domain": "https://wacv2022.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/WACV2022",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2021": {
+        "site": {
+            "domain": "https://wacv2021.thecvf.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "program/main_conference"
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/WACV2021",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "2020": {
+        "openaccess": {
+            "domain": "https://openaccess.thecvf.com/WACV2020",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": [
+                            ""
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

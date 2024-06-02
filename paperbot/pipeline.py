@@ -142,7 +142,7 @@ class Pipeline:
                     try:
                         assigner = eval(assigner_name)('or')
                         openreviewbot = assigner(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                        openreviewbot.launch(self.fetch_openreview)
+                        openreviewbot.launch(self.fetch_openreview, self.fetch_openreview_extra)
                         self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks
                         self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks
                     except Exception as e:

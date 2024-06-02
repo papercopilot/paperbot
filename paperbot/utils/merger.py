@@ -1081,13 +1081,52 @@ class MergerCVPR(Merger):
             # https://cvpr2016.thecvf.com/program/main_conference
             s['total'] = 2145
             s['withdraw'] = 2145 - 1865
+        elif year == 2015:
+            # https://cvpr2015.thecvf.com/files/welcome_message.pdf
+            s['total'] = 2123
+            s['withdraw'] = 2123 - 1815
+            tier_num['Poster'] = 602 - 71
+            tier_num['Oral'] = 71
+        elif year == 2014:
+            # https://www.kitware.com/cvpr-2014-in-review/
+            s['total'] = 1807
+            s['withdraw'] = 2145 - 1815
+            tier_num['Poster'] = 540 - 104
+            tier_num['Oral'] = 104
+        elif year == 2013:
+            # http://vigir.missouri.edu/~gdesouza/Research/Conference_CDs/IEEE_CVPR2013/data/home.htm
+            s['total'] = 1816
+            s['withdraw'] = 1816 - 1798
+            tier_num['Poster'] = 412
+            tier_num['Oral'] = 60
             
             
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
     
 class MergerECCV(Merger):
-    pass
+    
+    def update_total(self, s, year, track, tier_num):
+    
+        if year == 2024: 
+            pass
+        elif year == 2022: 
+            # https://eccv2022.ecva.net/files/2021/12/ECCV_2022_MainConference_ProgramGuide_Final_full.pdf
+            s['total'] = 6773
+            s['desk_reject'] = 846
+            tier_num['Poster'] = 1645 - 157
+            tier_num['Oral'] = 157
+        elif year == 2020: 
+            # https://graz.elsevierpure.com/en/publications/computer-visioneccv-2020-16th-european-conference-glasgow-uk-augu
+            s['total'] = 5025 
+        elif year == 2018: 
+            # https://eccv2018.org/wp-content/uploads/2018/09/ECCV_2018_final.pdf
+            s['total'] = 2439 # https://www.openresearch.org/wiki/ECCV
+            tier_num['Poster'] = 717
+            tier_num['Oral'] = 59
+    
+        s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
+        s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
     
 class MergerICCV(Merger):
 
@@ -1121,10 +1160,13 @@ class MergerICCV(Merger):
     def update_total(self, s, year, track, tier_num):
     
         if year == 2023: s['total'] = 8620 # https://iccv2023.thecvf.com/iccv2023.main.conference.program-38--MTE.php
-        if year == 2021: s['total'] = 6152 # https://www.openresearch.org/wiki/ICCV
-        if year == 2019: s['total'] = 4303 # https://www.openresearch.org/wiki/ICCV
-        if year == 2017: s['total'] = 2143 # https://www.openresearch.org/wiki/ICCV_2017
-        if year == 2015: s['total'] = 1698
+        elif year == 2021: s['total'] = 6152 # https://www.openresearch.org/wiki/ICCV
+        elif year == 2019: s['total'] = 4303 # https://www.openresearch.org/wiki/ICCV
+        elif year == 2017: 
+            # https://www.computer.org/csdl/proceedings-article/iccv/2017/1032z044/12OmNyvY9tQ
+            s['total'] = 2143 # https://www.openresearch.org/wiki/ICCV_2017
+        elif year == 2015: s['total'] = 1698 # https://www.computer.org/csdl/proceedings-article/iccv/2015/8391z036/12OmNvStcBR
+        elif year == 2013: s['total'] = 1629 # https://www.openresearch.org/wiki/ICCV
     
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
@@ -1140,3 +1182,27 @@ class MergerKDD(Merger):
 
 class MergerUAI(Merger):
     pass
+
+class MergerWACV(Merger):
+    
+    def update_total(self, s, year, track, tier_num):
+    
+        if year == 2024: 
+            # https://drive.google.com/file/d/14e5ssb2yhODK127IkcUtaO9EKd63rKak/view
+            s['total'] = 2043
+            tier_num['Poster'] = 846
+        elif year == 2023: 
+            # https://www.computer.org/csdl/proceedings-article/wacv/2023/934600z068/1KxVuRUI6Xu
+            s['total'] = 1577
+            tier_num['Poster'] = 641
+        elif year == 2022: 
+            # https://drive.google.com/file/d/1m9zdIM2B65w71dAPdp0QlrqZ-dNThBwj/view
+            s['total'] = 1172
+            tier_num['Poster'] = 406
+        elif year == 2021:
+            pass
+        elif year == 2020:
+            s['total'] = 1096 # https://www.openresearch.org/wiki/WACV
+    
+        s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
+        s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']

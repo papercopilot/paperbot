@@ -164,7 +164,18 @@ class StBotCVPR(CVFBot):
             xpath['sec'] = '//h4[contains(@class, "program-title")]'
             xpath['tab'] = '//h4[contains(@class, "program-title")]'
             xpath['td'] = f'./following-sibling::ul[following-sibling::h4[1] = //h4[contains(@class, "program-title")][{sec_idx+2}]]'
-            
+        elif self._year == 2015:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
+        elif self._year == 2014:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
+        elif self._year == 2013:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
         else:
             raise NotImplementedError
         return xpath[key]
@@ -230,6 +241,12 @@ class StBotCVPR(CVFBot):
             title = ''.join(e_row.xpath('./strong//text()')).strip()
             title = title if title[-1] != '.' else title[:-1] # remove the last period
             authors = ''.join(e_row.xpath('./p/text()'))
+        elif self._year == 2015:
+            pass
+        elif self._year == 2014:
+            pass
+        elif self._year == 2013:
+            pass
         else:
             raise NotImplementedError
         
@@ -286,6 +303,10 @@ class StBotICCV(CVFBot):
             xpath['sec'] = '//td[@colspan="3"]/b[contains(text(), "]")]'
             xpath['tab'] = '//td[@colspan="3"]/b[contains(text(), "]")]'
             xpath['td'] = f'../../following-sibling::tr/td/i[../../following-sibling::tr/td[@colspan="3"]/b[contains(text(), "]")] = (//td[@colspan="3"]/b[contains(text(), "]")])[{sec_idx+2}]]'
+        elif self._year == 2013:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
         else:
             raise NotImplementedError
         return xpath[key]
@@ -348,3 +369,53 @@ class StBotICCV(CVFBot):
         status_new = status_new if status_priority[status_new] > status_priority[status] else status
         
         return status_new
+
+class StBotECCV(CVFBot):
+    pass
+
+class StBotWACV(CVFBot):
+
+    def get_xpath(self, key, sec_idx=0):
+        xpath = {
+            'sec': '',
+            'tab': '',
+            'td': '',
+        }
+        if self._year == 2024:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
+        elif self._year == 2023:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
+        elif self._year == 2022:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
+        elif self._year == 2021:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
+        elif self._year == 2020:
+            xpath['sec'] = ''
+            xpath['tab'] = ''
+            xpath['td'] = ''
+        else:
+            raise NotImplementedError
+        return xpath[key]
+    
+    def process_row(self, e_sec, e_row):
+        
+        if self._year == 2024:
+            pass
+        elif self._year == 2023:
+            pass
+        elif self._year == 2022:
+            pass
+        elif self._year == 2021:
+            pass
+        elif self._year == 2020:
+            pass
+        else:
+            raise NotImplementedError

@@ -5,5 +5,71 @@
                 "main": "eccv"
             }
         }
+    },
+    "2022": {
+        "site": {
+            "domain": "https://eccv2022.ecva.net/",
+            "track": {
+                "main": {
+                    "pages": {
+
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://www.ecva.net/papers.php",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": ""
+                    }
+                }
+            }
+        }
+    },
+    "2020": {
+        "site": {
+            "domain": "http://eccv2020.eu",
+            "track": {
+                "main": {
+                    "pages": {
+
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://www.ecva.net/papers.php",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": ""
+                    }
+                }
+            }
+        }
+    },
+    "2018": {
+        "site": {
+            "domain": "https://eccv2018.org",
+            "track": {
+                "main": {
+                    "pages": {
+
+                    }
+                }
+            }
+        },
+        "openaccess": {
+            "domain": "https://www.ecva.net/papers.php",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": ""
+                    }
+                }
+            }
+        }
     }
 }

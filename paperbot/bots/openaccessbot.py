@@ -32,7 +32,8 @@ class OpenaccessBot(sitebot.SiteBot):
         self._baseurl = f'{self._domain}'
         
         self._paths = {
-            'paperlist': os.path.join(self._root_dir, 'venues_llama'),
+            'paperlist': os.path.join(self._root_dir, 'venues'),
+            # 'paperlist': os.path.join(self._root_dir, 'glm_batch/pdftext'), # use batch glm
             'summary': os.path.join(self._root_dir, 'summary'),
             'keywords': os.path.join(self._root_dir, 'keywords'),
         }
@@ -61,7 +62,7 @@ class OpenaccessBot(sitebot.SiteBot):
             # get content from the first page
             page_text = reader.pages[0].extract_text()
             
-            process_mode = 'llama'
+            process_mode = 'raw'
             if process_mode == 'raw':
                 # https://maas.aminer.cn/dev/howuse/batchapi
                 affs = page_text
@@ -521,3 +522,87 @@ class OABotICCV(OpenaccessBot):
             ret['arxiv'] = os.path.basename(e_arxiv[0]) if e_arxiv else ''
             
             return ret
+        
+class OABotECCV(OpenaccessBot):
+    
+    def crawl(self, url_paper, page, track):
+    
+        if self._year >= 2024:
+            pass
+        elif self._year >= 2018:
+            response = sitebot.SiteBot.session_request(url_paper)
+            tree_page = html.fromstring(response.content)
+            e_papers = tree_page.xpath(f"//button[contains(., '2022')]/following-sibling::div[1]//dt[contains(@class, 'ptitle')]/a")
+            
+            # parse each entry
+            for e in tqdm(e_papers, leave=False):
+                title = e.text_content().strip()
+                site = urljoin(os.path.dirname(self._domain), e.attrib['href'])
+                
+                self._paperlist.append({
+                    'title': title,
+                    'site': site,
+                })
+        else:
+            pass
+    
+    @staticmethod
+    def process_url(url_paper, year):
+        
+        parsed_url = urlparse(url_paper)
+        domain = f'{parsed_url.scheme}://{parsed_url.netloc}'
+        
+        # open paper url to load status
+        response_paper = sitebot.SiteBot.session_request(url_paper)
+        tree_paper = html.fromstring(response_paper.content)
+        
+        ret = {'site': url_paper,}
+        
+        e_author = tree_paper.xpath("//div[@id= 'authors']/b//text()")
+        ret['author'] = e_author[0].strip().replace(';', '')
+        
+        e_pdf = tree_paper.xpath("//a[contains(., 'pdf')]/@href")
+        ret['pdf'] = urljoin(domain, e_pdf[0])
+        
+        _, authors, aff, url_project, url_github = OpenaccessBot.parse_pdf(ret['pdf'])
+        ret['aff'] = aff
+        ret['project'] = url_project
+        ret['github'] = url_github
+        
+        e_arxiv = tree_paper.xpath("//a[contains(., 'arXiv')]/@href")
+        ret['arxiv'] = os.path.basename(e_arxiv[0]) if e_arxiv else ''
+        
+        e_doi = tree_paper.xpath("//a[contains(., 'DOI')]/@href")
+        ret['doi'] = e_doi[0] if e_doi else ''
+        
+        return ret
+    
+class OABotWACV(OpenaccessBot):
+        
+    @staticmethod
+    def process_url(url_paper, year):
+        
+        parsed_url = urlparse(url_paper)
+        domain = f'{parsed_url.scheme}://{parsed_url.netloc}'
+        
+        # open paper url to load status
+        response_paper = sitebot.SiteBot.session_request(url_paper, retries=3)
+        tree_paper = html.fromstring(response_paper.content)
+        
+        ret = {'site': url_paper,}
+        
+        e_author = tree_paper.xpath("//div[@id= 'authors']/b//text()")
+        ret['author'] = e_author[0].strip().replace(';', '')
+        
+        e_pdf = tree_paper.xpath("//a[contains(., 'pdf')]/@href")
+        ret['pdf'] = urljoin(domain, e_pdf[0])
+        
+        _, authors, aff, url_project, url_github = OpenaccessBot.parse_pdf(ret['pdf'])
+        ret['aff'] = aff
+        ret['project'] = url_project
+        ret['github'] = url_github
+        
+        e_arxiv = tree_paper.xpath("//a[contains(., 'arXiv')]/@href")
+        ret['arxiv'] = os.path.basename(e_arxiv[0]) if e_arxiv else ''
+        
+        return ret
