@@ -138,6 +138,12 @@ def glm_align(output_fids, root_download, root_src, root_out):
         with open(os.path.join(root_src, output_fids[fid])) as f:
             paperlist = json.load(f)
         
+        # some of the papers don't have results returned from llm
+        # reset aff first since root_src has only affs changed to the pdf text
+        for id, p in enumerate(paperlist):
+            if 'aff' in paperlist[id]:
+                paperlist[id]['aff'] = ''
+        
         # load file line by line, each line is the request
         with open(os.path.join(root_download, output_fids[fid])) as f:
             lines = f.readlines()
