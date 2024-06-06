@@ -1,4 +1,6 @@
 import requests
+from pypdf import PdfReader
+from io import BytesIO
 from tqdm import tqdm
 import numpy as np
 import json
@@ -6,6 +8,9 @@ from collections import Counter
 import os
 import pandas as pd
 import re
+import multiprocessing as mp
+import random
+import time
 
 from . import sitebot
 from ..utils import util, summarizer
@@ -42,6 +47,7 @@ class OpenreviewBot(sitebot.SiteBot):
         
         self._paths = {
             'paperlist': os.path.join(self._root_dir, 'venues'),
+            # 'paperlist': os.path.join(self._root_dir, 'glm_batch/pdftext'),
             'summary': os.path.join(self._root_dir, 'summary'),
             'keywords': os.path.join(self._root_dir, 'keywords'),
         }
@@ -248,6 +254,7 @@ class OpenreviewBot(sitebot.SiteBot):
                     'status': status,
                     'keywords': keywords,
                     'author': '',
+                    'aff': '',
                     
                     'rating': extra['rating']['str'],
                     'confidence': extra['confidence']['str'],
@@ -273,6 +280,80 @@ class OpenreviewBot(sitebot.SiteBot):
             self._paperlist.sort(key=lambda x: x['title'])
         pbar.close()
         
+    def crawl_extra(self):
+        
+        # create hashmap for paperlist
+        self._paperlist = self.paperlist
+        paper_idx = {p['id']: i for i, p in enumerate(self._paperlist)}
+        
+        # parallel crawl, DONT make pool as a class attribute
+        # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
+        pool = mp.Pool(5)
+        rets = mp.Manager().list()
+        pbar = tqdm(total=len(self._paperlist), leave=False)
+        
+        def mpupdate(x):
+            rets.append(x)
+            pbar.update(1)
+        def errupdate(x):
+            print(x)
+        for i in range(pbar.total):
+            pool.apply_async(self.process_url, (self._paperlist[i]['id'],), callback=mpupdate, error_callback=errupdate)
+        pool.close()
+        pool.join()
+        
+        for ret in rets:
+            idx = paper_idx[ret['id']]
+            self._paperlist[idx].update(ret)
+            
+    @staticmethod
+    def process_url(id):
+        
+        ret = {'id': id}
+        
+        url_pdf = f'https://openreview.net/pdf?id={id}'
+        _, authors, aff, url_project, url_github = OpenreviewBot.parse_pdf(url_pdf)
+        ret['author'] = authors
+        ret['aff'] = aff
+        ret['project'] = url_project
+        ret['github'] = url_github
+        
+        # https://stackoverflow.com/questions/4054254/how-to-add-random-delays-between-the-queries-sent-to-google-to-avoid-getting-blo
+        time.sleep(random.uniform(2, 4))
+        
+        return ret
+            
+    @staticmethod
+    def parse_pdf(url_pdf):
+        
+        response = sitebot.SiteBot.session_request(url_pdf, stream=True)
+        try:
+            # load pdf from remote url
+            response.raise_for_status()
+            bytes_stream = BytesIO(response.content)
+            reader = PdfReader(bytes_stream)    
+            
+            # get meta data
+            meta = reader.metadata
+            title = meta.title
+            authors = meta.author
+            affs = ''
+            url_project = ''
+            url_github = ''
+            
+            # get content from the first page
+            page_text = reader.pages[0].extract_text()
+            
+            process_mode = 'raw'
+            if process_mode == 'raw':
+                # https://maas.aminer.cn/dev/howuse/batchapi
+                affs = page_text
+        
+        except Exception as e:
+            print(f'Error Parsing PDF "{e}": ' + url_pdf)
+        
+        return title, authors, affs, url_project, url_github
+            
     def load_csv(self):
         pass
         
@@ -313,6 +394,10 @@ class OpenreviewBot(sitebot.SiteBot):
                 
                 # sort paperlist
                 self._paperlist = sorted(self._paperlist, key=lambda x: x['id'])
+            
+                if fetch_extra:
+                    self.crawl_extra()
+                
             else:
                 # load previous
                 cprint('info', f'{self._conf} {self._year} {track}: Fetching Skipped.')
