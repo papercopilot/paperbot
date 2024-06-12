@@ -185,3 +185,14 @@ class AssignerUAI(Assigner):
         elif botname == 'merge':
             return merger.MergerUAI
         else: super().__new__(cls, botname)
+        
+class AssignerACMMM(Assigner):
+    
+    def __new__(cls, botname, year=0):
+        if botname == 'st':
+            return sitebot.StBotACMMM
+        elif botname == 'gform':
+            return gformbot.GFormBotACMMM
+        elif botname == 'merge':
+            return merger.MergerACMMM
+        else: super().__new__(cls, botname)

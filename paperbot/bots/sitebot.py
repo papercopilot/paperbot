@@ -146,3 +146,8 @@ class StBotUAI(SiteBot):
     
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
+        
+class StBotACMMM(SiteBot):
+    
+    def __init__(self, conf='', year=None, root_dir=''):
+        super().__init__(conf, year, root_dir)

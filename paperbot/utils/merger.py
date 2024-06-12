@@ -1183,6 +1183,9 @@ class MergerKDD(Merger):
 class MergerUAI(Merger):
     pass
 
+class MergerACMMM(Merger):
+    pass
+
 class MergerWACV(Merger):
     
     def update_total(self, s, year, track, tier_num):
