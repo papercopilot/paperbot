@@ -527,9 +527,9 @@ class GFormBotACMMM(GFormBot):
                 # remove redundant data
                 # if row['Paper ID']: return ret
                 
-                rating = self.auto_split(row['Initial Ratings'])
                 paper_id = row['Paper ID (hash it if you prefer more anonymity)']
-                # confidence = self.auto_split(row['Initial Confidence'])
+                rating = self.auto_split(row['Initial Ratings'])
+                confidence = self.auto_split(row['Initial Confidence'])
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
