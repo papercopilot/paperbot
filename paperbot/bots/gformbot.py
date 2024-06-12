@@ -534,8 +534,7 @@ class GFormBotACMMM(GFormBot):
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
         rating = list2np(rating)
-        # confidence = list2np(confidence)
-        confidence = np.zeros_like(rating)
+        confidence = list2np(confidence)
 
         np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
