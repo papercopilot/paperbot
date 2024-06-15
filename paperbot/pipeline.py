@@ -1,5 +1,6 @@
 from .utils.assigner import *
 from .utils.util import color_print as cprint
+from .config import PipelineConfig
 import json
 import os
 import pandas as pd
@@ -22,21 +23,28 @@ class Pipeline:
         
         self.keywords_openreview = {}
         
-        self.dump_keywords = args.parse_keywords
+        self.config = PipelineConfig(
+            use_openreview=args.use_openreview, use_site=args.use_site, use_openaccess=args.use_openaccess, use_gform=args.use_gform, 
+            fetch_openreview=args.fetch_openreview, fetch_site=args.fetch_site, fetch_openaccess=args.fetch_openaccess, fetch_gform=args.fetch_gform, 
+            fetch_openreview_extra=args.fetch_openreview_extra, fetch_site_extra=args.fetch_site_extra, fetch_openaccess_extra=args.fetch_openaccess_extra,
+            dump_keywords=args.parse_keywords
+        )
         
-        self.use_openreview = args.use_openreview
-        self.use_site = args.use_site
-        self.use_openaccess = args.use_openaccess
-        self.use_gform = args.use_gform
+        # self.dump_keywords = args.parse_keywords
         
-        self.fetch_openreview = args.fetch_openreview
-        self.fetch_site = args.fetch_site
-        self.fetch_openaccess = args.fetch_openaccess
-        self.fetch_gform = args.fetch_gform
+        # self.use_openreview = args.use_openreview
+        # self.use_site = args.use_site
+        # self.use_openaccess = args.use_openaccess
+        # self.use_gform = args.use_gform
         
-        self.fetch_openreview_extra = args.fetch_openreview_extra
-        self.fetch_site_extra = args.fetch_site_extra
-        self.fetch_openaccess_extra = args.fetch_openaccess_extra
+        # self.fetch_openreview = args.fetch_openreview
+        # self.fetch_site = args.fetch_site
+        # self.fetch_openaccess = args.fetch_openaccess
+        # self.fetch_gform = args.fetch_gform
+        
+        # self.fetch_openreview_extra = args.fetch_openreview_extra
+        # self.fetch_site_extra = args.fetch_site_extra
+        # self.fetch_openaccess_extra = args.fetch_openaccess_extra
         # self.fetch_gform_extra = args.fetch_gform_extra
         
         self.root_dir = args.root_dir
@@ -111,7 +119,7 @@ class Pipeline:
         
                 
     def save_keywords(self, conf):
-        if not self.dump_keywords:
+        if not self.config.dump_keywords:
             cprint('info', "Saving keywords is disabled. Set --keywords to True to enable.")
             return
         # for conf in self.confs:
@@ -125,141 +133,205 @@ class Pipeline:
         if not openreviewbot.paperlist: return
         if not sitebot.paperlist: return
 
-    def launch(self, is_save=True):
+    # def launch(self, is_save=True):
         
-        self.summary = []
-        for conf in self.confs:
-            self.summary_openreview[conf] = {}
-            self.summary_site[conf] = {}
-            self.summary_openaccess[conf] = {}
-            self.summary_gform[conf] = {}
-            self.keywords_openreview[conf] = {}
-            for year in self.years:
+    #     self.summary = []
+    #     self.summary_openreview = defaultdict(dict)
+    #     self.summary_site = defaultdict(dict)
+    #     self.summary_openaccess = defaultdict(dict)
+    #     self.summary_gform = defaultdict(dict)
+    #     self.keywords_openreview = defaultdict(dict)
+        
+    #     status = defaultdict(dict)
+    #     console = Console()
+        
+    #     # initialize the shared dictionary with initial values
+    #     for conf in self.confs:
+    #         for year in self.years:
+    #             status[f"{conf} {year}"] = defaultdict(dict)
+    #             for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
+    #                 status[f"{conf} {year}"][bot] = ""
+        
+    #     is_render_table = True
+    #     with Live(self.render_table(self.config, status, is_render_table), refresh_per_second=30, console=console) as live:
+        
+    #         # prepare tasks
+    #         tasks = []
+    #         for conf in self.confs:
+    #             # self.summary_openreview[conf] = {}
+    #             # self.summary_site[conf] = {}
+    #             # self.summary_openaccess[conf] = {}
+    #             # self.summary_gform[conf] = {}
+    #             # self.keywords_openreview[conf] = {}
+    #             for year in sorted(self.years, reverse=True): # sort in descending order to start from the latest year (usually with the most data)
+    #                 # config = {
+    #                 #         'use_openreview': self.use_openreview, 'use_site': self.use_site, 'use_openaccess': self.use_openaccess, 'use_gform': self.use_gform, 'paths': self.paths, 
+    #                 #         'dump_keywords': self.dump_keywords, 'fetch_openreview': self.fetch_openreview, 
+    #                 #         'fetch_openreview_extra': self.fetch_openreview_extra, 'fetch_site': self.fetch_site, 
+    #                 #         'fetch_site_extra': self.fetch_site_extra, 'fetch_openaccess': self.fetch_openaccess, 
+    #                 #         'fetch_openaccess_extra': self.fetch_openaccess_extra, 'fetch_gform': self.fetch_gform, 
+    #                 #     }
+    #                 tasks.append((conf, year, self.config, self.paths, status))
+                    
+    #         # execute tasks
+    #         results = [Pipeline.process_conf_year(task, live=live) for task in tasks]
+
+    #         # Wait for all results to complete
+    #         for result in results:
+    #             conf, year, summary_openreview, summary_site, summary_openaccess, summary_gform, keywords_openreview, merger = result
                 
-                openreviewbot = None
-                sitebot = None
-                openaccessbot = None
-                gformbot = None
+    #             self.summary_openreview[conf][year] = summary_openreview
+    #             self.summary_site[conf][year] = summary_site
+    #             self.summary_openaccess[conf][year] = summary_openaccess
+    #             self.summary_gform[conf][year] = summary_gform
+    #             self.keywords_openreview[conf][year] = keywords_openreview
+
+    #             # remove empty years
+    #             self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}
+    #             self.summary_site[conf] = {k: v for k, v in self.summary_site[conf].items() if v}
+    #             self.summary_openaccess[conf] = {k: v for k, v in self.summary_openaccess[conf].items() if v}
+    #             self.summary_gform[conf] = {k: v for k, v in self.summary_gform[conf].items() if v}
+                    
+    #             # update summary for merger
+    #             if year in self.summary_openreview[conf]: merger.summary_openreview = { year: self.summary_openreview[conf][year] }
+    #             if year in self.summary_site[conf]: merger.summary_site = { year: self.summary_site[conf][year] }
+    #             if year in self.summary_openaccess[conf]: merger.summary_openaccess = { year: self.summary_openaccess[conf][year] }
+    #             if year in self.summary_gform[conf]: merger.summary_gform = { year: self.summary_gform[conf][year] }
+    #             self.summary += merger.merge_summary()
+    #             merger.save_summary()
+                    
+    #             if is_save:
+    #                 self.save_summary(conf)
+    #                 self.save_keywords(conf)
+                    
+    #         # Final update after all tasks are done
+    #         live.update(self.render_table(self.config, status, is_render_table))
                 
-                self.summary_openreview[conf][year] = {}
-                self.summary_site[conf][year] = {}
-                self.summary_openaccess[conf][year] = {}
-                self.summary_gform[conf][year] = {}
+            #     openreviewbot = None
+            #     sitebot = None
+            #     openaccessbot = None
+            #     gformbot = None
                 
-                self.keywords_openreview[conf][year] = {}
-                assigner_name = f"Assigner{conf.upper()}"
+            #     self.summary_openreview[conf][year] = {}
+            #     self.summary_site[conf][year] = {}
+            #     self.summary_openaccess[conf][year] = {}
+            #     self.summary_gform[conf][year] = {}
                 
-                if self.use_openreview:
-                    cprint('info', f"Initializing Openreview bots for {conf} {year}")
-                    try:
-                        assigner = eval(assigner_name)('or')
-                        openreviewbot = assigner(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
-                        openreviewbot.launch(self.fetch_openreview, self.fetch_openreview_extra)
-                        self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks
-                        self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks
-                    except Exception as e:
-                        if type(e) == ValueError:
-                            cprint('warning', e)
-                        elif type(e) == NameError:
-                            cprint('warning', f'{conf} {year}: Openreview Not available.')
-                        else:
-                            cprint('error', f"Openreview for {conf} {year}: {e}")
-                            raise e
+            #     self.keywords_openreview[conf][year] = {}
+            #     assigner_name = f"Assigner{conf.upper()}"
                 
-                if self.use_site:
-                    cprint('info', f"Initializing Site bots for {conf} {year}")
-                    try:
-                        assigner = eval(assigner_name)('st', year)
-                        sitebot = assigner(conf, year, root_dir=self.paths['site'])
-                        sitebot.launch(self.fetch_site, self.fetch_site_extra)
-                        self.summary_site[conf][year] = sitebot.summary_all_tracks
-                    except Exception as e:
-                        if type(e) == ValueError:
-                            raise e
-                        elif type(e) == NameError:
-                            cprint('warning', f'{conf} {year}: Site Not available.')
-                        else:
-                            cprint('error', f"Site for {conf} {year}: {e}")
-                            raise e
+            #     if self.use_openreview:
+            #         cprint('info', f"Initializing Openreview bots for {conf} {year}")
+            #         try:
+            #             assigner = eval(assigner_name)('or')
+            #             openreviewbot = assigner(conf, year, root_dir=self.paths['openreview'], dump_keywords=self.dump_keywords)
+            #             openreviewbot.launch(self.fetch_openreview, self.fetch_openreview_extra)
+            #             self.summary_openreview[conf][year] = openreviewbot.summary_all_tracks
+            #             self.keywords_openreview[conf][year] = openreviewbot.keywords_all_tracks
+            #         except Exception as e:
+            #             if type(e) == ValueError:
+            #                 cprint('warning', e)
+            #             elif type(e) == NameError:
+            #                 cprint('warning', f'{conf} {year}: Openreview Not available.')
+            #             else:
+            #                 cprint('error', f"Openreview for {conf} {year}: {e}")
+            #                 raise e
+                
+            #     if self.use_site:
+            #         cprint('info', f"Initializing Site bots for {conf} {year}")
+            #         try:
+            #             assigner = eval(assigner_name)('st', year)
+            #             sitebot = assigner(conf, year, root_dir=self.paths['site'])
+            #             sitebot.launch(self.fetch_site, self.fetch_site_extra)
+            #             self.summary_site[conf][year] = sitebot.summary_all_tracks
+            #         except Exception as e:
+            #             if type(e) == ValueError:
+            #                 raise e
+            #             elif type(e) == NameError:
+            #                 cprint('warning', f'{conf} {year}: Site Not available.')
+            #             else:
+            #                 cprint('error', f"Site for {conf} {year}: {e}")
+            #                 raise e
                         
-                if self.use_openaccess:
-                    cprint('info', f"Initializing Openaccess bots for {conf} {year}")
-                    try:
-                        assigner = eval(assigner_name)('oa')
-                        openaccessbot = assigner(conf, year, root_dir=self.paths['openaccess'])
-                        openaccessbot.launch(self.fetch_openaccess, self.fetch_openaccess_extra)
-                        self.summary_openaccess[conf][year] = openaccessbot.summary_all_tracks
-                    except Exception as e:
-                        if type(e) == ValueError:
-                            raise e
-                        elif type(e) == NameError:
-                            cprint('warning', f'{conf} {year}: Openaccess Not available.')
-                        else:
-                            cprint('error', f"Openaccess for {conf} {year}: {e}")
-                            raise e
+            #     if self.use_openaccess:
+            #         cprint('info', f"Initializing Openaccess bots for {conf} {year}")
+            #         try:
+            #             assigner = eval(assigner_name)('oa')
+            #             openaccessbot = assigner(conf, year, root_dir=self.paths['openaccess'])
+            #             openaccessbot.launch(self.fetch_openaccess, self.fetch_openaccess_extra)
+            #             self.summary_openaccess[conf][year] = openaccessbot.summary_all_tracks
+            #         except Exception as e:
+            #             if type(e) == ValueError:
+            #                 raise e
+            #             elif type(e) == NameError:
+            #                 cprint('warning', f'{conf} {year}: Openaccess Not available.')
+            #             else:
+            #                 cprint('error', f"Openaccess for {conf} {year}: {e}")
+            #                 raise e
                         
-                if self.use_gform:
-                    cprint('info', f"Initializing GForm bots for {conf} {year}")
-                    try:
-                        assigner = eval(assigner_name)('gform')
-                        gformbot = assigner(conf, year, root_dir=self.paths['gform'])
-                        gformbot.launch(self.fetch_gform)
-                        self.summary_gform[conf][year] = gformbot.summary_all_tracks
-                    except Exception as e:
-                        if type(e) == ValueError:
-                            cprint('warning', f'{conf} {year}: GForm Not available.')
-                            raise e
-                        elif type(e) == NameError:
-                            cprint('warning', f'{conf} {year}: GForm Not available.')
-                        else:
-                            cprint('error', f"GForm for {conf} {year}: {e}")
-                            raise e
+            #     if self.use_gform:
+            #         cprint('info', f"Initializing GForm bots for {conf} {year}")
+            #         try:
+            #             assigner = eval(assigner_name)('gform')
+            #             gformbot = assigner(conf, year, root_dir=self.paths['gform'])
+            #             gformbot.launch(self.fetch_gform)
+            #             self.summary_gform[conf][year] = gformbot.summary_all_tracks
+            #         except Exception as e:
+            #             if type(e) == ValueError:
+            #                 cprint('warning', f'{conf} {year}: GForm Not available.')
+            #                 raise e
+            #             elif type(e) == NameError:
+            #                 cprint('warning', f'{conf} {year}: GForm Not available.')
+            #             else:
+            #                 cprint('error', f"GForm for {conf} {year}: {e}")
+            #                 raise e
                 
                 
-                cprint('info', f"Merging paperlists for {conf} {year}")
-                assigner = eval(assigner_name)('merge')
-                merger = assigner(conf, year, root_dir=self.paths['statistics'])
-                if openreviewbot: 
-                    merger.paperlist_openreview = openreviewbot.paperlist
-                if sitebot: 
-                    merger.paperlist_site = sitebot.paperlist
-                if openaccessbot: 
-                    merger.paperlist_openaccess = openaccessbot.paperlist
-                if gformbot: 
-                    merger.paperlist_gform = gformbot.paperlist
-                merger.merge_paperlist()
-                merger.save_paperlist()
+            #     cprint('info', f"Merging paperlists for {conf} {year}")
+            #     assigner = eval(assigner_name)('merge')
+            #     merger = assigner(conf, year, root_dir=self.paths['statistics'])
+            #     if openreviewbot: 
+            #         merger.paperlist_openreview = openreviewbot.paperlist
+            #     if sitebot: 
+            #         merger.paperlist_site = sitebot.paperlist
+            #     if openaccessbot: 
+            #         merger.paperlist_openaccess = openaccessbot.paperlist
+            #     if gformbot: 
+            #         merger.paperlist_gform = gformbot.paperlist
+            #     merger.merge_paperlist()
+            #     merger.save_paperlist()
                 
-            # remove empty years
-            self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}
-            self.summary_site[conf] = {k: v for k, v in self.summary_site[conf].items() if v}
-            self.summary_openaccess[conf] = {k: v for k, v in self.summary_openaccess[conf].items() if v}
-            self.summary_gform[conf] = {k: v for k, v in self.summary_gform[conf].items() if v}
+            # # remove empty years
+            # self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}
+            # self.summary_site[conf] = {k: v for k, v in self.summary_site[conf].items() if v}
+            # self.summary_openaccess[conf] = {k: v for k, v in self.summary_openaccess[conf].items() if v}
+            # self.summary_gform[conf] = {k: v for k, v in self.summary_gform[conf].items() if v}
             
-            merger.summary_openreview = self.summary_openreview[conf]
-            merger.summary_site = self.summary_site[conf]
-            merger.summary_openaccess = self.summary_openaccess[conf]
-            merger.summary_gform = self.summary_gform[conf]
-            self.summary += merger.merge_summary()
-            merger.save_summary()
+            # merger.summary_openreview = self.summary_openreview[conf]
+            # merger.summary_site = self.summary_site[conf]
+            # merger.summary_openaccess = self.summary_openaccess[conf]
+            # merger.summary_gform = self.summary_gform[conf]
+            # self.summary += merger.merge_summary()
+            # merger.save_summary()
                 
-            # remove empty conferences
-            # self.summary_openreview = {k: v for k, v in self.summary_openreview.items() if v}
-            # self.summary_site = {k: v for k, v in self.summary_site.items() if v}
-            # self.summary_openaccess = {k: v for k, v in self.summary_openaccess.items() if v}
-            # self.summary_gform = {k: v for k, v in self.summary_gform.items() if v}
+            # # remove empty conferences
+            # # self.summary_openreview = {k: v for k, v in self.summary_openreview.items() if v}
+            # # self.summary_site = {k: v for k, v in self.summary_site.items() if v}
+            # # self.summary_openaccess = {k: v for k, v in self.summary_openaccess.items() if v}
+            # # self.summary_gform = {k: v for k, v in self.summary_gform.items() if v}
                 
-            if is_save: 
-                # save should be done per conference per year
-                # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
-                self.save_summary(conf)
-                self.save_keywords(conf)
+            # if is_save: 
+            #     # save should be done per conference per year
+            #     # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
+            #     self.save_summary(conf)
+            #     self.save_keywords(conf)
                 
         # self.save_summary()
         
     @staticmethod
-    def process_conf_year(args):
-        conf, year, use_openreview, use_site, use_openaccess, use_gform, paths, dump_keywords, fetch_openreview, fetch_openreview_extra, fetch_site, fetch_site_extra, fetch_openaccess, fetch_openaccess_extra, fetch_gform, status = args
+    def process_conf_year(args, live=None):
+        # conf, year, use_openreview, use_site, use_openaccess, use_gform, paths, dump_keywords, fetch_openreview, fetch_openreview_extra, fetch_site, fetch_site_extra, fetch_openaccess, fetch_openaccess_extra, fetch_gform, status = args
+        conf, year, config, paths, status = args
         openreviewbot = None
         sitebot = None
         openaccessbot = None
@@ -276,23 +348,28 @@ class Pipeline:
         def log_start(bot):
             status[f"{conf} {year}"][bot] = f"[bright_white]Running[/bright_white]"
             cprint('info', f"Initializing {bot} bots for {conf} {year}")
+            if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
         
         def log_unavailable(bot):
             status[f"{conf} {year}"][bot] = f"[orange1]Unavailable[/orange1]"
             cprint('warning', f'{conf} {year}: {bot} Unavailable.')
+            if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
             
         def log_error(bot, e):
             status[f"{conf} {year}"][bot] = f"[red1]Error[/red1]"
             cprint('error', f"{bot} for {conf} {year}: {e}")
+            if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
             raise e
         
         def log_done(bot):
             status[f"{conf} {year}"][bot] = f"[green1]Done[/green1]"
             cprint('info', f"{bot} for {conf} {year} Done.")
+            if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
             
         def log_save(bot, path):
             status[f"{conf} {year}"][bot] = f"[bright_blue]Saved[/bright_blue]"
             cprint('io', f"Saved {bot} for {conf} {year} to {path}")
+            if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
         
         # https://www.artima.com/weblogs/viewpost.jsp?thread=240845#decorator-functions-with-decorator-arguments
         def log_status(arg1):
@@ -310,8 +387,8 @@ class Pipeline:
             available_openreview, summary_openreview, keywords_openreview, paperlist_openreview = False, None, None, None
             try:
                 assigner = eval(assigner_name)('or')
-                openreviewbot = assigner(conf, year, root_dir=paths['openreview'], dump_keywords=dump_keywords)
-                openreviewbot.launch(fetch_openreview, fetch_openreview_extra)
+                openreviewbot = assigner(conf, year, root_dir=paths['openreview'], dump_keywords=config.dump_keywords)
+                openreviewbot.launch(config.fetch_openreview, config.fetch_openreview_extra)
                 summary_openreview = openreviewbot.summary_all_tracks
                 keywords_openreview = openreviewbot.keywords_all_tracks
                 paperlist_openreview = openreviewbot.paperlist
@@ -329,7 +406,7 @@ class Pipeline:
             try:
                 assigner = eval(assigner_name)('st', year)
                 sitebot = assigner(conf, year, root_dir=paths['site'])
-                sitebot.launch(fetch_site, fetch_site_extra)
+                sitebot.launch(config.fetch_site, config.fetch_site_extra)
                 summary_site = sitebot.summary_all_tracks
                 paperlist_site = sitebot.paperlist
                 available_site = True
@@ -346,7 +423,7 @@ class Pipeline:
             try:
                 assigner = eval(assigner_name)('oa')
                 openaccessbot = assigner(conf, year, root_dir=paths['openaccess'])
-                openaccessbot.launch(fetch_openaccess, fetch_openaccess_extra)
+                openaccessbot.launch(config.fetch_openaccess, config.fetch_openaccess_extra)
                 summary_openaccess = openaccessbot.summary_all_tracks
                 paperlist_openaccess = openaccessbot.paperlist
                 available_openaccess = True
@@ -363,7 +440,7 @@ class Pipeline:
             try:
                 assigner = eval(assigner_name)('gform')
                 gformbot = assigner(conf, year, root_dir=paths['gform'])
-                gformbot.launch(fetch_gform)
+                gformbot.launch(config.fetch_gform)
                 summary_gform = gformbot.summary_all_tracks
                 paperlist_gform = gformbot.paperlist
                 available_gform = True
@@ -391,13 +468,13 @@ class Pipeline:
             return merger
 
         try:
-            if use_openreview:
+            if config.use_openreview:
                 available_openreview, summary_openreview, keywords_openreview, paperlist_openreview = process_openreview()
-            if use_site:
+            if config.use_site:
                 available_site, summary_site, paperlist_site = process_site()
-            if use_openaccess:
+            if config.use_openaccess:
                 available_openaccess, summary_openaccess, paperlist_openaccess = process_openaccess()
-            if use_gform:
+            if config.use_gform:
                 available_gform, summary_gform, paperlist_gform = process_gform()
             merger = process_merge()
             merger.save_paperlist()
@@ -408,8 +485,9 @@ class Pipeline:
             cprint('error', f"Error processing {conf} {year}: {e}")
             raise e
         
-    def render_table(self, data, is_render_table=True):
-        table = Table(title="Live Updating Table", padding=(0, 1))
+    @staticmethod
+    def render_table(config, data, is_render_table=True):
+        table = Table(title="Live Progress Table", padding=(0, 1))
         table.add_column("Index", justify="center", style="cyan", no_wrap=True)
         
         for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
@@ -417,14 +495,77 @@ class Pipeline:
                 
         # add row of configuration
         b2c = lambda x: "[green]True[/green]" if x else "[red]False[/red]"
-        table.add_row('Use', b2c(self.use_openreview), b2c(self.use_site), b2c(self.use_openaccess), b2c(self.use_gform), b2c(True))
-        table.add_row('Fetch', b2c(self.fetch_openreview), b2c(self.fetch_site), b2c(self.fetch_openaccess), b2c(self.fetch_gform), "")
-        table.add_row('Extra', b2c(self.fetch_openreview_extra), b2c(self.fetch_site_extra), b2c(self.fetch_openaccess_extra), "", "", end_section=True)
+        table.add_row('Use', b2c(config.use_openreview), b2c(config.use_site), b2c(config.use_openaccess), b2c(config.use_gform), b2c(True))
+        table.add_row('Fetch', b2c(config.fetch_openreview), b2c(config.fetch_site), b2c(config.fetch_openaccess), b2c(config.fetch_gform), "")
+        table.add_row('Extra', b2c(config.fetch_openreview_extra), b2c(config.fetch_site_extra), b2c(config.fetch_openaccess_extra), "", "", end_section=True)
 
         for index, value in data.items():
             table.add_row(str(index), str(value['openreview']), str(value['site']), str(value['openaccess']), str(value['gform']), str(value['merge']))
 
         if is_render_table: return table
+        
+    def launch(self, is_save=True):
+        
+        self.summary = []
+        self.summary_openreview = defaultdict(dict)
+        self.summary_site = defaultdict(dict)
+        self.summary_openaccess = defaultdict(dict)
+        self.summary_gform = defaultdict(dict)
+        self.keywords_openreview = defaultdict(dict)
+        
+        status = defaultdict(dict)
+        console = Console()
+        
+        # initialize the shared dictionary with initial values
+        for conf in self.confs:
+            for year in self.years:
+                status[f"{conf} {year}"] = defaultdict(dict)
+                for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
+                    status[f"{conf} {year}"][bot] = ""
+        
+        is_render_table = True
+        with Live(self.render_table(self.config, status, is_render_table), refresh_per_second=30, console=console) as live:
+        
+            # prepare tasks
+            tasks = []
+            for conf in self.confs:
+                for year in sorted(self.years, reverse=False): # sort in descending order to start from the latest year (usually with the most data)
+                    tasks.append((conf, year, self.config, self.paths, status))
+                    
+            # execute tasks
+            results = [Pipeline.process_conf_year(task, live=live) for task in tasks]
+
+            # Wait for all results to complete
+            for result in results:
+                conf, year, summary_openreview, summary_site, summary_openaccess, summary_gform, keywords_openreview, merger = result
+                
+                self.summary_openreview[conf][year] = summary_openreview
+                self.summary_site[conf][year] = summary_site
+                self.summary_openaccess[conf][year] = summary_openaccess
+                self.summary_gform[conf][year] = summary_gform
+                self.keywords_openreview[conf][year] = keywords_openreview
+
+                # remove empty years
+                self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}
+                self.summary_site[conf] = {k: v for k, v in self.summary_site[conf].items() if v}
+                self.summary_openaccess[conf] = {k: v for k, v in self.summary_openaccess[conf].items() if v}
+                self.summary_gform[conf] = {k: v for k, v in self.summary_gform[conf].items() if v}
+                    
+                # update summary for merger
+                if year in self.summary_openreview[conf]: merger.summary_openreview = { year: self.summary_openreview[conf][year] }
+                if year in self.summary_site[conf]: merger.summary_site = { year: self.summary_site[conf][year] }
+                if year in self.summary_openaccess[conf]: merger.summary_openaccess = { year: self.summary_openaccess[conf][year] }
+                if year in self.summary_gform[conf]: merger.summary_gform = { year: self.summary_gform[conf][year] }
+                self.summary += merger.merge_summary()
+                merger.save_summary()
+                    
+                if is_save:
+                    self.save_summary(conf)
+                    self.save_keywords(conf)
+                    
+            # Final update after all tasks are done
+            live.update(self.render_table(self.config, status, is_render_table))
+        
 
     def launch_mp(self, is_save=True):
         self.summary = []
@@ -446,26 +587,20 @@ class Pipeline:
                     status[f"{conf} {year}"][bot] = ""
         
         is_render_table = True
-        with Live(self.render_table(status, is_render_table), refresh_per_second=30, console=console) as live:
+        with Live(self.render_table(self.config, status, is_render_table), refresh_per_second=30, console=console) as live:
 
             with mp.Pool(12) as pool:
                 
                 # prepare tasks
                 tasks = []
                 for conf in self.confs:
-                    for year in sorted(self.years, reverse=True): # sort in descending order to start from the latest year (usually with the most data)
-                        args = (
-                            conf, year, self.use_openreview, self.use_site, self.use_openaccess, self.use_gform, 
-                            self.paths, self.dump_keywords, self.fetch_openreview, self.fetch_openreview_extra, 
-                            self.fetch_site, self.fetch_site_extra, self.fetch_openaccess, self.fetch_openaccess_extra, 
-                            self.fetch_gform, status
-                        )
-                        tasks.append(args)
+                    for year in sorted(self.years, reverse=False): # sort in descending order to start from the latest year (usually with the most data)
+                        tasks.append((conf, year, self.config, self.paths, status))
                 
                 # execute tasks
                 results = [pool.apply_async(Pipeline.process_conf_year, args=(task,)) for task in tasks]
                 while any(not result.ready() for result in results):
-                    live.update(self.render_table(status))
+                    live.update(self.render_table(self.config, status, is_render_table))
 
                 # Wait for all results to complete
                 for result in results:
@@ -496,5 +631,5 @@ class Pipeline:
                         self.save_keywords(conf)
                         
                 # Final update after all tasks are done
-                live.update(self.render_table(status))
+                live.update(self.render_table(self.config, status, is_render_table))
                 
