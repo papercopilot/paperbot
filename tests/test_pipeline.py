@@ -2,8 +2,8 @@ import paperbot
 import argparse
 
 def set_arguments():
-    parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'cvpr', 'iccv', 'acl', 'kdd', 'uai'])
-    parser.add_argument('--years', nargs='+', help='years', default=range(2024, 2012, -1))
+    parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'cvpr', 'iccv', 'eccv', 'wacv', 'acl', 'kdd', 'uai', 'acmmm'])
+    parser.add_argument('--years', nargs='+', help='years', default=range(2013, 2025, 1))
     
     # 
     parser.add_argument('--openreview', action='store_true', help='parse from openreview')
@@ -29,9 +29,9 @@ def set_arguments():
     parser.add_argument('--fetch_openaccess', action='store_true', help='fetch from openaccess, disabled automatically when not using openaccess data ', default=False)
     parser.add_argument('--fetch_gform', action='store_true', help='fetch from google form, disabled automatically when not using google form data', default=True)
     
-    parser.add_argument('--fetch_openreview_extra', action='store_true', help='fetch extra information on openreview', default=False)
-    parser.add_argument('--fetch_site_extra', action='store_true', help='fetch extra information on site', default=False)
-    parser.add_argument('--fetch_openaccess_extra', action='store_true', help='fetch extra information on openaccess', default=False)
+    parser.add_argument('--fetch_openreview_extra', action='store_true', help='fetch extra information on openreview', default=True)
+    parser.add_argument('--fetch_site_extra', action='store_true', help='fetch extra information on site', default=True)
+    parser.add_argument('--fetch_openaccess_extra', action='store_true', help='fetch extra information on openaccess', default=True)
     
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
     
@@ -40,18 +40,18 @@ def set_arguments():
 def test_pipeline(args):
     p = paperbot.Pipeline(args)
     assert p is not None
-    p.launch(is_save=args.save)
+    # p.launch(is_save=args.save)
+    p.launch_mp(is_save=args.save)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     set_arguments()
     args = parser.parse_args()
-    # args.confs = ['iclr', 'cvpr', 'iccv', 'acl', 'kdd', 'uai'] # web
-    # args.years = [2019, 2021, 2023]
-    # args.confs = ['iclr'] # google
-    # args.confs = ['icml', 'acl', 'kdd', 'uai']
-    # args.confs = ['iclr']
-    # args.years = [2022]
+    # args.confs = ['nips', 'icml', 'corl', 'emnlp'] # openreview + site
+    # args.confs = ['cvpr', 'iccv'] # openaccess + site
+    # args.confs = ['icml', 'acl', 'kdd', 'uai'] # gform
+    # args.confs = ['acmmm']
+    # args.years = [2024]
     
     # check iclr 2024/23 summary
     # check cvpr 2022 site
