@@ -291,7 +291,7 @@ class Pipeline:
 
         if is_render_table: return table
         
-    def launch(self, is_save=True):
+    def launch(self, is_save=True, is_mp=False):
         
         self.summary = []
         self.summary_openreview = defaultdict(dict)
@@ -300,125 +300,75 @@ class Pipeline:
         self.summary_gform = defaultdict(dict)
         self.keywords_openreview = defaultdict(dict)
         
-        status = defaultdict(dict)
         console = Console()
         
+        manager = mp.Manager()
+        auto_dict = lambda is_mp: manager.dict() if is_mp else defaultdict(dict)
+        
+        
+        def process_results(results):
+            conf, year, summary_openreview, summary_site, summary_openaccess, summary_gform, keywords_openreview, merger = results
+            
+            self.summary_openreview[conf][year] = summary_openreview
+            self.summary_site[conf][year] = summary_site
+            self.summary_openaccess[conf][year] = summary_openaccess
+            self.summary_gform[conf][year] = summary_gform
+            self.keywords_openreview[conf][year] = keywords_openreview
+
+            # remove empty years
+            self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}
+            self.summary_site[conf] = {k: v for k, v in self.summary_site[conf].items() if v}
+            self.summary_openaccess[conf] = {k: v for k, v in self.summary_openaccess[conf].items() if v}
+            self.summary_gform[conf] = {k: v for k, v in self.summary_gform[conf].items() if v}
+                
+            # update summary for merger
+            if year in self.summary_openreview[conf]: merger.summary_openreview = { year: self.summary_openreview[conf][year] }
+            if year in self.summary_site[conf]: merger.summary_site = { year: self.summary_site[conf][year] }
+            if year in self.summary_openaccess[conf]: merger.summary_openaccess = { year: self.summary_openaccess[conf][year] }
+            if year in self.summary_gform[conf]: merger.summary_gform = { year: self.summary_gform[conf][year] }
+            self.summary += merger.merge_summary()
+            merger.save_summary()
+                
+            if is_save:
+                # save should be done per conference per year
+                # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
+                self.save_summary(conf)
+                self.save_keywords(conf)
+        
         # initialize the shared dictionary with initial values
+        status = auto_dict(is_mp)
         for conf in self.confs:
             for year in self.years:
-                status[f"{conf} {year}"] = defaultdict(dict)
+                status[f"{conf} {year}"] = auto_dict(is_mp)
                 for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
                     status[f"{conf} {year}"][bot] = ""
-        
+                    
         is_render_table = True
         with Live(self.render_table(self.config, status, is_render_table), refresh_per_second=30, console=console) as live:
-        
+            
             # prepare tasks
             tasks = []
             for conf in self.confs:
-                for year in sorted(self.years, reverse=False): # sort in descending order to start from the latest year (usually with the most data)
+                for year in sorted(self.years, reverse=False): # set reverse=True to sort in descending order to start from the latest year (usually with the most data)
                     tasks.append((conf, year, self.config, self.paths, status))
                     
-            # execute tasks
-            results = [Pipeline.process_conf_year(task, live=live) for task in tasks]
-
-            # Wait for all results to complete
-            for result in results:
-                conf, year, summary_openreview, summary_site, summary_openaccess, summary_gform, keywords_openreview, merger = result
-                
-                self.summary_openreview[conf][year] = summary_openreview
-                self.summary_site[conf][year] = summary_site
-                self.summary_openaccess[conf][year] = summary_openaccess
-                self.summary_gform[conf][year] = summary_gform
-                self.keywords_openreview[conf][year] = keywords_openreview
-
-                # remove empty years
-                self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}
-                self.summary_site[conf] = {k: v for k, v in self.summary_site[conf].items() if v}
-                self.summary_openaccess[conf] = {k: v for k, v in self.summary_openaccess[conf].items() if v}
-                self.summary_gform[conf] = {k: v for k, v in self.summary_gform[conf].items() if v}
-                    
-                # update summary for merger
-                if year in self.summary_openreview[conf]: merger.summary_openreview = { year: self.summary_openreview[conf][year] }
-                if year in self.summary_site[conf]: merger.summary_site = { year: self.summary_site[conf][year] }
-                if year in self.summary_openaccess[conf]: merger.summary_openaccess = { year: self.summary_openaccess[conf][year] }
-                if year in self.summary_gform[conf]: merger.summary_gform = { year: self.summary_gform[conf][year] }
-                self.summary += merger.merge_summary()
-                merger.save_summary()
-                    
-                if is_save:
-                    # save should be done per conference per year
-                    # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
-                    self.save_summary(conf)
-                    self.save_keywords(conf)
-                    
-            # Final update after all tasks are done
-            live.update(self.render_table(self.config, status, is_render_table))
-        
-
-    def launch_mp(self, is_save=True):
-        self.summary = []
-        self.summary_openreview = defaultdict(dict)
-        self.summary_site = defaultdict(dict)
-        self.summary_openaccess = defaultdict(dict)
-        self.summary_gform = defaultdict(dict)
-        self.keywords_openreview = defaultdict(dict)
-        
-        manager = mp.Manager()
-        status = manager.dict()
-        console = Console()
-        
-        # initialize the shared dictionary with initial values
-        for conf in self.confs:
-            for year in self.years:
-                status[f"{conf} {year}"] = manager.dict()
-                for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
-                    status[f"{conf} {year}"][bot] = ""
-        
-        is_render_table = True
-        with Live(self.render_table(self.config, status, is_render_table), refresh_per_second=30, console=console) as live:
-
-            with mp.Pool(12) as pool:
-                
-                # prepare tasks
-                tasks = []
-                for conf in self.confs:
-                    for year in sorted(self.years, reverse=False): # sort in descending order to start from the latest year (usually with the most data)
-                        tasks.append((conf, year, self.config, self.paths, status))
-                
+            if is_mp:
+                with mp.Pool(12) as pool:
+                    # execute tasks
+                    results = [pool.apply_async(Pipeline.process_conf_year, args=(task,)) for task in tasks]
+                    while any(not result.ready() for result in results):
+                        live.update(self.render_table(self.config, status, is_render_table))
+                        
+                    # Wait for all results to complete
+                    for result in results:
+                        process_results(result.get())
+            else:
                 # execute tasks
-                results = [pool.apply_async(Pipeline.process_conf_year, args=(task,)) for task in tasks]
-                while any(not result.ready() for result in results):
-                    live.update(self.render_table(self.config, status, is_render_table))
-
+                results = [Pipeline.process_conf_year(task, live=live) for task in tasks]
+                
                 # Wait for all results to complete
                 for result in results:
-                    conf, year, summary_openreview, summary_site, summary_openaccess, summary_gform, keywords_openreview, merger = result.get()
-                    
-                    self.summary_openreview[conf][year] = summary_openreview
-                    self.summary_site[conf][year] = summary_site
-                    self.summary_openaccess[conf][year] = summary_openaccess
-                    self.summary_gform[conf][year] = summary_gform
-                    self.keywords_openreview[conf][year] = keywords_openreview
+                    process_results(result)
 
-                    # remove empty years
-                    self.summary_openreview[conf] = {k: v for k, v in self.summary_openreview[conf].items() if v}
-                    self.summary_site[conf] = {k: v for k, v in self.summary_site[conf].items() if v}
-                    self.summary_openaccess[conf] = {k: v for k, v in self.summary_openaccess[conf].items() if v}
-                    self.summary_gform[conf] = {k: v for k, v in self.summary_gform[conf].items() if v}
-                        
-                    # update summary for merger
-                    if year in self.summary_openreview[conf]: merger.summary_openreview = { year: self.summary_openreview[conf][year] }
-                    if year in self.summary_site[conf]: merger.summary_site = { year: self.summary_site[conf][year] }
-                    if year in self.summary_openaccess[conf]: merger.summary_openaccess = { year: self.summary_openaccess[conf][year] }
-                    if year in self.summary_gform[conf]: merger.summary_gform = { year: self.summary_gform[conf][year] }
-                    self.summary += merger.merge_summary()
-                    merger.save_summary()
-                        
-                    if is_save:
-                        self.save_summary(conf)
-                        self.save_keywords(conf)
-                        
-                # Final update after all tasks are done
-                live.update(self.render_table(self.config, status, is_render_table))
-                
+            # Final update after all tasks are done
+            live.update(self.render_table(self.config, status, is_render_table))
