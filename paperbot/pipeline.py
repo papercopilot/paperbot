@@ -274,25 +274,25 @@ class Pipeline:
         assigner_name = f"Assigner{conf.upper()}"
         
         def log_start(bot):
-            status[f"{conf} {year}"][bot] = f"Running"
+            status[f"{conf} {year}"][bot] = f"[bright_white]Running[/bright_white]"
             cprint('info', f"Initializing {bot} bots for {conf} {year}")
         
         def log_unavailable(bot):
-            status[f"{conf} {year}"][bot] = f"Unavailable"
+            status[f"{conf} {year}"][bot] = f"[orange1]Unavailable[/orange1]"
             cprint('warning', f'{conf} {year}: {bot} Unavailable.')
             
         def log_error(bot, e):
-            status[f"{conf} {year}"][bot] = f"Error"
+            status[f"{conf} {year}"][bot] = f"[red1]Error[/red1]"
             cprint('error', f"{bot} for {conf} {year}: {e}")
             raise e
         
         def log_done(bot):
-            status[f"{conf} {year}"][bot] = f"Done"
+            status[f"{conf} {year}"][bot] = f"[green1]Done[/green1]"
             cprint('info', f"{bot} for {conf} {year} Done.")
             
         def log_save(bot, path):
-            status[f"{conf} {year}"][bot] = f"Saved"
-            # cprint('io', f"Saved {bot} for {conf} {year} to {path}")
+            status[f"{conf} {year}"][bot] = f"[bright_blue]Saved[/bright_blue]"
+            cprint('io', f"Saved {bot} for {conf} {year} to {path}")
         
         # https://www.artima.com/weblogs/viewpost.jsp?thread=240845#decorator-functions-with-decorator-arguments
         def log_status(arg1):
@@ -409,12 +409,17 @@ class Pipeline:
             raise e
         
     def render_table(self, data, is_render_table=True):
-        table = Table(title="Live Updating Table")
+        table = Table(title="Live Updating Table", padding=(0, 1))
         table.add_column("Index", justify="center", style="cyan", no_wrap=True)
-        # table.add_column("Value", justify="right", style="magenta")
         
         for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
                 table.add_column(f"{bot}", justify="center", style="magenta")
+                
+        # add row of configuration
+        b2c = lambda x: "[green]True[/green]" if x else "[red]False[/red]"
+        table.add_row('Use', b2c(self.use_openreview), b2c(self.use_site), b2c(self.use_openaccess), b2c(self.use_gform), b2c(True))
+        table.add_row('Fetch', b2c(self.fetch_openreview), b2c(self.fetch_site), b2c(self.fetch_openaccess), b2c(self.fetch_gform), "")
+        table.add_row('Extra', b2c(self.fetch_openreview_extra), b2c(self.fetch_site_extra), b2c(self.fetch_openaccess_extra), "", "", end_section=True)
 
         for index, value in data.items():
             table.add_row(str(index), str(value['openreview']), str(value['site']), str(value['openaccess']), str(value['gform']), str(value['merge']))
@@ -448,7 +453,7 @@ class Pipeline:
                 # prepare tasks
                 tasks = []
                 for conf in self.confs:
-                    for year in self.years:
+                    for year in sorted(self.years, reverse=True): # sort in descending order to start from the latest year (usually with the most data)
                         args = (
                             conf, year, self.use_openreview, self.use_site, self.use_openaccess, self.use_gform, 
                             self.paths, self.dump_keywords, self.fetch_openreview, self.fetch_openreview_extra, 
