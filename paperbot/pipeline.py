@@ -408,7 +408,7 @@ class Pipeline:
             cprint('error', f"Error processing {conf} {year}: {e}")
             raise e
         
-    def render_table(self, data):
+    def render_table(self, data, is_render_table=True):
         table = Table(title="Live Updating Table")
         table.add_column("Index", justify="center", style="cyan", no_wrap=True)
         # table.add_column("Value", justify="right", style="magenta")
@@ -419,7 +419,7 @@ class Pipeline:
         for index, value in data.items():
             table.add_row(str(index), str(value['openreview']), str(value['site']), str(value['openaccess']), str(value['gform']), str(value['merge']))
 
-        return table
+        if is_render_table: return table
 
     def launch_mp(self, is_save=True):
         self.summary = []
@@ -440,8 +440,8 @@ class Pipeline:
                 for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
                     status[f"{conf} {year}"][bot] = ""
         
-        
-        with Live(self.render_table(status), refresh_per_second=30, console=console) as live:
+        is_render_table = True
+        with Live(self.render_table(status, is_render_table), refresh_per_second=30, console=console) as live:
 
             with mp.Pool(12) as pool:
                 
