@@ -99,7 +99,7 @@ class CVFBot(sitebot.SiteBot):
                     self._paperlist.append(p)
                     self._paper_idx[title] = len(self._paperlist) - 1
         
-    def launch(self, fetch_site=False, fetch_extra=False):
+    def launch(self, fetch_site=False, fetch_extra=False, fetch_extra_mp=False):
         if not self._args: 
             cprint('Info', f'{self._conf} {self._year}: Site Not available.')
             return

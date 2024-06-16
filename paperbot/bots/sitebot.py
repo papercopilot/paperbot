@@ -85,7 +85,7 @@ class SiteBot:
     def crawl(self, target=None):
         pass
     
-    def launch(self, fetch_site=False, fetch_extra=False):
+    def launch(self, fetch_site=False, fetch_extra=False, fetch_extra_mp=False):
         pass
 
     @staticmethod
