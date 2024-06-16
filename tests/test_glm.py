@@ -194,6 +194,38 @@ def glm_align(output_fids, root_download, root_src, root_out):
         os.makedirs(os.path.dirname(os.path.join(root_out, output_fids[fid])), exist_ok=True)
         with open(os.path.join(root_out, output_fids[fid]), 'w') as f:
             json.dump(paperlist, f, indent=4)
+            
+def align_cvpr24():
+    
+    # situation for cvpr24 is that the affs are provided by the conference before and now unavailable
+    # using the current pipeline to get all meta from the site has the same structure than the previous but lack of affs
+    # the affs are used to processed by llm in a separate folder, and the previous code is simply update the extracted affs from the llm to the openaccess paperlist
+    # however, such method is only a temporary solution. we should introduce another module as the llm to process all the affs and use the merger the merge in to the final paperlist
+    
+    # let's use this function to simply merge
+    
+    path_paperlist = '/home/jyang/projects/papercopilot/logs/paperlists/cvpr/cvpr2024.json'
+    affs = '/home/jyang/projects/papercopilot/logs/gt/venues/cvpr/cvpr2024.json'
+    
+    with open(path_paperlist) as f:
+        paperlist = json.load(f)
+        
+    with open(affs) as f:
+        affs = json.load(f)
+        
+    # build key dict in affs
+    site_dict = {}
+    for aff in affs:
+        site_dict[aff['site']] = aff
+        
+    # loop through paperlist and update affs
+    for p in paperlist:
+        if p['site'] in site_dict:
+            p['aff'] = site_dict[p['site']]['aff']
+            
+    # dump paperlist
+    with open(path_paperlist, 'w') as f:
+        json.dump(paperlist, f, indent=4)
         
                     
 if __name__ == '__main__':
@@ -378,5 +410,6 @@ if __name__ == '__main__':
     }
     # glm_download(client, output_fids, root_download)
     
-    glm_align(output_fids, root_download, root_raw, root_output)
+    # glm_align(output_fids, root_download, root_raw, root_output)
     
+    align_cvpr24()

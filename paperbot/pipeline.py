@@ -27,6 +27,7 @@ class Pipeline:
             use_openreview=args.use_openreview, use_site=args.use_site, use_openaccess=args.use_openaccess, use_gform=args.use_gform, 
             fetch_openreview=args.fetch_openreview, fetch_site=args.fetch_site, fetch_openaccess=args.fetch_openaccess, fetch_gform=args.fetch_gform, 
             fetch_openreview_extra=args.fetch_openreview_extra, fetch_site_extra=args.fetch_site_extra, fetch_openaccess_extra=args.fetch_openaccess_extra,
+            fetch_openreview_extra_mp=args.fetch_openreview_extra_mp, fetch_site_extra_mp=args.fetch_site_extra_mp, fetch_openaccess_extra_mp=args.fetch_openaccess_extra_mp,
             dump_keywords=args.parse_keywords
         )
         
@@ -193,7 +194,7 @@ class Pipeline:
             try:
                 assigner = eval(assigner_name)('st', year)
                 sitebot = assigner(conf, year, root_dir=paths['site'])
-                sitebot.launch(config.fetch_site, config.fetch_site_extra)
+                sitebot.launch(config.fetch_site, config.fetch_site_extra, config.fetch_site_extra_mp)
                 summary_site = sitebot.summary_all_tracks
                 paperlist_site = sitebot.paperlist
                 available_site = True
@@ -284,7 +285,8 @@ class Pipeline:
         b2c = lambda x: "[green]True[/green]" if x else "[red]False[/red]"
         table.add_row('Use', b2c(config.use_openreview), b2c(config.use_site), b2c(config.use_openaccess), b2c(config.use_gform), b2c(True))
         table.add_row('Fetch', b2c(config.fetch_openreview), b2c(config.fetch_site), b2c(config.fetch_openaccess), b2c(config.fetch_gform), "")
-        table.add_row('Extra', b2c(config.fetch_openreview_extra), b2c(config.fetch_site_extra), b2c(config.fetch_openaccess_extra), "", "", end_section=True)
+        table.add_row('Extra', b2c(config.fetch_openreview_extra), b2c(config.fetch_site_extra), b2c(config.fetch_openaccess_extra), "", "")
+        table.add_row('Extra MP', b2c(config.fetch_openreview_extra_mp), b2c(config.fetch_site_extra_mp), b2c(config.fetch_openaccess_extra_mp), "", "", end_section=True)
 
         for index, value in data.items():
             table.add_row(str(index), str(value['openreview']), str(value['site']), str(value['openaccess']), str(value['gform']), str(value['merge']))

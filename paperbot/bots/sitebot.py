@@ -89,12 +89,12 @@ class SiteBot:
         pass
 
     @staticmethod
-    def session_request(url, retries=10, stream=None):
+    def session_request(url, retries=10, stream=None, cookies=None):
         # https://stackoverflow.com/questions/23013220/max-retries-exceeded-with-url-in-requests
         
         try:
             # direct request
-            response = requests.get(url, stream=stream)
+            response = requests.get(url, cookies=cookies, stream=stream)
         except requests.exceptions.RequestException as e:
             session = requests.Session()
             retry = Retry(connect=retries, backoff_factor=0.5)
@@ -103,7 +103,7 @@ class SiteBot:
             session.mount('https://', adapter)
             try:
                 # direct request failed, try with session
-                response = session.get(url)
+                response = session.get(url, cookies=cookies)
             except requests.exceptions.RequestException as e:
                 # failed to fetch
                 cprint('warning', f"Failed to fetch {url}.")

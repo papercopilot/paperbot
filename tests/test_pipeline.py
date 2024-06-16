@@ -3,7 +3,7 @@ import argparse
 
 def set_arguments():
     parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'cvpr', 'iccv', 'eccv', 'wacv', 'acl', 'kdd', 'uai', 'acmmm'])
-    parser.add_argument('--years', nargs='+', help='years', default=range(2013, 2025, 1))
+    parser.add_argument('--years', nargs='+', help='years', default=range(2024, 2012, -1)) # use
     
     # 
     parser.add_argument('--openreview', action='store_true', help='parse from openreview')
@@ -33,6 +33,10 @@ def set_arguments():
     parser.add_argument('--fetch_site_extra', action='store_true', help='fetch extra information on site', default=True)
     parser.add_argument('--fetch_openaccess_extra', action='store_true', help='fetch extra information on openaccess', default=True)
     
+    parser.add_argument('--fetch_openreview_extra_mp', action='store_true', help='fetch from openreview using multiprocessing', default=False)
+    parser.add_argument('--fetch_site_extra_mp', action='store_true', help='fetch from site using multiprocessing', default=True)
+    parser.add_argument('--fetch_openaccess_extra_mp', action='store_true', help='fetch from openaccess using multiprocessing', default=True)
+    
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
     
     parser.add_argument('--save', action='store_true', help='save the results', default=True)
@@ -40,8 +44,8 @@ def set_arguments():
 def test_pipeline(args):
     p = paperbot.Pipeline(args)
     assert p is not None
-    # p.launch(is_save=args.save)
-    p.launch_mp(is_save=args.save)
+    p.launch(is_save=args.save, is_mp=False)
+    # p.launch_mp(is_save=args.save)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -50,8 +54,8 @@ if __name__ == "__main__":
     # args.confs = ['nips', 'icml', 'corl', 'emnlp'] # openreview + site
     # args.confs = ['cvpr', 'iccv'] # openaccess + site
     # args.confs = ['icml', 'acl', 'kdd', 'uai'] # gform
-    # args.confs = ['acmmm']
-    # args.years = [2024]
+    args.confs = ['cvpr']
+    args.years = [2024]
     
     # check iclr 2024/23 summary
     # check cvpr 2022 site

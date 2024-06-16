@@ -62,7 +62,7 @@ class OpenaccessBot(sitebot.SiteBot):
             # get content from the first page
             page_text = reader.pages[0].extract_text()
             
-            process_mode = 'raw'
+            process_mode = 'hard'
             if process_mode == 'raw':
                 # https://maas.aminer.cn/dev/howuse/batchapi
                 affs = page_text

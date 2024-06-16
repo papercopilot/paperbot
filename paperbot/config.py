@@ -32,6 +32,7 @@ class PipelineConfig(Config, metaclass=AutoPropertyMeta):
         use_openreview: bool = False, use_site: bool = False, use_openaccess: bool = False, use_gform: bool = False, 
         fetch_openreview: bool = False, fetch_site: bool = False, fetch_openaccess: bool = False, fetch_gform: bool = False, 
         fetch_openreview_extra: bool = False, fetch_site_extra: bool = False, fetch_openaccess_extra: bool = False,
+        fetch_openreview_extra_mp: bool = False, fetch_site_extra_mp: bool = False, fetch_openaccess_extra_mp: bool = False,
         dump_keywords: bool = False
     ):
         self._use_openreview = use_openreview
@@ -47,5 +48,9 @@ class PipelineConfig(Config, metaclass=AutoPropertyMeta):
         self._fetch_openreview_extra = fetch_openreview_extra
         self._fetch_site_extra = fetch_site_extra
         self._fetch_openaccess_extra = fetch_openaccess_extra
+        
+        self._fetch_openreview_extra_mp = fetch_openreview_extra_mp
+        self._fetch_site_extra_mp = fetch_site_extra_mp
+        self._fetch_openaccess_extra_mp = fetch_openaccess_extra_mp
         
         self._dump_keywords = dump_keywords

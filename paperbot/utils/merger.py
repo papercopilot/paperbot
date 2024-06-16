@@ -1014,7 +1014,10 @@ class MergerCVPR(Merger):
         paper = p1.copy()
         
         if self._year >= 2024:
-            pass
+            if 'github' in p2: paper['github'] = paper['github'] if paper['github'] else p2['github']
+            if 'project' in p2: paper['project'] = paper['project'] if paper['project'] else p2['project']
+            if 'aff' in p2: paper['aff'] = p2['aff']
+            if 'arxiv' in p2: paper['arxiv'] = p2['arxiv']
         elif self._year == 2023:
             if 'github' in p2: paper['github'] = paper['github'] if paper['github'] else p2['github']
             if 'project' in p2: paper['project'] = paper['project'] if paper['project'] else p2['project']
@@ -1047,7 +1050,9 @@ class MergerCVPR(Merger):
         
     def normalize_site_tier_name(self, s, year, track, tier_num):
         
-        if year == 2023:
+        if year == 2024:
+            tier_num['Spotlight'] = tier_num.pop('Highlight')
+        elif year == 2023:
             tier_num['Spotlight'] = tier_num.pop('Highlight')
         
     def update_total(self, s, year, track, tier_num):

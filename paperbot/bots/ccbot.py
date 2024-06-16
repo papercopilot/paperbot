@@ -9,6 +9,7 @@ import os
 import multiprocessing as mp
 import difflib
 from urllib.parse import urlparse, urljoin
+from pycookiecheat import BrowserType, chrome_cookies
 
 from . import sitebot
 from ..utils import util, summarizer
@@ -102,7 +103,7 @@ class CCBot(sitebot.SiteBot):
                 self._paperlist.append(p)
                 self._paper_idx[paperid] = len(self._paperlist) - 1
                 
-    def crawl_extra(self):
+    def crawl_extra(self, is_mp=False):
         
         if self._paperlist and self.process_url(self._paperlist[0]['site'], self._year):
             cprint('info', f'{self._conf} {self._year}: Fetching Extra...')
@@ -110,19 +111,25 @@ class CCBot(sitebot.SiteBot):
             # create hashmap for paperlist
             paper_idx = {p['site']: i for i, p in enumerate(self._paperlist)}
             
-            # parallel crawl, DONT make pool as a class attribute
-            # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
-            pool = mp.Pool(mp.cpu_count() * 2)
-            rets = mp.Manager().list()
-            pbar = tqdm(total=len(self._paperlist), leave=False)
+            # prepare tasks
+            tasks = [(p['site'], self._year) for p in self._paperlist]
             
-            def mpupdate(x):
-                rets.append(x)
-                pbar.update(1)
-            for i in range(pbar.total):
-                pool.apply_async(self.process_url, (self._paperlist[i]['site'], self._year), callback=mpupdate)
-            pool.close()
-            pool.join()
+            if is_mp:
+                # parallel crawl, DONT make pool as a class attribute
+                # https://stackoverflow.com/questions/25382455/python-notimplementederror-pool-objects-cannot-be-passed-between-processes
+                pool = mp.Pool(mp.cpu_count() * 2)
+                rets = mp.Manager().list()
+                pbar = tqdm(total=len(tasks), leave=False)
+                
+                def mpupdate(x):
+                    rets.append(x)
+                    pbar.update(1)
+                for i in range(pbar.total):
+                    pool.apply_async(self.process_url, (tasks[i]), callback=mpupdate)
+                pool.close()
+                pool.join()
+            else:
+                rets = [self.process_url(*task) for task in tqdm(tasks, leave=False)]
             
             for ret in rets:
                 if not ret: 
@@ -138,7 +145,7 @@ class CCBot(sitebot.SiteBot):
     def process_url(url_paper):
         pass
             
-    def launch(self, fetch_site=False, fetch_extra=False):
+    def launch(self, fetch_site=False, fetch_extra=False, fetch_extra_mp=False):
         if not self._args: 
             cprint('Info', f'{self._conf} {self._year}: Site Not available.')
             return
@@ -157,7 +164,7 @@ class CCBot(sitebot.SiteBot):
             
             # crawl for extra info if available
             if fetch_extra:
-                self.crawl_extra()
+                self.crawl_extra(fetch_extra_mp)
             
         else:
             # load previous
@@ -374,8 +381,11 @@ class StBotICML(CCBot):
         
 class StBotCVPR(CCBot):
     
-    def crawl_extra(self):
-        super().crawl_extra()
+    def crawl_extra(self, is_mp=False):
+        super().crawl_extra(is_mp)
+        
+        return
+        # github and authors can be extracted from extra_session
         
         # TODO: this section is similar to merger function, maybe defined this as another src and merge it 
         if self._year == 2024:
@@ -416,6 +426,11 @@ class StBotCVPR(CCBot):
                 # remove redundant affs
                 affs = list(set(affs))
                 affs = list(filter(None, affs))
+                
+                
+                authors = e.xpath(".//i//text()")[0].strip()
+                authors = authors.split('·')
+                
                     
                 # remove redundant affs and stringfy
                 authors = ', '.join(authors)
@@ -480,8 +495,11 @@ class StBotCVPR(CCBot):
     @staticmethod
     def process_url(url_paper, year):
         
+        # get cookies to surpass login
+        cookies = chrome_cookies(url_paper)
+        
         # open paper url to load status
-        response_paper = sitebot.SiteBot.session_request(url_paper)
+        response_paper = sitebot.SiteBot.session_request(url_paper, cookies=cookies)
         tree_paper = html.fromstring(response_paper.content)
         
         # get the div element that contains a <a> element with text 'Abstract'
@@ -490,7 +508,32 @@ class StBotCVPR(CCBot):
         
         ret = {'site': url_paper,}
         if year == 2024:
-            pass
+            # if 'Highlight' is in the first element
+            ret['status'] = 'Highlight' if 'Highlight' in e_container[0].text_content() else 'Poster'
+
+            # get project page if exist
+            e_project = tree_paper.xpath("//a[normalize-space()='Project Page']")
+            url_project = '' if not e_project else e_project[0].xpath("./@href")[0]
+            
+            # get github link if exist
+            ret['github'] = '' if 'github.com' not in url_project else url_project
+            ret['project'] = '' if 'github.com' in url_project else url_project
+            
+            # find if there is a div with id='after-abstract-media'
+            e_after_abstract_media = tree_paper.xpath("//div[@id='after-abstract-media']")
+            ret['video'] = '' if not e_after_abstract_media else f'https://youtu.be/{e_after_abstract_media[0].xpath(".//iframe/@src")[0].split("/")[-1]}'
+            
+            e_url_pdf = tree_paper.xpath("//a[@title='Paper PDF']")
+            ret['pdf'] = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
+            
+            ret['oa'] = ret['pdf'].replace('/papers/', '/html/').replace('.pdf', '.html')
+        
+            e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
+            ret['poster'] = '' if not e_poster else e_poster[0].xpath("./@href")[0]
+            
+            e_url_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
+            ret['openreview'] = '' if not e_url_openreview else e_url_openreview[0].xpath("./@href")[0]
+        
         elif year == 2023:
             # if 'Highlight' is in the first element
             ret['status'] = 'Highlight' if 'Highlight' in e_container[0].text_content() else 'Poster'
