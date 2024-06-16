@@ -40,12 +40,12 @@ def set_arguments():
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
     
     parser.add_argument('--save', action='store_true', help='save the results', default=True)
+    parser.add_argument('--mp', action='store_true', help='load the results', default=False)
 
 def test_pipeline(args):
     p = paperbot.Pipeline(args)
     assert p is not None
-    p.launch(is_save=args.save, is_mp=False)
-    # p.launch_mp(is_save=args.save)
+    p.launch(is_save=args.save, is_mp=args.mp)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -54,8 +54,8 @@ if __name__ == "__main__":
     # args.confs = ['nips', 'icml', 'corl', 'emnlp'] # openreview + site
     # args.confs = ['cvpr', 'iccv'] # openaccess + site
     # args.confs = ['icml', 'acl', 'kdd', 'uai'] # gform
-    args.confs = ['cvpr']
-    args.years = [2024]
+    # args.confs = ['cvpr']
+    # args.years = [2024]
     
     # check iclr 2024/23 summary
     # check cvpr 2022 site
