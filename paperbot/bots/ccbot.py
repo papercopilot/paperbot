@@ -524,9 +524,10 @@ class StBotCVPR(CCBot):
             ret['video'] = '' if not e_after_abstract_media else f'https://youtu.be/{e_after_abstract_media[0].xpath(".//iframe/@src")[0].split("/")[-1]}'
             
             e_url_pdf = tree_paper.xpath("//a[@title='Paper PDF']")
-            ret['pdf'] = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
+            url_oa = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
+            ret['pdf'] = url_oa.replace('/html/', '/papers/').replace('.html', '.pdf')
             
-            ret['oa'] = ret['pdf'].replace('/papers/', '/html/').replace('.pdf', '.html')
+            ret['oa'] = url_oa
         
             e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
             ret['poster'] = '' if not e_poster else e_poster[0].xpath("./@href")[0]
