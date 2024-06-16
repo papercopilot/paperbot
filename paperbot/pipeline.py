@@ -89,15 +89,15 @@ class Pipeline:
             cprint('info', f"No summary for {conf} in gform")
             
         # save all the
-        if self.summary:
+        if self.summarys:
             summary_path = os.path.join(self.paths['statistics'], 'stats', 'stat.json')
             os.makedirs(os.path.dirname(summary_path), exist_ok=True)
             with open(summary_path, 'w') as f:
-                json.dump(self.summary, f, indent=4)
+                json.dump(self.summarys, f, indent=4)
             cprint('io', f"Saved summary for all conferences to {summary_path}")
             
             # convert to xls
-            df = pd.DataFrame(self.summary)
+            df = pd.DataFrame(self.summarys)
             df.to_excel(summary_path.replace('.json', '.xlsx'), index=False)
             df.to_csv(summary_path.replace('.json', '.csv'), index=False)
         
@@ -241,7 +241,7 @@ class Pipeline:
             return available_gform, summary_gform, paperlist_gform
                 
         @log_status('merge')
-        def process_merge():
+        def process_merge_paperlist():
             assigner = eval(assigner_name)('merge')
             merger = assigner(conf, year, root_dir=paths['statistics'])
             if available_openreview: 
@@ -264,7 +264,7 @@ class Pipeline:
                 available_openaccess, summary_openaccess, paperlist_openaccess = process_openaccess()
             if config.use_gform:
                 available_gform, summary_gform, paperlist_gform = process_gform()
-            merger = process_merge()
+            merger = process_merge_paperlist()
             merger.save_paperlist()
             log_save('merge', '')
 
@@ -295,7 +295,7 @@ class Pipeline:
         
     def launch(self, is_save=True, is_mp=False):
         
-        self.summary = []
+        self.summarys = []
         self.summary_openreview = defaultdict(dict)
         self.summary_site = defaultdict(dict)
         self.summary_openaccess = defaultdict(dict)
@@ -328,9 +328,9 @@ class Pipeline:
             if year in self.summary_site[conf]: merger.summary_site = { year: self.summary_site[conf][year] }
             if year in self.summary_openaccess[conf]: merger.summary_openaccess = { year: self.summary_openaccess[conf][year] }
             if year in self.summary_gform[conf]: merger.summary_gform = { year: self.summary_gform[conf][year] }
-            self.summary += merger.merge_summary()
+            self.summarys += merger.merge_summary()
             merger.save_summary()
-                
+            
             if is_save:
                 # save should be done per conference per year
                 # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)

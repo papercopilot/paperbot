@@ -3,6 +3,7 @@ import difflib
 import os
 from tqdm import tqdm
 import hashlib
+from collections import Counter
 
 from .summarizer import Summarizer
 from .util import color_print as cprint
@@ -29,6 +30,9 @@ class Merger:
         self._keywords_openreview = {}
         
         self._keywords_site = {}
+        
+        self._affs = {}
+        self._authors = {}
         
         self._paths = {
             'paperlists': os.path.join(self._root_dir, 'paperlists'),
@@ -156,6 +160,7 @@ class Merger:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w') as f:
                 json.dump(self._paperlist_merged, f, indent=4)
+            cprint('io', f"Saved paperlist for {self._conf} to {path}")
     
     def get_highest_status(self):
         # default status_priority, can be rewrite in subclass
@@ -486,6 +491,32 @@ class Merger:
         
         # table in db
         return header
+            
+    def count_affiliations(self, n_top=100):
+        
+        counter = Counter()
+        for paper in self._paperlist_merged:
+            if 'aff' not in paper: continue
+            counter.update([aff.strip() for aff in paper['aff'].split(';') if aff.strip()])
+            
+        remove_keys = [
+            'double-blind' # iclr
+        ]
+        
+        for k in list(counter.keys()):
+            for remove_key in remove_keys:
+                if remove_key in k: # check if the top affiliation conatins the remove keys
+                    del counter[k]
+            
+        return ';'.join([f'{aff}:{num}' for aff, num in counter.most_common(n_top)])
+    
+    def count_authors(self, n_top=100):
+        
+        couhter = Counter()
+        for paper in self._paperlist_merged:
+            if 'author' not in paper: continue
+            couhter.update([author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()])
+        return ';'.join([f'{author}:{num}' for author, num in couhter.most_common(n_top)])
                 
     def merge_summary(self):
         
@@ -762,7 +793,12 @@ class Merger:
                             s[f'tsf_conf_{i}'] = '' if k not in tier_tsf_conf else tier_tsf_conf[k]
 
                         stats[s['conference']] = s
-                        
+        
+        # if there is only one key
+        if len(stats) == 1:
+            k = list(stats.keys())[0]
+            stats[k]['affs'] = self.count_affiliations(100)
+            stats[k]['authors'] = self.count_authors(100)
                                     
         # return stats as list
         stats = dict(sorted(stats.items()))
@@ -773,7 +809,7 @@ class Merger:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w') as f:
             json.dump(self._summary_merged, f, indent=4)
-            
+
 
 class MergerICLR(Merger):
     
