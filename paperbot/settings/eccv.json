@@ -3,6 +3,12 @@
         "gform": {
             "track": {
                 "main": "eccv"
+            },
+            "tname": {
+                "main": {
+                    "Poster": "Poster",
+                    "Reject": "Reject"
+                }
             }
         }
     },

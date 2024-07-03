@@ -21,6 +21,7 @@ class GFormBot(sitebot.SiteBot):
         self._args = self._args['gform'] # select sub-dictionary
         self._tracks = self._args['track']
         
+        # init visit gform here to avoid futher error, e.g. token has been expired
         self._gform = util.load_settings('gform')[str(self._year)]
         
         self._paths = {
@@ -44,6 +45,9 @@ class GFormBot(sitebot.SiteBot):
             df = pd.DataFrame()
             
         return df
+    
+    def crawl_extra(self, track):
+        pass
         
     def get_paperlist(self, track='', mode=None, as_init=False):
         
@@ -61,7 +65,7 @@ class GFormBot(sitebot.SiteBot):
                     'id': paper_id,
                     'title': '',
                     'track': ret['track'],
-                    'status': '',
+                    'status': ret['status'],
                     'keywords': '',
                     'author': '',
                     
@@ -100,10 +104,35 @@ class GFormBot(sitebot.SiteBot):
             
             if fetch_site:
                 self.df = self.crawl(track)
+                self.df_extra = self.crawl_extra(track)
             else:
                 self.df = pd.read_csv(self.file_path)
         
             self.summarizer.paperlist = self.get_paperlist(track=track)
+            
+            if self._conf == 'eccv' and self._year == 2024:
+                # TODO: hack now improve in the futhre
+                # update paper ids from announced paper ids
+                for i, p in enumerate(self.summarizer.paperlist):
+                    if p['id'] in self.df_extra['Paper ID'].values:
+                        self.summarizer.paperlist[i]['status'] = 'Poster'
+                    else:
+                        if p['status'] == '':
+                            self.summarizer.paperlist[i]['status'] = 'Reject'
+                        if '-' in p['id'] or not p['id'].isdigit():
+                            self.summarizer.paperlist[i]['status'] = 'Unknown'
+                            
+                # update tids
+                for k in self._args['tname'][track]:
+                    self.summarizer.update_summary(k, 0)
+                self.summarizer.update_summary('Withdraw', 0)
+                    
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
+                self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
+                
+                return
+                    
             self.summarizer.get_histogram(track=track)
 
             # hack to copy total data to active for now
@@ -201,6 +230,7 @@ class GFormBotICML(GFormBot):
         ret = {
             'id': index,
             'track': track,
+            'status': '',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -267,6 +297,7 @@ class GFormBotACL(GFormBot):
         ret = {
             'id': index,
             'track': track,
+            'status': '',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -340,6 +371,7 @@ class GFormBotKDD(GFormBot):
         ret = {
             'id': index,
             'track': track,
+            'status': '',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -404,6 +436,7 @@ class GFormBotUAI(GFormBot):
         ret = {
             'id': index,
             'track': track,
+            'status': '',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -419,6 +452,24 @@ class GFormBotUAI(GFormBot):
         
         
 class GFormBotECCV(GFormBot):
+    
+    def crawl_extra(self, track):
+    
+        extra = None
+        if self._year == 2024:
+            
+            gc = gspread.oauth()
+            sh = gc.open_by_key(self._gform[self._tracks[track]])
+            response = sh.worksheet('accept').get_all_values() # header is included as row0
+            df = pd.DataFrame.from_records(response)
+    
+            # process header
+            df.columns = df.iloc[0]
+            df = df[1:]
+            extra = df
+        else:
+            pass
+        return extra
     
     
     def process_row(self, index, row, track, mode=None, as_init=False):
@@ -449,12 +500,14 @@ class GFormBotECCV(GFormBot):
                 else:
                     rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
                     # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                status = row['[Optional] Final Decision']
             else:
                 # remove redundant data
                 # if row['Paper ID']: return ret
                 
                 rating = self.auto_split(row['Initial Ratings'])
                 paper_id = row['Paper ID (hash it if you prefer more anonymity)']
+                status = row['[Optional] Final Decision']
                 # confidence = self.auto_split(row['Initial Confidence'])
 
         # list to numpy
@@ -477,6 +530,7 @@ class GFormBotECCV(GFormBot):
         ret = {
             'id': paper_id,
             'track': track,
+            'status': status,
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -550,6 +604,7 @@ class GFormBotACMMM(GFormBot):
         ret = {
             'id': paper_id,
             'track': track,
+            'status': '',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)

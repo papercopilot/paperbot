@@ -492,7 +492,7 @@ class Merger:
         # table in db
         return header
             
-    def count_affiliations(self, n_top=100):
+    def count_affiliations(self, n_top=None):
         
         counter = Counter()
         for paper in self._paperlist_merged:
@@ -510,7 +510,7 @@ class Merger:
             
         return ';'.join([f'{aff}:{num}' for aff, num in counter.most_common(n_top)])
     
-    def count_authors(self, n_top=100):
+    def count_authors(self, n_top=None):
         
         couhter = Counter()
         for paper in self._paperlist_merged:
@@ -746,6 +746,11 @@ class Merger:
                             s['active'] = summary['tnum'].get(tid, summary['thsum'][tid])
                             s['h_active'] = summary['thist'][tid]
                             s['h_conf_active'] = summary['thist_conf'][tid]
+                        if 'Withdraw' in tier_id:
+                            tid = tier_id['Withdraw']
+                            s['withdraw'] = summary['tnum'][tid]
+                            s['h_withdraw'] = summary['thist'][tid]
+                            s['h_conf_withdraw'] = summary['thist_conf'][tid]
                         if 'Total' in tier_id:
                             tid = tier_id['Total']
                             s['h_total'] = summary['thist'][tid]
@@ -796,9 +801,40 @@ class Merger:
         
         # if there is only one key
         if len(stats) == 1:
+            
+            
+            if self._conf == 'cvpr' and self._year == 2024:
+    
+                # TODO: hack now, improve later
+                path_paperlist = '/home/jyang/projects/papercopilot/logs/paperlists/cvpr/cvpr2024.json'
+                affs = '/home/jyang/projects/papercopilot/logs/gt/venues/cvpr/cvpr2024.json'
+                
+                with open(path_paperlist) as f:
+                    paperlist = json.load(f)
+                    
+                with open(affs) as f:
+                    affs = json.load(f)
+                    
+                # build key dict in affs
+                site_dict = {}
+                for aff in affs:
+                    site_dict[aff['site']] = aff
+                    
+                # loop through paperlist and update affs
+                for p in paperlist:
+                    if p['site'] in site_dict:
+                        p['aff'] = site_dict[p['site']]['aff']
+                        
+                # dump paperlist
+                with open(path_paperlist, 'w') as f:
+                    json.dump(paperlist, f, indent=4)
+                    
+                self._paperlist_merged = paperlist
+            
+            
             k = list(stats.keys())[0]
-            stats[k]['affs'] = self.count_affiliations(100)
-            stats[k]['authors'] = self.count_authors(100)
+            stats[k]['affs'] = self.count_affiliations()
+            stats[k]['authors'] = self.count_authors()
                                     
         # return stats as list
         stats = dict(sorted(stats.items()))
