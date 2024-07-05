@@ -120,13 +120,13 @@ class Summarizer():
         # histogram for active will be zero when the decision is out, since all active paper will be moved to each tiers
         k = 'Active'
         tid = self.get_tid(k)
-        hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(self._paperlist, status=k)
+        hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(self._paperlist, status=k, track=track)
         self.tier_hist[tid], self.tier_hist_sum[tid], self.tier_hist_confidence[tid] = hist_rating_str, hist_sum, hist_confidence_str
         
         k = 'Withdraw'
         if 'Withdraw' in self.tier_ids:
             tid = self.tier_ids[k]
-            hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(self._paperlist, status=k)
+            hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(self._paperlist, status=k, track=track)
             self.tier_hist[tid], self.tier_hist_sum[tid], self.tier_hist_confidence[tid] = hist_rating_str, hist_sum, hist_confidence_str
 
             # if withdraw in thsum is not equal to withdraw in tnum, label the difference as "Post Decision Withdraw"
@@ -138,7 +138,7 @@ class Summarizer():
         
         # whether to update active from tiers
         tid = self.tier_ids['Active']
-        update_active_from_tiers = True if self.tier_hist_sum[tid] == 0 or self.tier_hist_sum[tid]/self.tier_num[tid] < 0.01 else False # when no active data or only several data points are available
+        update_active_from_tiers = True if self.tier_hist_sum[tid] == 0 or self.tier_hist_sum[tid]/(self.tier_num[tid]+1e-4) < 0.01 else False # when no active data or only several data points are available
         rating_avg_hist_update = np.array(self.tier_hist[tid].split(';')).astype(np.int32) # add tiers on top of active
         confidence_avg_hist_update = np.array(self.tier_hist_confidence[tid].split(';')).astype(np.int32) # add tiers on top of active
         

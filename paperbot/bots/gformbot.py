@@ -113,45 +113,69 @@ class GFormBot(sitebot.SiteBot):
             if self._conf == 'eccv' and self._year == 2024:
                 # TODO: hack now improve in the futhre
                 # update paper ids from announced paper ids
-                for i, p in enumerate(self.summarizer.paperlist):
-                    if p['id'] in self.df_extra['Paper ID'].values:
-                        self.summarizer.paperlist[i]['status'] = 'Poster'
-                    else:
-                        if p['status'] == '':
-                            self.summarizer.paperlist[i]['status'] = 'Reject'
-                        if '-' in p['id'] or not p['id'].isdigit():
-                            self.summarizer.paperlist[i]['status'] = 'Unknown'
+                
+                def update_paperlist_status(paperlist):
+                    for i, p in enumerate(paperlist):
+                        if p['id'] in self.df_extra['Paper ID'].values:
+                            paperlist[i]['status'] = 'Poster'
+                        else:
+                            if p['status'] == '':
+                                paperlist[i]['status'] = 'Reject'
+                            if '-' in p['id'] or not p['id'].isdigit():
+                                paperlist[i]['status'] = 'Unknown'
+                                
+                update_paperlist_status(self.summarizer.paperlist)
                             
-                # update tids
+                # update tids and get initial histogram
                 for k in self._args['tname'][track]:
                     self.summarizer.update_summary(k, 0)
                 self.summarizer.update_summary('Withdraw', 0)
-                    
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
+        
+                # update paperlist and get rebuttal histogram
+                self.summarizer.paperlist = self.get_paperlist(track=track, mode='Rebuttal')
+                self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
+                update_paperlist_status(self.summarizer.paperlist)
+                update_paperlist_status(self.summarizer.paperlist_init)
                 self.summarizer.get_histogram(self._args['tname'][track], track=track)
                 self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
-                self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
+                self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf
+                self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence
+                self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum
+                
+                # update total and total0 since usually rebuttal data is less than initial data
+                for k in ['Total', 'Total0']:
+                    kid = self.summarizer.get_tid(k)
+                    if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                    self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
+                    self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
+                    self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
                 
                 return
                     
-            self.summarizer.get_histogram(track=track)
-
-            # hack to copy total data to active for now
-            hist = self.summarizer.tier_hist[1]
-            hist_conf = self.summarizer.tier_hist_confidence[1]
-            hist_sum = self.summarizer.tier_hist_sum[1]
+            # update tids and get initial histogram
+            self.summarizer.update_summary('Active', 0)
+            self.summarizer.get_histogram(self._args['tname'][track], track=track)
+            self.summarizer.update_summary('Active', self.summarizer.tier_hist_sum[self.summarizer.tier_ids['Total']])
+            self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
         
-            # update paperlist
+            # update paperlist and get rebuttal histogram
             self.summarizer.paperlist = self.get_paperlist(track=track, mode='Rebuttal')
             self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
-            self.summarizer.get_histogram(track=track)
-            self.summarizer.get_transfer_matrix(track=track)
-        
-            # move data to active
-            self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
-            self._summary_all_tracks[track]['thist'][0] = hist
-            self._summary_all_tracks[track]['thist_conf'][0] = hist_conf
-            self._summary_all_tracks[track]['thsum'][0] = hist_sum
-            
+            self.summarizer.get_histogram(self._args['tname'][track], track=track)
+            self.summarizer.get_transfer_matrix(self._args['tname'][track], track=track)
+            self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf.copy()
+            self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence.copy()
+            self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum.copy()
+                
+            # update total and total0 since usually rebuttal data is less than initial data
+            for k in ['Total', 'Total0']:
+                kid = self.summarizer.get_tid(k)
+                if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
+                self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
+                self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
             
     def auto_split(self, content):
         non_digits = set([x for x in content if (not x.isdigit() and x!='.')])
@@ -230,7 +254,7 @@ class GFormBotICML(GFormBot):
         ret = {
             'id': index,
             'track': track,
-            'status': '',
+            'status': 'Active',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -297,7 +321,7 @@ class GFormBotACL(GFormBot):
         ret = {
             'id': index,
             'track': track,
-            'status': '',
+            'status': 'Active',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -371,7 +395,7 @@ class GFormBotKDD(GFormBot):
         ret = {
             'id': index,
             'track': track,
-            'status': '',
+            'status': 'Active',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -436,7 +460,7 @@ class GFormBotUAI(GFormBot):
         ret = {
             'id': index,
             'track': track,
-            'status': '',
+            'status': 'Active',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)
@@ -604,7 +628,7 @@ class GFormBotACMMM(GFormBot):
         ret = {
             'id': paper_id,
             'track': track,
-            'status': '',
+            'status': 'Active',
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)

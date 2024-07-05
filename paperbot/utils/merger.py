@@ -746,11 +746,15 @@ class Merger:
                             s['active'] = summary['tnum'].get(tid, summary['thsum'][tid])
                             s['h_active'] = summary['thist'][tid]
                             s['h_conf_active'] = summary['thist_conf'][tid]
+                            s['tsf_active'] = summary['ttsf'].get(tid, '')
+                            s['tsf_conf_active'] = summary['ttsf_conf'].get(tid, '')
                         if 'Withdraw' in tier_id:
                             tid = tier_id['Withdraw']
                             s['withdraw'] = summary['tnum'][tid]
                             s['h_withdraw'] = summary['thist'][tid]
                             s['h_conf_withdraw'] = summary['thist_conf'][tid]
+                            s['tsf_withdraw'] = summary['ttsf'].get(tid, '')
+                            s['tsf_conf_withdraw'] = summary['ttsf_conf'].get(tid, '')
                         if 'Total' in tier_id:
                             tid = tier_id['Total']
                             s['h_total'] = summary['thist'][tid]
@@ -759,13 +763,12 @@ class Merger:
                             tid = tier_id['Total0']
                             s['h_total0'] = summary['thist'][tid]
                             s['h_conf_total0'] = summary['thist_conf'][tid]
-                            
                             if 'Total' in tier_id: 
                                 tid = tier_id['Total']
                                 s['tsf_total'] = summary['ttsf'][tid]
                                 s['tsf_conf_total'] = summary['ttsf_conf'][tid]
-                                s['tsf_active'] = summary['ttsf'][tid]
-                                s['tsf_conf_active'] = summary['ttsf_conf'][tid]
+                                # s['tsf_active'] = summary['ttsf'][tid]
+                                # s['tsf_conf_active'] = summary['ttsf_conf'][tid]
                     
                         # load tiers and sort by num
                         tier_num = {}
@@ -1186,7 +1189,9 @@ class MergerECCV(Merger):
     def update_total(self, s, year, track, tier_num):
     
         if year == 2024: 
-            pass
+            # https://x.com/eccvconf/status/1808601545535029417
+            s['total'] = 8585
+            tier_num['Poster'] = 2395
         elif year == 2022: 
             # https://eccv2022.ecva.net/files/2021/12/ECCV_2022_MainConference_ProgramGuide_Final_full.pdf
             s['total'] = 6773

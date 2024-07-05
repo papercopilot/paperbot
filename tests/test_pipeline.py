@@ -53,9 +53,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # args.confs = ['nips', 'icml', 'corl', 'emnlp'] # openreview + site
     # args.confs = ['cvpr', 'iccv'] # openaccess + site
-    # args.confs = ['icml', 'acl', 'kdd', 'uai'] # gform
-    # args.confs = ['cvpr']
-    # args.years = [2024]
+    # args.confs = ['icml', 'acl', 'kdd', 'uai', 'acmmm'] # gform
+    args.confs = ['acl']
+    args.years = [2024]
     
     # check iclr 2024/23 summary
     # check cvpr 2022 site

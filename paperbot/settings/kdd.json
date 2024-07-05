@@ -4,6 +4,10 @@
             "track": {
                 "main": "kdd",
                 "Applied Data Science": "kdd"
+            },
+            "tname": {
+                "main": {},
+                "Applied Data Science": {}
             }
         }
     }
