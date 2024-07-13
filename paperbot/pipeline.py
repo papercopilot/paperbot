@@ -1,5 +1,6 @@
 from .utils.assigner import *
 from .utils.util import color_print as cprint
+from .utils.util import gspread2pd, download_gspread_setting
 from .config import PipelineConfig
 import json
 import os
@@ -307,6 +308,9 @@ class Pipeline:
         manager = mp.Manager()
         auto_dict = lambda is_mp: manager.dict() if is_mp else defaultdict(dict)
         
+        # load gform settings via gspread and output to gform.json
+        if self.config.use_gform:
+            download_gspread_setting('1cWrKI8gDI-R6KOnoYkZHmEFfESU_rPLpkup8-Z0Km_0')
         
         def process_results(results):
             conf, year, summary_openreview, summary_site, summary_openaccess, summary_gform, keywords_openreview, merger = results

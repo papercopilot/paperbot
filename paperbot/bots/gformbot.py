@@ -22,7 +22,7 @@ class GFormBot(sitebot.SiteBot):
         self._tracks = self._args['track']
         
         # init visit gform here to avoid futher error, e.g. token has been expired
-        self._gform = util.load_settings('gform')[str(self._year)]
+        self._gform = util.load_gspread_setting()[str(self._year)]
         
         self._paths = {
             'paperlist': os.path.join(self._root_dir, 'venues'),
