@@ -1,6 +1,6 @@
 from .utils.assigner import *
 from .utils.util import color_print as cprint
-from .utils.util import gspread2pd, download_gspread_setting
+from .utils import util
 from .config import PipelineConfig
 import json
 import os
@@ -21,7 +21,6 @@ class Pipeline:
         self.summary_site = {}
         self.summary_openaccess = {}
         self.summary_gform = {}
-        
         self.keywords_openreview = {}
         
         self.config = PipelineConfig(
@@ -55,47 +54,32 @@ class Pipeline:
         
         if conf in self.summary_openreview and self.summary_openreview[conf]:
             summary_path = os.path.join(self.paths['openreview'], f'summary/{conf}.json')
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            with open(summary_path, 'w') as f:
-                json.dump(self.summary_openreview[conf], f, indent=4)
-            cprint('io', f"Saved summary for {conf} to {summary_path}")
+            util.save_json(summary_path, self.summary_openreview[conf])
         else:
             cprint('info', f"No summary for {conf} in openreview")
         
         if conf in self.summary_site and self.summary_site[conf]:
             summary_path = os.path.join(self.paths['site'], f'summary/{conf}.json')
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            with open(summary_path, 'w') as f:
-                json.dump(self.summary_site[conf], f, indent=4)
-            cprint('io', f"Saved summary for {conf} to {summary_path}")
+            util.save_json(summary_path, self.summary_site[conf])
         else:
             cprint('info', f"No summary for {conf} in site")
         
         if conf in self.summary_openaccess and self.summary_openaccess[conf]:
             summary_path = os.path.join(self.paths['openaccess'], f'summary/{conf}.json')
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            with open(summary_path, 'w') as f:
-                json.dump(self.summary_openaccess[conf], f, indent=4)
-            cprint('io', f"Saved summary for {conf} to {summary_path}")
+            util.save_json(summary_path, self.summary_openaccess[conf])
         else:
             cprint('info', f"No summary for {conf} in openaccess")
         
         if conf in self.summary_gform and self.summary_gform[conf]:
             summary_path = os.path.join(self.paths['gform'], f'summary/{conf}.json')
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            with open(summary_path, 'w') as f:
-                json.dump(self.summary_gform[conf], f, indent=4)
-            cprint('io', f"Saved summary for {conf} to {summary_path}")
+            util.save_json(summary_path, self.summary_gform[conf])
         else:
             cprint('info', f"No summary for {conf} in gform")
             
         # save all the
         if self.summarys:
             summary_path = os.path.join(self.paths['statistics'], 'stats', 'stat.json')
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            with open(summary_path, 'w') as f:
-                json.dump(self.summarys, f, indent=4)
-            cprint('io', f"Saved summary for all conferences to {summary_path}")
+            util.save_json(summary_path, self.summarys)
             
             # convert to xls
             df = pd.DataFrame(self.summarys)
@@ -296,22 +280,6 @@ class Pipeline:
         
     def launch(self, is_save=True, is_mp=False):
         
-        self.summarys = []
-        self.summary_openreview = defaultdict(dict)
-        self.summary_site = defaultdict(dict)
-        self.summary_openaccess = defaultdict(dict)
-        self.summary_gform = defaultdict(dict)
-        self.keywords_openreview = defaultdict(dict)
-        
-        console = Console()
-        
-        manager = mp.Manager()
-        auto_dict = lambda is_mp: manager.dict() if is_mp else defaultdict(dict)
-        
-        # load gform settings via gspread and output to gform.json
-        if self.config.use_gform:
-            download_gspread_setting('1cWrKI8gDI-R6KOnoYkZHmEFfESU_rPLpkup8-Z0Km_0')
-        
         def process_results(results):
             conf, year, summary_openreview, summary_site, summary_openaccess, summary_gform, keywords_openreview, merger = results
             
@@ -340,6 +308,22 @@ class Pipeline:
                 # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
                 self.save_summary(conf)
                 self.save_keywords(conf)
+        
+        # initialization
+        self.summarys = []
+        self.summary_openreview = defaultdict(dict)
+        self.summary_site = defaultdict(dict)
+        self.summary_openaccess = defaultdict(dict)
+        self.summary_gform = defaultdict(dict)
+        self.keywords_openreview = defaultdict(dict)
+        
+        console = Console()
+        manager = mp.Manager()
+        auto_dict = lambda is_mp: manager.dict() if is_mp else defaultdict(dict)
+        
+        # load gform settings via gspread and output to gform.json
+        if self.config.use_gform:
+            util.download_gspread_setting('1cWrKI8gDI-R6KOnoYkZHmEFfESU_rPLpkup8-Z0Km_0')
         
         # initialize the shared dictionary with initial values
         status = auto_dict(is_mp)

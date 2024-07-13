@@ -32,14 +32,7 @@ class GFormBot(sitebot.SiteBot):
     def crawl(self, track):
         
         if self._tracks[track]:
-            gc = gspread.oauth()
-            sh = gc.open_by_key(self._gform[self._tracks[track]])
-            response = sh.sheet1.get_all_values() # header is included as row0
-            df = pd.DataFrame.from_records(response)
-            
-            # process header
-            df.columns = df.iloc[0]
-            df = df[1:]
+            df = util.gspread2pd(self._gform[self._tracks[track]], parse_header=True)
         else:
             cprint('warning', f'{self._conf} {self._year} {track}: Google Form Not indicated.')
             df = pd.DataFrame()
@@ -481,16 +474,7 @@ class GFormBotECCV(GFormBot):
     
         extra = None
         if self._year == 2024:
-            
-            gc = gspread.oauth()
-            sh = gc.open_by_key(self._gform[self._tracks[track]])
-            response = sh.worksheet('accept').get_all_values() # header is included as row0
-            df = pd.DataFrame.from_records(response)
-    
-            # process header
-            df.columns = df.iloc[0]
-            df = df[1:]
-            extra = df
+            extra = util.gspread2pd(self._gform[self._tracks[track]], sheet='accept', parse_header=True)
         else:
             pass
         return extra

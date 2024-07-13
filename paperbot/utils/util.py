@@ -21,11 +21,11 @@ def load_settings(conf):
     with open(setting_path, 'r') as f:
         return json.load(f)
     
-def save_json(path, data):
+def save_json(path, data, indent=4):
     """Save JSON file."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
-        json.dump(data, f, indent=4)
+        json.dump(data, f, indent=indent)
     color_print('io', f'{path} saved.')
     
 def load_json(path):
@@ -47,11 +47,18 @@ def color_print(type, msg):
     else:
         print(msg)
         
-def gspread2pd(key, parse_header=False):
+def gspread2pd(key, sheet='', parse_header=False):
+    # fetch data
     gc = gspread.oauth()
     sh = gc.open_by_key(key)
-    response = sh.sheet1.get_all_values() # header is included as row0
-    df = pd.DataFrame.from_records(response)
+    
+    if sheet== '':
+        response = sh.sheet1 # header is included as row0
+    else:
+        response = sh.worksheet(sheet) # header is included as row0
+    
+    # convert response to dataframe
+    df = pd.DataFrame.from_records(response.get_all_values())
     
     # process header if needed
     if parse_header:
