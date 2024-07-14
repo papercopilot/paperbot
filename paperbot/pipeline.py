@@ -44,7 +44,7 @@ class Pipeline:
     def __call__(self):
         self.openreviewbot()
         
-    def save_summary(self, conf):
+    def save_summary(self, conf=None):
         
         # sort the summary by year in descending order
         self.summary_openreview[conf] = dict(sorted(self.summary_openreview[conf].items(), reverse=True))
@@ -118,30 +118,35 @@ class Pipeline:
 
         assigner_name = f"Assigner{conf.upper()}"
         
-        def log_start(bot):
-            status[f"{conf} {year}"][bot] = f"[bright_white]Running[/bright_white]"
-            cprint('info', f"Initializing {bot} bots for {conf} {year}")
+        def log_start(bot_name, abbr=True):
+            stat = util.bot_abbr(bot_name) if abbr else 'Running'
+            status[f"{conf} {year}"][bot_name] = f"[bright_white]{stat}[/bright_white]"
+            cprint('info', f"Initializing {bot_name} bots for {conf} {year}")
             if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
         
-        def log_unavailable(bot):
-            status[f"{conf} {year}"][bot] = f"[orange1]Unavailable[/orange1]"
-            cprint('warning', f'{conf} {year}: {bot} Unavailable.')
+        def log_unavailable(bot_name, abbr=True):
+            stat = util.bot_abbr(bot_name) if abbr else 'Unavailable'
+            status[f"{conf} {year}"][bot_name] = f"[orange1]{stat}[/orange1]"
+            cprint('warning', f'{conf} {year}: {bot_name} Unavailable.')
             if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
             
-        def log_error(bot, e):
-            status[f"{conf} {year}"][bot] = f"[red1]Error[/red1]"
-            cprint('error', f"{bot} for {conf} {year}: {e}")
+        def log_error(bot_name, e, abbr=True):
+            stat = util.bot_abbr(bot_name) if abbr else 'Error'
+            status[f"{conf} {year}"][bot_name] = f"[red1]{stat}[/red1]"
+            cprint('error', f"{bot_name} for {conf} {year}: {e}")
             if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
             raise e
         
-        def log_done(bot):
-            status[f"{conf} {year}"][bot] = f"[green1]Done[/green1]"
-            cprint('info', f"{bot} for {conf} {year} Done.")
+        def log_done(bot_name, abbr=True):
+            stat = util.bot_abbr(bot_name) if abbr else 'Done'
+            status[f"{conf} {year}"][bot_name] = f"[green1]{stat}[/green1]"
+            cprint('info', f"{bot_name} for {conf} {year} Done.")
             if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
             
-        def log_save(bot, path):
-            status[f"{conf} {year}"][bot] = f"[bright_blue]Saved[/bright_blue]"
-            cprint('io', f"Saved {bot} for {conf} {year} to {path}")
+        def log_save(bot_name, path, abbr=True):
+            stat = util.bot_abbr(bot_name) if abbr else 'Save'
+            status[f"{conf} {year}"][bot_name] = f"[bright_blue]{stat}[/bright_blue]"
+            cprint('io', f"Saved {bot_name} for {conf} {year} to {path}")
             if live: live.update(Pipeline.render_table(config, status, is_render_table=True))
         
         # https://www.artima.com/weblogs/viewpost.jsp?thread=240845#decorator-functions-with-decorator-arguments
@@ -259,22 +264,63 @@ class Pipeline:
             raise e
         
     @staticmethod
-    def render_table(config, data, is_render_table=True):
-        table = Table(title="Live Progress Table", padding=(0, 1))
-        table.add_column("Index", justify="center", style="cyan", no_wrap=True)
+    def render_table(config, data, compact=True, compact_dir='V', is_render_table=True):
+        """
+        Renders a table displaying the configuration and processing status of various bots.
+
+        Args:
+            config (object): Configuration object containing attributes for various bots.
+            data (dict): Dictionary containing processing status data for each conference and year.
+            compact (bool, optional): If True, compacts the table by organizing data by years and conferences. Defaults to True.
+            compact_dir (str, optional): Direction for compacting data. 'V' for vertical (default), 'H' for horizontal.
+            is_render_table (bool, optional): If True, returns the rendered table. Defaults to True.
+
+        Returns:
+            Table: The rendered table with configuration and processing status, if `is_render_table` is True.
+        """
         
-        for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
-                table.add_column(f"{bot}", justify="center", style="magenta")
+        table = Table(title="Live Progress Table", padding=(0, 1))
+        table.add_column("INDEX", justify="center", style="cyan", no_wrap=True)
+        bot_names = ['openreview', 'site', 'openaccess', 'gform', 'merge']
+        
+        for bot in bot_names:
+                table.add_column(util.bot_abbr(bot), justify="center")
                 
         # add row of configuration
-        b2c = lambda x: "[green]True[/green]" if x else "[red]False[/red]"
+        b2c = lambda x: "[green]T[/green]" if x else "[red]F[/red]"
         table.add_row('Use', b2c(config.use_openreview), b2c(config.use_site), b2c(config.use_openaccess), b2c(config.use_gform), b2c(True))
         table.add_row('Fetch', b2c(config.fetch_openreview), b2c(config.fetch_site), b2c(config.fetch_openaccess), b2c(config.fetch_gform), "")
         table.add_row('Extra', b2c(config.fetch_openreview_extra), b2c(config.fetch_site_extra), b2c(config.fetch_openaccess_extra), "", "")
         table.add_row('Extra MP', b2c(config.fetch_openreview_extra_mp), b2c(config.fetch_site_extra_mp), b2c(config.fetch_openaccess_extra_mp), "", "", end_section=True)
-
-        for index, value in data.items():
-            table.add_row(str(index), str(value['openreview']), str(value['site']), str(value['openaccess']), str(value['gform']), str(value['merge']))
+        
+        if compact:
+            # get all confs and 
+            confs, years = [], []
+            for index, value in data.items():
+                year = str(index)[-4:]
+                conf = str(index).replace(year, '').strip()
+                years.append(year)
+                confs.append(conf)
+            years = sorted(list(set(years)))
+            confs = sorted(list(set(confs)))
+                
+            # append rows of processing status
+            table.add_row('YEAR', *years, end_section=True)
+            for conf in confs:
+                cells = []
+                for year in years:
+                    index = f'{conf} {year}'
+                    if compact_dir == 'V':
+                        cell = f'\n'.join([f"{data[index][bot_names[i]]}|{data[index][bot_names[i+1]]}" if i + 1 < len(bot_names) else data[index][bot_names[i]] for i in range(0, len(bot_names), 2)])
+                    elif compact_dir == 'H':
+                        cell = f'|'.join(data[index][bot_name] for bot_name in bot_names)
+                    # cell = f'{spliter}'.join(data[index][bot_name] for bot_name in ['openreview', 'site', 'openaccess', 'gform', 'merge'])
+                    cells.append(cell)
+                table.add_row(conf, *cells)
+        else:
+            # append rows of processing status
+            for index, value in data.items():
+                table.add_row(str(index), str(value['openreview']), str(value['site']), str(value['openaccess']), str(value['gform']), str(value['merge']))
 
         if is_render_table: return table
         
