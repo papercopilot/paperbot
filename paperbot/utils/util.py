@@ -84,3 +84,10 @@ def download_gspread_setting(key, json_path=None):
 def load_gspread_setting():
     """Load JSON file."""
     return load_settings('gform')
+
+def bot_abbr(bot_name):
+    if bot_name == 'openreview': return 'OR'
+    elif bot_name == 'site': return 'ST'
+    elif bot_name == 'openaccess': return 'OA'
+    elif bot_name == 'gform': return 'GF'
+    elif bot_name == 'merge': return 'MG'
