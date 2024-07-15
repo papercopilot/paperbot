@@ -314,7 +314,6 @@ class Pipeline:
                         cell = f'\n'.join([f"{data[index][bot_names[i]]}|{data[index][bot_names[i+1]]}" if i + 1 < len(bot_names) else data[index][bot_names[i]] for i in range(0, len(bot_names), 2)])
                     elif compact_dir == 'H':
                         cell = f'|'.join(data[index][bot_name] for bot_name in bot_names)
-                    # cell = f'{spliter}'.join(data[index][bot_name] for bot_name in ['openreview', 'site', 'openaccess', 'gform', 'merge'])
                     cells.append(cell)
                 table.add_row(conf, *cells)
         else:

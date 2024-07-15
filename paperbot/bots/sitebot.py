@@ -127,15 +127,15 @@ class StBotACL(SiteBot):
         def __init__(self, conf='', year=None, root_dir=''):
             super().__init__(conf, year, root_dir)
         
-class StBotSIGGRAPH(SiteBot):
+# class StBotSIGGRAPH(SiteBot):
     
-    def __init__(self, conf='', year=None, root_dir=''):
-        super().__init__(conf, year, root_dir)
+#     def __init__(self, conf='', year=None, root_dir=''):
+#         super().__init__(conf, year, root_dir)
         
-class StBotSIGGRAPHASIA(SiteBot):
+# class StBotSIGGRAPHASIA(SiteBot):
     
-    def __init__(self, conf='', year=None, root_dir=''):
-        super().__init__(conf, year, root_dir)
+#     def __init__(self, conf='', year=None, root_dir=''):
+#         super().__init__(conf, year, root_dir)
         
 class StBotKDD(SiteBot):
     

@@ -212,10 +212,14 @@ class Merger:
             else:
                 # only site data is available
                 for paper in self._paperlist_site:
-                    encoder = hashlib.md5()
-                    encoder.update(paper['title'].encode('utf-8'))
-                    paper['id'] = 'site_' + encoder.hexdigest()[0:10]
-                    paper = {'id': paper.pop('id'), **paper}
+                    if 'ssid' in paper:
+                        # this is for SIGGRAPH and SIGGRAPH Asia
+                        pass
+                    else:
+                        encoder = hashlib.md5()
+                        encoder.update(paper['title'].encode('utf-8'))
+                        paper['id'] = 'site_' + encoder.hexdigest()[0:10]
+                        paper = {'id': paper.pop('id'), **paper}
                     self._paperlist_merged.append(paper)
                 self._paperlist_merged = sorted(self._paperlist_merged, key=lambda x: x['title'])
         elif self._paperlist_openreview:
@@ -474,6 +478,7 @@ class Merger:
             'withdraw': 0,
             'desk_reject': 0,
             'post_withdraw': 0,
+            't_order': '',
             'n0': '', 'n1': '', 'n2': '', 'n3': '', 'n4': '', 'n5': '',
             't0': '', 't1': '', 't2': '', 't3': '', 't4': '', 't5': '',
             'h_total0': '', 'h_total': '', 'h_active': '', 'h_withdraw': '',
@@ -1183,6 +1188,7 @@ class MergerCVPR(Merger):
             
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
+        s['t_order'] = ' '.join()
     
 class MergerECCV(Merger):
     
@@ -1256,8 +1262,66 @@ class MergerICCV(Merger):
 class MergerSIGGRAPH(Merger):
     pass
     
+    # def normalize_tier_num(self, tier_num):
+        
+    #     if 'Reject' not in tier_num: tier_num['Reject'] = 0
+    #     if 'Poster' not in tier_num: tier_num['Poster'] = 0
+    #     if 'Conference' not in tier_num: tier_num['Conference'] = 0
+    #     if 'Journal' not in tier_num: tier_num['Journal'] = 0
+    #     if 'TOG Submission' not in tier_num: tier_num['TOG Submission'] = 0
+    #     tier_num.pop('Technical Paper')
+    #     tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
+            
+    #     # adjust position
+    #     tier_num = {
+    #         'Reject': tier_num.pop('Reject'), 
+    #         'Poster': tier_num.pop('Poster'),
+    #         'Conference': tier_num.pop('Conference'),
+    #         'Journal': tier_num.pop('Journal'),
+    #         'TOG Submission': tier_num.pop('TOG Submission'),
+    #         **tier_num
+    #     }
+    #     return tier_num
+    
+    # def update_total(self, s, year, track, tier_num):
+    
+    #     if year == 2023:
+    #         s['total'] = 616
+    #         tier_num['Conference'] = 86
+    #         tier_num['Journal'] = 126
+    #         tier_num['TOG Submission'] = 27
+    #     elif year == 2022:
+    #         s['total'] = 610
+    #         tier_num['Reject'] = 66
+    #         tier_num['Conference'] = 61
+    #         tier_num['Journal'] = 133
+    #         tier_num['TOG Submission'] = 27
+    
+    #     s['accept'] = tier_num['Conference'] + tier_num['Journal'] + tier_num['TOG Submission']
+    #     s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
+    
 class MergerSIGGRAPHASIA(Merger):
     pass
+    
+    # def normalize_tier_num(self, tier_num):
+        
+    #     if 'Reject' not in tier_num: tier_num['Reject'] = 0
+    #     if 'Poster' not in tier_num: tier_num['Poster'] = 0
+    #     if 'Conference' not in tier_num: tier_num['Conference'] = 0
+    #     if 'Journal' not in tier_num: tier_num['Journal'] = 0
+    #     if 'TOG Submission' not in tier_num: tier_num['TOG Submission'] = 0
+    #     tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
+            
+    #     # adjust position
+    #     tier_num = {
+    #         'Reject': tier_num.pop('Reject'), 
+    #         'Poster': tier_num.pop('Poster'),
+    #         'Conference': tier_num.pop('Conference'),
+    #         'Journal': tier_num.pop('Journal'),
+    #         'TOG Submission': tier_num.pop('TOG Submission'),
+    #         **tier_num
+    #     }
+    #     return tier_num
 
 class MergerKDD(Merger):
     pass

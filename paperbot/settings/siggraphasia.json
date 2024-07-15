@@ -1,0 +1,86 @@
+{
+    "2023": {
+        "site": {
+            "domain": "https://asia.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "2023/full-program/",
+                        "paper": "2023/?post_type=page&p=14494&id=[ssid]&sess=[psid]",
+                        "sess": "session/?sess=[psid]"
+                    }
+                }
+            }
+        }
+    },
+    "2022": {
+        "site": {
+            "domain": "https://sa2022.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "en/full-program/",
+                        "paper": "en/presentation/?id=[ssid]&sess=[psid]",
+                        "sess": "en/session/?sess=[psid]"
+                    }
+                }
+            }
+        }
+    },
+    "2021": {
+        "site": {
+            "domain": "https://sa2021.conference-program.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "",
+                        "paper": "presentation/?id=[ssid]&sess=[psid]",
+                        "sess": "session/?sess=[psid]"
+                    }
+                }
+            }
+        }
+    },
+    "2020": {
+        "site": {
+            "domain": "https://sa2020.conference-program.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "",
+                        "paper": "presentation/?id=[ssid]&sess=[psid]",
+                        "sess": "session/?sess=[psid]"
+                    }
+                }
+            }
+        }
+    },
+    "2019": {
+        "site": {
+            "domain": "https://sa2019.conference-program.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "",
+                        "paper": "presentation/?id=[ssid]&sess=[psid]",
+                        "sess": "session/?sess=[psid]"
+                    }
+                }
+            }
+        }
+    },
+    "2018": {
+        "site": {
+            "domain": "https://sa2018.conference-program.com/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "",
+                        "paper": "presentation/?id=[ssid]&sess=[psid]",
+                        "sess": "session/?sess=[psid]"
+                    }
+                }
+            }
+        }
+    }
+}

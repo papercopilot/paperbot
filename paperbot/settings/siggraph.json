@@ -1,0 +1,76 @@
+{
+    "2023": {
+        "site": {
+            "domain": "https://s2023.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "session/?sess=sess213",
+                        "paper": "presentation/?id=[ssid]&sess=[psid]",
+                        "sess": "session/?sess=[psid]"
+                    }
+                }
+            }
+        }
+    },
+    "2022": {
+        "site": {
+            "domain": "https://s2022.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "full-program/"
+                    }
+                }
+            }
+        }
+    },
+    "2021": {
+        "site": {
+            "domain": "https://s2021.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "full-program/"
+                    }
+                }
+            }
+        }
+    },
+    "2020": {
+        "site": {
+            "domain": "https://s2020.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "full-program/"
+                    }
+                }
+            }
+        }
+    },
+    "2019": {
+        "site": {
+            "domain": "https://s2019.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "full-program/"
+                    }
+                }
+            }
+        }
+    },
+    "2018": {
+        "site": {
+            "domain": "https://s2018.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "conference/conference-overview/technical-papers/sessions/technical-papers-fast-forward/technical-papers-fast-forward.html"
+                    }
+                }
+            }
+        }
+    }
+}

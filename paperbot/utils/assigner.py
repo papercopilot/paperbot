@@ -4,6 +4,7 @@ from ..bots import ccbot
 from ..bots import cvfbot
 from ..bots import openaccessbot
 from ..bots import gformbot
+from ..bots import seleniumbot
 from ..utils import merger
 
 class Assigner:
@@ -149,7 +150,7 @@ class AssignerSIGGRAPH(Assigner):
         
     def __new__(cls, botname, year=0):
         if botname == 'st':
-            return sitebot.StBotSIGGRAPH
+            return seleniumbot.SnBotSIGGRAPH
         elif botname == 'merge':
             return merger.MergerSIGGRAPH
         else: super().__new__(cls, botname)
@@ -159,7 +160,7 @@ class AssignerSIGGRAPHASIA(Assigner):
         
     def __new__(cls, botname, year=0):
         if botname == 'st':
-            return sitebot.StBotSIGGRAPHASIA
+            return seleniumbot.SnBotSIGGRAPHASIA
         elif botname == 'merge':
             return merger.MergerSIGGRAPHASIA
         else: super().__new__(cls, botname)

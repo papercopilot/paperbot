@@ -1,3 +1,6 @@
+import os
+import pathlib
+import json
 
 class Paper(object):
     
@@ -78,11 +81,31 @@ class PaperList:
         def papers(self):
             return self._papers
         
-        def add(self, paper):
+        def append(self, paper):
             self._papers.append(paper)
             
         def merge(self, paperlist):
             raise NotImplementedError
+        
+        def sorted(self, key):
+            return sorted(self._papers, key=lambda x: x[key])
+        
+        def sort(self, key):
+            self._papers = self.sorted(key)
+            
+        def load(self, file_path):
+            if not os.path.exists(file_path): return
+            if '.json' in pathlib.Path(file_path).suffixes:
+                with open(file_path) as f:
+                    self._papers = json.load(f)
+            else:
+                pass
+            
+        def save(self, file_path):
+            if '.json' in pathlib.Path(file_path).suffixes:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, 'w') as f:
+                    json.dump(self._papers, f, indent=4)
             
 class ORPaperList(PaperList):
     pass
