@@ -62,7 +62,7 @@ def gspread2pd(key, sheet='', parse_header=False):
     
     # process header if needed
     if parse_header:
-        df.columns = df.iloc[0]
+        df.columns = df.iloc[0].tolist()
         df = df[1:]
         
     return df

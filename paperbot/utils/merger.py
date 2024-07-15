@@ -7,6 +7,7 @@ from collections import Counter
 
 from .summarizer import Summarizer
 from .util import color_print as cprint
+from ..utils import util
 
 class Merger:
     
@@ -464,6 +465,11 @@ class Merger:
     
     def update_total(self, s, year, track, tier_num):
         return s
+        df = util.gspread2pd('1_PCmk6e3MkJDSV_Dl0BLeWjLu1V3A-IDb6SfBhDxkFo', parse_header=True)
+        cid = self.get_cid(track)
+        df.set_index('conference', inplace=True)
+        df.to_dict('index')[cid]
+        
     
     def get_template(self):
         
@@ -522,6 +528,12 @@ class Merger:
             if 'author' not in paper: continue
             couhter.update([author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()])
         return ';'.join([f'{author}:{num}' for author, num in couhter.most_common(n_top)])
+    
+    def get_cid(self, track):
+        f = filter(str.isalpha, track[:4])
+        track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
+        cid = f'{self._conf.lower()}{self._year}{track_alphabet}'
+        return cid
                 
     def merge_summary(self):
         
@@ -550,9 +562,10 @@ class Merger:
                     # dump
                     s = self.get_template()
                     
-                    f = filter(str.isalpha, track[:4])
-                    track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
-                    cid = f'{self._conf.lower()}{year}{track_alphabet}'
+                    # f = filter(str.isalpha, track[:4])
+                    # track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
+                    # cid = f'{self._conf.lower()}{year}{track_alphabet}'
+                    cid = self.get_cid(track)
                     
                     s['conference'] = cid
                     s['name'] = self._conf.upper()
@@ -650,9 +663,7 @@ class Merger:
                     # dump
                     s = self.get_template()
                     
-                    f = filter(str.isalpha, track[:4])
-                    track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
-                    cid = f'{self._conf.lower()}{year}{track_alphabet}'
+                    cid = self.get_cid(track)
                     
                     if cid in stats:
                         stats[cid]['s1'] = summary['src']['site']['name']
@@ -696,9 +707,7 @@ class Merger:
                         
                     summary = self._summary_openaccess[year][track]
                     
-                    f = filter(str.isalpha, track[:4])
-                    track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
-                    cid = f'{self._conf.lower()}{year}{track_alphabet}'
+                    cid = self.get_cid(track)
                     
                     
                     if cid in stats:
@@ -732,9 +741,7 @@ class Merger:
                     # dump
                     s = self.get_template()
                     
-                    f = filter(str.isalpha, track[:4])
-                    track_alphabet = '' if track == 'main' else '_' + ''.join(f).lower()
-                    cid = f'{self._conf.lower()}{year}{track_alphabet}'
+                    cid = self.get_cid(track)
                     
                     if cid in stats and stats[cid]['s0'] == 'openreview':
                         # if openreview data is available, gform data is not used
@@ -1188,7 +1195,7 @@ class MergerCVPR(Merger):
             
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
-        s['t_order'] = ' '.join()
+        # s['t_order'] = ' '.join()
     
 class MergerECCV(Merger):
     
@@ -1260,28 +1267,27 @@ class MergerICCV(Merger):
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
         
 class MergerSIGGRAPH(Merger):
-    pass
     
-    # def normalize_tier_num(self, tier_num):
+    def normalize_tier_num(self, tier_num):
         
-    #     if 'Reject' not in tier_num: tier_num['Reject'] = 0
-    #     if 'Poster' not in tier_num: tier_num['Poster'] = 0
-    #     if 'Conference' not in tier_num: tier_num['Conference'] = 0
-    #     if 'Journal' not in tier_num: tier_num['Journal'] = 0
-    #     if 'TOG Submission' not in tier_num: tier_num['TOG Submission'] = 0
-    #     tier_num.pop('Technical Paper')
-    #     tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
+        if 'Reject' not in tier_num: tier_num['Reject'] = 0
+        if 'Poster' not in tier_num: tier_num['Poster'] = 0
+        if 'Conference' not in tier_num: tier_num['Conference'] = 0
+        if 'Journal' not in tier_num: tier_num['Journal'] = 0
+        if 'TOG Paper' not in tier_num: tier_num['TOG Paper'] = 0
+        tier_num.pop('Technical Paper')
+        tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
             
-    #     # adjust position
-    #     tier_num = {
-    #         'Reject': tier_num.pop('Reject'), 
-    #         'Poster': tier_num.pop('Poster'),
-    #         'Conference': tier_num.pop('Conference'),
-    #         'Journal': tier_num.pop('Journal'),
-    #         'TOG Submission': tier_num.pop('TOG Submission'),
-    #         **tier_num
-    #     }
-    #     return tier_num
+        # adjust position
+        tier_num = {
+            'Reject': tier_num.pop('Reject'), 
+            'Poster': tier_num.pop('Poster'),
+            'Conference': tier_num.pop('Conference'),
+            'Journal': tier_num.pop('Journal'),
+            'TOG Submission': tier_num.pop('TOG Paper'),
+            **tier_num
+        }
+        return tier_num
     
     # def update_total(self, s, year, track, tier_num):
     
@@ -1301,27 +1307,27 @@ class MergerSIGGRAPH(Merger):
     #     s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
     
 class MergerSIGGRAPHASIA(Merger):
-    pass
     
-    # def normalize_tier_num(self, tier_num):
+    def normalize_tier_num(self, tier_num):
         
-    #     if 'Reject' not in tier_num: tier_num['Reject'] = 0
-    #     if 'Poster' not in tier_num: tier_num['Poster'] = 0
-    #     if 'Conference' not in tier_num: tier_num['Conference'] = 0
-    #     if 'Journal' not in tier_num: tier_num['Journal'] = 0
-    #     if 'TOG Submission' not in tier_num: tier_num['TOG Submission'] = 0
-    #     tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
+        if 'Reject' not in tier_num: tier_num['Reject'] = 0
+        if 'Poster' not in tier_num: tier_num['Poster'] = 0
+        if 'Conference' not in tier_num: tier_num['Conference'] = 0
+        if 'Journal' not in tier_num: tier_num['Journal'] = 0
+        if 'TOG Paper' not in tier_num: tier_num['TOG Paper'] = 0
+        tier_num.pop('Technical Paper')
+        tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
             
-    #     # adjust position
-    #     tier_num = {
-    #         'Reject': tier_num.pop('Reject'), 
-    #         'Poster': tier_num.pop('Poster'),
-    #         'Conference': tier_num.pop('Conference'),
-    #         'Journal': tier_num.pop('Journal'),
-    #         'TOG Submission': tier_num.pop('TOG Submission'),
-    #         **tier_num
-    #     }
-    #     return tier_num
+        # adjust position
+        tier_num = {
+            'Reject': tier_num.pop('Reject'), 
+            'Poster': tier_num.pop('Poster'),
+            'Conference': tier_num.pop('Conference'),
+            'Journal': tier_num.pop('Journal'),
+            'TOG Submission': tier_num.pop('TOG Paper'),
+            **tier_num
+        }
+        return tier_num
 
 class MergerKDD(Merger):
     pass
