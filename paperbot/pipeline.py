@@ -368,6 +368,7 @@ class Pipeline:
         
         # load gform settings via gspread and output to gform.json
         if self.config.use_gform:
+            util.download_gspread_meta('1_PCmk6e3MkJDSV_Dl0BLeWjLu1V3A-IDb6SfBhDxkFo')
             util.download_gspread_setting('1cWrKI8gDI-R6KOnoYkZHmEFfESU_rPLpkup8-Z0Km_0')
         
         # initialize the shared dictionary with initial values

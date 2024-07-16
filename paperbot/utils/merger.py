@@ -4,10 +4,12 @@ import os
 from tqdm import tqdm
 import hashlib
 from collections import Counter
+import pandas as pd
 
 from .summarizer import Summarizer
 from .util import color_print as cprint
 from ..utils import util
+from .. import settings
 
 class Merger:
     
@@ -464,12 +466,22 @@ class Merger:
         return tier_num
     
     def update_total(self, s, year, track, tier_num):
-        return s
-        df = util.gspread2pd('1_PCmk6e3MkJDSV_Dl0BLeWjLu1V3A-IDb6SfBhDxkFo', parse_header=True)
-        cid = self.get_cid(track)
+        df = pd.read_csv(os.path.join(settings.__path__[0], 'meta.csv'), sep=',', keep_default_na=False)
         df.set_index('conference', inplace=True)
-        df.to_dict('index')[cid]
+        v = df.to_dict('index')[self.get_cid(track)]
         
+        # 
+        if v['total']: s['total'] = int(v['total'].replace(',',''))
+        if v['accept']: s['accept'] = int(v['accept'].replace(',',''))
+        if v['withdraw']: s['withdraw'] = int(v['withdraw'].replace(',',''))
+        if v['desk_reject']: s['desk_reject'] = int(v['desk_reject'].replace(',',''))
+        if v['t_order']: s['t_order'] = v['t_order'].replace(" ", "")
+        # s['total'] = int(v['total'].replace(',','')) if v['total'] else 0
+        # s['accept'] = int(v['accept'].replace(',','')) if v['accept'] else 0
+        # s['withdraw'] = int(v['withdraw'].replace(',','')) if v['withdraw'] else 0
+        # s['desk_reject'] = int(v['desk_reject'].replace(',','')) if v['desk_reject'] else 0
+        
+        return s, v
     
     def get_template(self):
         
@@ -916,8 +928,9 @@ class MergerICLR(Merger):
             tier_num['Spotlight'] = tier_num.pop('Poster Workshop') + tier_num.pop('Oral Workshop')
     
     def update_total(self, s, year, track, tier_num):
-        if year == 2014: s['total'] = 0
-        elif year == 2013: s['total'] = 0
+        _, v = super().update_total(s, year, track, tier_num)
+        # if year == 2014: s['total'] = 0
+        # elif year == 2013: s['total'] = 0
         
         # get total accepted
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
@@ -965,31 +978,32 @@ class MergerNIPS(Merger):
                 tier_hist_conf[tier_name[k]] = hist_confidence_str
         
     def update_total(self, s, year, track, tier_num):
-        if year >= 2019: s['name'] = 'NeurIPS'
+        _, v = super().update_total(s, year, track, tier_num)
         
-        if year == 2023: s['total'] = 12345 if track == 'main' else 985 if track == 'Datasets & Benchmarks' else 0 # https://blog.neurips.cc/category/2023-conference/ (13330-12345)
-        elif year == 2022: s['total'] = 10411 if track == 'main' else 447 if track == 'Datasets & Benchmarks' else 0 # https://www.businesswire.com/news/home/20221130005340/en/Eleven-NTT-Papers-Selected-for-NeurIPS-2022, https://blog.neurips.cc/category/2022-conference/
-        elif year == 2021: s['total'] = 9122 if track == 'main' else 0 if track == 'Datasets & Benchmarks' else 0 # https://www.vinai.io/an-overview-of-neurips-2021s-publications/
-        elif year == 2020: s['total'] = 9467 # https://syncedreview.com/2020/10/08/google-stanford-mit-top-neurips-2020-accepted-papers-list/
-        elif year == 2019: s['total'] = 6743 # https://medium.com/syncedreview/paper-submissions-break-neurips-2019-paper-submission-system-884a60e32a82
-        elif year == 2018: s['total'] = 4856 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2017: s['total'] = 3240 # https://medium.com/syncedreview/nips-2017-day-1-2-highlights-67ab464086c
-        elif year == 2016: s['total'] = 2425 # https://arxiv.org/pdf/1708.09794.pdf
-        elif year == 2015: s['total'] = 1838 # https://signalprocessingsociety.org/community-involvement/speech-and-language-processing/newsletter/brief-review-nips-2015
-        elif year == 2014: s['total'] = 1678 # http://inverseprobability.com/talks/notes/the-neurips-experiment-snsf.html
-        elif year == 2013: s['total'] = 1420 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2012: s['total'] = 1397
-        elif year == 2011: s['total'] = 1400 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2010: s['total'] = 1219 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2009: s['total'] = 1105 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2008: s['total'] = 1022 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2007: s['total'] = 973
-        elif year == 2006: s['total'] = 833 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2005: s['total'] = 822 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2004: s['total'] = 0 
-        elif year == 2003: s['total'] = 717 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2002: s['total'] = 710 # https://www.openresearch.org/wiki/NIPS
-        elif year == 2001: s['total'] = 650 # https://www.openresearch.org/wiki/NIPS
+        if year >= 2019: s['name'] = 'NeurIPS'
+        # if year == 2023: s['total'] = 12345 if track == 'main' else 985 if track == 'Datasets & Benchmarks' else 0 # https://blog.neurips.cc/category/2023-conference/ (13330-12345)
+        # elif year == 2022: s['total'] = 10411 if track == 'main' else 447 if track == 'Datasets & Benchmarks' else 0 # https://www.businesswire.com/news/home/20221130005340/en/Eleven-NTT-Papers-Selected-for-NeurIPS-2022, https://blog.neurips.cc/category/2022-conference/
+        # elif year == 2021: s['total'] = 9122 if track == 'main' else 0 if track == 'Datasets & Benchmarks' else 0 # https://www.vinai.io/an-overview-of-neurips-2021s-publications/
+        # elif year == 2020: s['total'] = 9467 # https://syncedreview.com/2020/10/08/google-stanford-mit-top-neurips-2020-accepted-papers-list/
+        # elif year == 2019: s['total'] = 6743 # https://medium.com/syncedreview/paper-submissions-break-neurips-2019-paper-submission-system-884a60e32a82
+        # elif year == 2018: s['total'] = 4856 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2017: s['total'] = 3240 # https://medium.com/syncedreview/nips-2017-day-1-2-highlights-67ab464086c
+        # elif year == 2016: s['total'] = 2425 # https://arxiv.org/pdf/1708.09794.pdf
+        # elif year == 2015: s['total'] = 1838 # https://signalprocessingsociety.org/community-involvement/speech-and-language-processing/newsletter/brief-review-nips-2015
+        # elif year == 2014: s['total'] = 1678 # http://inverseprobability.com/talks/notes/the-neurips-experiment-snsf.html
+        # elif year == 2013: s['total'] = 1420 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2012: s['total'] = 1397
+        # elif year == 2011: s['total'] = 1400 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2010: s['total'] = 1219 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2009: s['total'] = 1105 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2008: s['total'] = 1022 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2007: s['total'] = 973
+        # elif year == 2006: s['total'] = 833 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2005: s['total'] = 822 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2004: s['total'] = 0 
+        # elif year == 2003: s['total'] = 717 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2002: s['total'] = 710 # https://www.openresearch.org/wiki/NIPS
+        # elif year == 2001: s['total'] = 650 # https://www.openresearch.org/wiki/NIPS
         
         # get total accepted
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
@@ -1008,33 +1022,41 @@ class MergerICML(Merger):
         return paper
     
     def update_total(self, s, year, track, tier_num):
-        if year == 2024: 
-            s['total'] = 9653 # https://twitter.com/zicokolter/status/1753398445216604588
-            tier_num['Poster'] = 2609
-        if year == 2023: s['total'] = 6538 # https://min.news/en/tech/c1d451087b3b992dafb8ef13c19862ca.html
-        elif year == 2022: s['total'] = 5630 # https://www.myhuiban.com/conference/406?page=6&lang=en_us
-        elif year == 2021: s['total'] = 5513 # https://www.openresearch.org/wiki/ICML
-        elif year == 2020: s['total'] = 4990 # https://www.openresearch.org/wiki/ICML
-        elif year == 2019: s['total'] = 3424 # https://www.openresearch.org/wiki/ICML
-        elif year == 2018: s['total'] = 2473 # https://www.openresearch.org/wiki/ICML
-        elif year == 2017: s['total'] = 1676 # https://www.openresearch.org/wiki/ICML
-        elif year == 2016: s['total'] = 0
-        elif year == 2015: s['total'] = 1037 # https://www.openresearch.org/wiki/ICML
-        elif year == 2014: s['total'] = 0
-        elif year == 2013: s['total'] = 0
-        elif year == 2012: s['total'] = 0
-        elif year == 2011: s['total'] = 0
-        elif year == 2010: s['total'] = 0
-        elif year == 2009: s['total'] = 595 # https://www.openresearch.org/wiki/ICML
-        elif year == 2008: s['total'] = 583 # https://www.openresearch.org/wiki/ICML
-        elif year == 2007: s['total'] = 522 # https://www.openresearch.org/wiki/ICML
-        elif year == 2006: s['total'] = 700 # https://www.openresearch.org/wiki/ICML
-        elif year == 2005: s['total'] = 491 # https://www.openresearch.org/wiki/ICML
-        elif year == 2004: s['total'] = 368 # https://www.openresearch.org/wiki/ICML
-        elif year == 2003: s['total'] = 371 # https://www.openresearch.org/wiki/ICML
-        elif year == 2002: s['total'] = 261 # https://www.openresearch.org/wiki/ICML
-        elif year == 2001: s['total'] = 249 # https://www.openresearch.org/wiki/ICML
-        elif year == 2000: s['total'] = 349 # https://www.openresearch.org/wiki/ICML
+        _, v = super().update_total(s, year, track, tier_num)
+        # if year == 2024: 
+        #     s['total'] = 9653 # https://twitter.com/zicokolter/status/1753398445216604588
+        #     tier_num['Poster'] = 2609
+        # if year == 2023: s['total'] = 6538 # https://min.news/en/tech/c1d451087b3b992dafb8ef13c19862ca.html
+        # elif year == 2022: s['total'] = 5630 # https://www.myhuiban.com/conference/406?page=6&lang=en_us
+        # elif year == 2021: s['total'] = 5513 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2020: s['total'] = 4990 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2019: s['total'] = 3424 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2018: s['total'] = 2473 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2017: s['total'] = 1676 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2016: s['total'] = 0
+        # elif year == 2015: s['total'] = 1037 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2014: s['total'] = 0
+        # elif year == 2013: s['total'] = 0
+        # elif year == 2012: s['total'] = 0
+        # elif year == 2011: s['total'] = 0
+        # elif year == 2010: s['total'] = 0
+        # elif year == 2009: s['total'] = 595 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2008: s['total'] = 583 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2007: s['total'] = 522 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2006: s['total'] = 700 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2005: s['total'] = 491 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2004: s['total'] = 368 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2003: s['total'] = 371 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2002: s['total'] = 261 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2001: s['total'] = 249 # https://www.openresearch.org/wiki/ICML
+        # elif year == 2000: s['total'] = 349 # https://www.openresearch.org/wiki/ICML
+        if v['t1']: tier_num['Poster'] = int(v['t1'].replace(',',''))
+        if v['t2']: tier_num['Spotlight'] = int(v['t2'].replace(',',''))
+        if v['t3']: tier_num['Oral'] = int(v['t3'].replace(',',''))
+        # tier_num['Poster'] = int(v['t1'].replace(',','')) if v['t1'] else 0
+        # tier_num['Spotlight'] = int(v['t2'].replace(',','')) if v['t2'] else 0
+        # tier_num['Oral'] = int(v['t3'].replace(',','')) if v['t3'] else 0
+        
         
         # get total accepted
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
@@ -1046,9 +1068,10 @@ class MergerCORL(Merger):
         return paper
     
     def update_total(self, s, year, track, tier_num):
-        if year == 2023: s['total'] = 0
-        elif year == 2022: s['total'] = 504 # https://corl2022.org/
-        elif year == 2021: s['total'] = 0
+        _, v = super().update_total(s, year, track, tier_num)
+        # if year == 2023: s['total'] = 0
+        # elif year == 2022: s['total'] = 504 # https://corl2022.org/
+        # elif year == 2021: s['total'] = 0
         
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
@@ -1080,10 +1103,11 @@ class MergerEMNLP(Merger):
         return tier_num
         
     def update_total(self, s, year, track, tier_num):
+        _, v = super().update_total(s, year, track, tier_num)
         
-        if year == 2023: 
-            s['total'] = 4909 # https://2023.emnlp.org/downloads/EMNLP-2023-Handbook-Nov-30.pdf
-            s['desk_reject'] = 256
+        # if year == 2023: 
+        #     s['total'] = 4909 # https://2023.emnlp.org/downloads/EMNLP-2023-Handbook-Nov-30.pdf
+        #     s['desk_reject'] = 256
         
         # get total accepted
         s['accept'] = tier_num['Long Main'] + tier_num['Short Main'] + tier_num['Long Findings'] + tier_num['Short Findings']
@@ -1143,54 +1167,62 @@ class MergerCVPR(Merger):
             tier_num['Spotlight'] = tier_num.pop('Highlight')
         
     def update_total(self, s, year, track, tier_num):
+        _, v = super().update_total(s, year, track, tier_num)
         
-        if year == 2024: 
-            # Openreview
-            s['total'] = 11532
-            tier_num['Poster'] = 2305
-            tier_num['Spotlight'] = 324
-            tier_num['Oral'] = 90
-        elif year == 2023: s['total'] = 9155 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
-        elif year == 2022: s['total'] = 8262 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
-        elif year == 2021: 
-            # https://cvpr2021.thecvf.com/CVPRaccepts.html
-            s['total'] = 7500 
-            s['withdraw'] = 7500-5900
-        elif year == 2020: 
-            # https://yassouali.github.io/ml-blog/cvpr2020/
-            s['total'] = 6424
-            s['withdraw'] = 6424-5865
-        elif year == 2019: s['total'] = 5160 # https://cvpr2019.thecvf.com/files/CVPR%202019%20-%20Welcome%20Slides%20Final.pdf
-        elif year == 2018: 
-            s['total'] = 3300 # https://cvpr2018.thecvf.com/
-            tier_num['Poster'] = 929 # poster, openaccess
-            tier_num['Oral'] = 50 # oral, https://haowang1992.github.io/posts/2019/01/CVPR%202018%20Oral%20Collections/
-        elif year == 2017: 
-            # https://cvpr2017.thecvf.com/program/main_conference
-            s['total'] = 2680
-            s['withdraw'] = 60
-        elif year == 2016:
-            # https://cvpr2016.thecvf.com/program/main_conference
-            s['total'] = 2145
-            s['withdraw'] = 2145 - 1865
-        elif year == 2015:
-            # https://cvpr2015.thecvf.com/files/welcome_message.pdf
-            s['total'] = 2123
-            s['withdraw'] = 2123 - 1815
-            tier_num['Poster'] = 602 - 71
-            tier_num['Oral'] = 71
-        elif year == 2014:
-            # https://www.kitware.com/cvpr-2014-in-review/
-            s['total'] = 1807
-            s['withdraw'] = 2145 - 1815
-            tier_num['Poster'] = 540 - 104
-            tier_num['Oral'] = 104
-        elif year == 2013:
-            # http://vigir.missouri.edu/~gdesouza/Research/Conference_CDs/IEEE_CVPR2013/data/home.htm
-            s['total'] = 1816
-            s['withdraw'] = 1816 - 1798
-            tier_num['Poster'] = 412
-            tier_num['Oral'] = 60
+        # if year == 2024: 
+        #     # Openreview
+        #     s['total'] = 11532
+        #     tier_num['Poster'] = 2305
+        #     tier_num['Spotlight'] = 324
+        #     tier_num['Oral'] = 90
+        # elif year == 2023: s['total'] = 9155 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
+        # elif year == 2022: s['total'] = 8262 # https://cvpr.thecvf.com/Conferences/2023/BlogPaperSubmissions
+        # elif year == 2021: 
+        #     # https://cvpr2021.thecvf.com/CVPRaccepts.html
+        #     s['total'] = 7500 
+        #     s['withdraw'] = 7500-5900
+        # elif year == 2020: 
+        #     # https://yassouali.github.io/ml-blog/cvpr2020/
+        #     s['total'] = 6424
+        #     s['withdraw'] = 6424-5865
+        # elif year == 2019: s['total'] = 5160 # https://cvpr2019.thecvf.com/files/CVPR%202019%20-%20Welcome%20Slides%20Final.pdf
+        # elif year == 2018: 
+        #     s['total'] = 3300 # https://cvpr2018.thecvf.com/
+        #     tier_num['Poster'] = 929 # poster, openaccess
+        #     tier_num['Oral'] = 50 # oral, https://haowang1992.github.io/posts/2019/01/CVPR%202018%20Oral%20Collections/
+        # elif year == 2017: 
+        #     # https://cvpr2017.thecvf.com/program/main_conference
+        #     s['total'] = 2680
+        #     s['withdraw'] = 60
+        # elif year == 2016:
+        #     # https://cvpr2016.thecvf.com/program/main_conference
+        #     s['total'] = 2145
+        #     s['withdraw'] = 2145 - 1865
+        # elif year == 2015:
+        #     # https://cvpr2015.thecvf.com/files/welcome_message.pdf
+        #     s['total'] = 2123
+        #     s['withdraw'] = 2123 - 1815
+        #     tier_num['Poster'] = 602 - 71
+        #     tier_num['Oral'] = 71
+        # elif year == 2014:
+        #     # https://www.kitware.com/cvpr-2014-in-review/
+        #     s['total'] = 1807
+        #     s['withdraw'] = 2145 - 1815
+        #     tier_num['Poster'] = 540 - 104
+        #     tier_num['Oral'] = 104
+        # elif year == 2013:
+        #     # http://vigir.missouri.edu/~gdesouza/Research/Conference_CDs/IEEE_CVPR2013/data/home.htm
+        #     s['total'] = 1816
+        #     s['withdraw'] = 1816 - 1798
+        #     tier_num['Poster'] = 412
+        #     tier_num['Oral'] = 60
+        
+        if v['t1']: tier_num['Poster'] = int(v['t1'].replace(',',''))
+        if v['t2']: tier_num['Spotlight'] = int(v['t2'].replace(',',''))
+        if v['t3']: tier_num['Oral'] = int(v['t3'].replace(',',''))
+        # tier_num['Poster'] = int(v['t1'].replace(',','')) if v['t1'] else 0
+        # tier_num['Spotlight'] = int(v['t2'].replace(',','')) if v['t2'] else 0
+        # tier_num['Oral'] = int(v['t3'].replace(',','')) if v['t3'] else 0
             
             
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
@@ -1200,25 +1232,32 @@ class MergerCVPR(Merger):
 class MergerECCV(Merger):
     
     def update_total(self, s, year, track, tier_num):
+        _, v = super().update_total(s, year, track, tier_num)
     
-        if year == 2024: 
-            # https://x.com/eccvconf/status/1808601545535029417
-            s['total'] = 8585
-            tier_num['Poster'] = 2395
-        elif year == 2022: 
-            # https://eccv2022.ecva.net/files/2021/12/ECCV_2022_MainConference_ProgramGuide_Final_full.pdf
-            s['total'] = 6773
-            s['desk_reject'] = 846
-            tier_num['Poster'] = 1645 - 157
-            tier_num['Oral'] = 157
-        elif year == 2020: 
-            # https://graz.elsevierpure.com/en/publications/computer-visioneccv-2020-16th-european-conference-glasgow-uk-augu
-            s['total'] = 5025 
-        elif year == 2018: 
-            # https://eccv2018.org/wp-content/uploads/2018/09/ECCV_2018_final.pdf
-            s['total'] = 2439 # https://www.openresearch.org/wiki/ECCV
-            tier_num['Poster'] = 717
-            tier_num['Oral'] = 59
+        # if year == 2024: 
+        #     # https://x.com/eccvconf/status/1808601545535029417
+        #     s['total'] = 8585
+        #     tier_num['Poster'] = 2395
+        # elif year == 2022: 
+        #     # https://eccv2022.ecva.net/files/2021/12/ECCV_2022_MainConference_ProgramGuide_Final_full.pdf
+        #     s['total'] = 6773
+        #     s['desk_reject'] = 846
+        #     tier_num['Poster'] = 1645 - 157
+        #     tier_num['Oral'] = 157
+        # elif year == 2020: 
+        #     # https://graz.elsevierpure.com/en/publications/computer-visioneccv-2020-16th-european-conference-glasgow-uk-augu
+        #     s['total'] = 5025 
+        # elif year == 2018: 
+        #     # https://eccv2018.org/wp-content/uploads/2018/09/ECCV_2018_final.pdf
+        #     s['total'] = 2439 # https://www.openresearch.org/wiki/ECCV
+        #     tier_num['Poster'] = 717
+        #     tier_num['Oral'] = 59
+        if v['t1']: tier_num['Poster'] = int(v['t1'].replace(',',''))
+        if v['t2']: tier_num['Spotlight'] = int(v['t2'].replace(',',''))
+        if v['t3']: tier_num['Oral'] = int(v['t3'].replace(',',''))
+        # tier_num['Poster'] = int(v['t1'].replace(',','')) if v['t1'] else 0
+        # tier_num['Spotlight'] = int(v['t2'].replace(',','')) if v['t2'] else 0
+        # tier_num['Oral'] = int(v['t3'].replace(',','')) if v['t3'] else 0
     
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
@@ -1253,15 +1292,22 @@ class MergerICCV(Merger):
         }
         
     def update_total(self, s, year, track, tier_num):
+        _, v = super().update_total(s, year, track, tier_num)
     
-        if year == 2023: s['total'] = 8620 # https://iccv2023.thecvf.com/iccv2023.main.conference.program-38--MTE.php
-        elif year == 2021: s['total'] = 6152 # https://www.openresearch.org/wiki/ICCV
-        elif year == 2019: s['total'] = 4303 # https://www.openresearch.org/wiki/ICCV
-        elif year == 2017: 
-            # https://www.computer.org/csdl/proceedings-article/iccv/2017/1032z044/12OmNyvY9tQ
-            s['total'] = 2143 # https://www.openresearch.org/wiki/ICCV_2017
-        elif year == 2015: s['total'] = 1698 # https://www.computer.org/csdl/proceedings-article/iccv/2015/8391z036/12OmNvStcBR
-        elif year == 2013: s['total'] = 1629 # https://www.openresearch.org/wiki/ICCV
+        # if year == 2023: s['total'] = 8620 # https://iccv2023.thecvf.com/iccv2023.main.conference.program-38--MTE.php
+        # elif year == 2021: s['total'] = 6152 # https://www.openresearch.org/wiki/ICCV
+        # elif year == 2019: s['total'] = 4303 # https://www.openresearch.org/wiki/ICCV
+        # elif year == 2017: 
+        #     # https://www.computer.org/csdl/proceedings-article/iccv/2017/1032z044/12OmNyvY9tQ
+        #     s['total'] = 2143 # https://www.openresearch.org/wiki/ICCV_2017
+        # elif year == 2015: s['total'] = 1698 # https://www.computer.org/csdl/proceedings-article/iccv/2015/8391z036/12OmNvStcBR
+        # elif year == 2013: s['total'] = 1629 # https://www.openresearch.org/wiki/ICCV
+        if v['t1']: tier_num['Poster'] = int(v['t1'].replace(',',''))
+        if v['t2']: tier_num['Spotlight'] = int(v['t2'].replace(',',''))
+        if v['t3']: tier_num['Oral'] = int(v['t3'].replace(',',''))
+        # tier_num['Poster'] = int(v['t1'].replace(',','')) if v['t1'] else 0
+        # tier_num['Spotlight'] = int(v['t2'].replace(',','')) if v['t2'] else 0
+        # tier_num['Oral'] = int(v['t3'].replace(',','')) if v['t3'] else 0
     
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
@@ -1273,9 +1319,7 @@ class MergerSIGGRAPH(Merger):
         if 'Reject' not in tier_num: tier_num['Reject'] = 0
         if 'Poster' not in tier_num: tier_num['Poster'] = 0
         if 'Conference' not in tier_num: tier_num['Conference'] = 0
-        if 'Journal' not in tier_num: tier_num['Journal'] = 0
         if 'TOG Paper' not in tier_num: tier_num['TOG Paper'] = 0
-        tier_num.pop('Technical Paper')
         tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
             
         # adjust position
@@ -1283,28 +1327,37 @@ class MergerSIGGRAPH(Merger):
             'Reject': tier_num.pop('Reject'), 
             'Poster': tier_num.pop('Poster'),
             'Conference': tier_num.pop('Conference'),
-            'Journal': tier_num.pop('Journal'),
+            'Journal': tier_num.pop('Technical Paper'),
             'TOG Submission': tier_num.pop('TOG Paper'),
             **tier_num
         }
         return tier_num
     
-    # def update_total(self, s, year, track, tier_num):
+    def update_total(self, s, year, track, tier_num):
+        _, v = super().update_total(s, year, track, tier_num)
     
-    #     if year == 2023:
-    #         s['total'] = 616
-    #         tier_num['Conference'] = 86
-    #         tier_num['Journal'] = 126
-    #         tier_num['TOG Submission'] = 27
-    #     elif year == 2022:
-    #         s['total'] = 610
-    #         tier_num['Reject'] = 66
-    #         tier_num['Conference'] = 61
-    #         tier_num['Journal'] = 133
-    #         tier_num['TOG Submission'] = 27
+        # if year == 2023:
+        #     s['total'] = 616
+        #     tier_num['Conference'] = 86
+        #     tier_num['Journal'] = 126
+        #     tier_num['TOG Submission'] = 27
+        # elif year == 2022:
+        #     s['total'] = 610
+        #     tier_num['Reject'] = 66
+        #     tier_num['Conference'] = 61
+        #     tier_num['Journal'] = 133
+        #     tier_num['TOG Submission'] = 27
+        if v['t1']: tier_num['Poster'] = int(v['t1'].replace(',',''))
+        if v['t2']: tier_num['Conference'] = int(v['t2'].replace(',',''))
+        if v['t3']: tier_num['Journal'] = int(v['t3'].replace(',',''))
+        if v['t4']: tier_num['TOG Submission'] = int(v['t4'].replace(',',''))
+        # tier_num['Poster'] = int(v['t1'].replace(',','')) if v['t1'] else 0
+        # tier_num['Conference'] = int(v['t2'].replace(',','')) if v['t2'] else 0
+        # tier_num['Journal'] = int(v['t3'].replace(',','')) if v['t3'] else 0
+        # tier_num['TOG Submission'] = int(v['t4'].replace(',','')) if v['t4'] else 0
     
-    #     s['accept'] = tier_num['Conference'] + tier_num['Journal'] + tier_num['TOG Submission']
-    #     s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
+        s['accept'] = tier_num['Conference'] + tier_num['Journal'] # don't include tier_num['TOG Submission'], since it's not siggraph submission
+        s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
     
 class MergerSIGGRAPHASIA(Merger):
     
@@ -1313,9 +1366,7 @@ class MergerSIGGRAPHASIA(Merger):
         if 'Reject' not in tier_num: tier_num['Reject'] = 0
         if 'Poster' not in tier_num: tier_num['Poster'] = 0
         if 'Conference' not in tier_num: tier_num['Conference'] = 0
-        if 'Journal' not in tier_num: tier_num['Journal'] = 0
         if 'TOG Paper' not in tier_num: tier_num['TOG Paper'] = 0
-        tier_num.pop('Technical Paper')
         tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
             
         # adjust position
@@ -1323,11 +1374,25 @@ class MergerSIGGRAPHASIA(Merger):
             'Reject': tier_num.pop('Reject'), 
             'Poster': tier_num.pop('Poster'),
             'Conference': tier_num.pop('Conference'),
-            'Journal': tier_num.pop('Journal'),
+            'Journal': tier_num.pop('Technical Paper'),
             'TOG Submission': tier_num.pop('TOG Paper'),
             **tier_num
         }
         return tier_num
+    
+    def update_total(self, s, year, track, tier_num):
+        _, v = super().update_total(s, year, track, tier_num)
+        if v['t1']: tier_num['Poster'] = int(v['t1'].replace(',',''))
+        if v['t2']: tier_num['Conference'] = int(v['t2'].replace(',',''))
+        if v['t3']: tier_num['Journal'] = int(v['t3'].replace(',',''))
+        if v['t4']: tier_num['TOG Submission'] = int(v['t4'].replace(',',''))
+        # tier_num['Poster'] = int(v['t1'].replace(',','')) if v['t1'] else 0
+        # tier_num['Conference'] = int(v['t2'].replace(',','')) if v['t2'] else 0
+        # tier_num['Journal'] = int(v['t3'].replace(',','')) if v['t3'] else 0
+        # tier_num['TOG Submission'] = int(v['t4'].replace(',','')) if v['t4'] else 0
+        
+        s['accept'] = tier_num['Conference'] + tier_num['Journal'] # don't include tier_num['TOG Submission'], since it's not siggraph submission
+        s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
 
 class MergerKDD(Merger):
     pass
@@ -1341,23 +1406,30 @@ class MergerACMMM(Merger):
 class MergerWACV(Merger):
     
     def update_total(self, s, year, track, tier_num):
+        _, v = super().update_total(s, year, track, tier_num)
     
-        if year == 2024: 
-            # https://drive.google.com/file/d/14e5ssb2yhODK127IkcUtaO9EKd63rKak/view
-            s['total'] = 2043
-            tier_num['Poster'] = 846
-        elif year == 2023: 
-            # https://www.computer.org/csdl/proceedings-article/wacv/2023/934600z068/1KxVuRUI6Xu
-            s['total'] = 1577
-            tier_num['Poster'] = 641
-        elif year == 2022: 
-            # https://drive.google.com/file/d/1m9zdIM2B65w71dAPdp0QlrqZ-dNThBwj/view
-            s['total'] = 1172
-            tier_num['Poster'] = 406
-        elif year == 2021:
-            pass
-        elif year == 2020:
-            s['total'] = 1096 # https://www.openresearch.org/wiki/WACV
+        # if year == 2024: 
+        #     # https://drive.google.com/file/d/14e5ssb2yhODK127IkcUtaO9EKd63rKak/view
+        #     s['total'] = 2043
+        #     tier_num['Poster'] = 846
+        # elif year == 2023: 
+        #     # https://www.computer.org/csdl/proceedings-article/wacv/2023/934600z068/1KxVuRUI6Xu
+        #     s['total'] = 1577
+        #     tier_num['Poster'] = 641
+        # elif year == 2022: 
+        #     # https://drive.google.com/file/d/1m9zdIM2B65w71dAPdp0QlrqZ-dNThBwj/view
+        #     s['total'] = 1172
+        #     tier_num['Poster'] = 406
+        # elif year == 2021:
+        #     pass
+        # elif year == 2020:
+        #     s['total'] = 1096 # https://www.openresearch.org/wiki/WACV
+        if v['t1']: tier_num['Poster'] = int(v['t1'].replace(',',''))
+        if v['t2']: tier_num['Spotlight'] = int(v['t2'].replace(',',''))
+        if v['t3']: tier_num['Oral'] = int(v['t3'].replace(',',''))
+        # tier_num['Poster'] = int(v['t1'].replace(',','')) if v['t1'] else 0
+        # tier_num['Spotlight'] = int(v['t2'].replace(',','')) if v['t2'] else 0
+        # tier_num['Oral'] = int(v['t3'].replace(',','')) if v['t3'] else 0
     
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']

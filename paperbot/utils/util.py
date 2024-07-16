@@ -77,9 +77,22 @@ def download_gspread_setting(key, json_path=None):
             os.remove(authorized_user_path)
         
     # convert the loaded df to json and write as gform.json by default
-    df = gspread2pd('1cWrKI8gDI-R6KOnoYkZHmEFfESU_rPLpkup8-Z0Km_0', parse_header=True)
+    df = gspread2pd(key, parse_header=True)
     json_data = {df.columns[1]: df.set_index("conf").to_dict()[df.columns[1]]}
     save_json(os.path.join(settings.__path__[0], 'gform.json') if json_path == None else json_path, json_data)
+        
+def download_gspread_meta(key, csv_path=None):
+    try:
+        gc = gspread.oauth()
+        gc.open_by_key(key)
+    except:
+        authorized_user_path = '~/.config/gspread/authorized_user.json'
+        if os.path.isfile(authorized_user_path):
+            os.remove(authorized_user_path)
+        
+    # convert the loaded df to json and write as gform.json by default
+    df = gspread2pd(key, parse_header=True)
+    df.to_csv(os.path.join(settings.__path__[0], 'meta.csv') if csv_path == None else csv_path, sep=',')
         
 def load_gspread_setting():
     """Load JSON file."""
