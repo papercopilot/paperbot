@@ -106,6 +106,29 @@ class PaperList:
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 with open(file_path, 'w') as f:
                     json.dump(self._papers, f, indent=4)
+                    
+        def add_key(self, key, value='', insert_after=None):
+            for idx, paper in enumerate(self._papers):
+                if insert_after is not None:
+                    pos = list(paper.keys()).index(insert_after)
+                    items = list(paper.items())
+                    items.insert(pos, (key, value))
+                    paper = dict(items)
+                else:
+                    self._papers[idx][key] = value
+                self._papers[idx] = paper
+                
+        def move_key(self, key, move_before=None):
+            for idx, paper in enumerate(self._papers):
+                pos = list(paper.keys()).index(move_before)
+                items = list(paper.items())
+                items.insert(pos, (key, paper.pop(key)))
+                paper = dict(items)
+                self._papers[idx] = paper
+                
+        def empty_key(self, key):
+            for idx, paper in enumerate(self._papers):
+                self._papers[idx][key] = ''
             
 class ORPaperList(PaperList):
     pass
