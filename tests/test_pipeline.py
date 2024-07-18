@@ -2,7 +2,7 @@ import paperbot
 import argparse
 
 def set_arguments():
-    parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'cvpr', 'iccv', 'eccv', 'wacv', 'acl', 'kdd', 'uai', 'acmmm'])
+    parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'cvpr', 'iccv', 'eccv', 'wacv', 'acl', 'kdd', 'uai', 'acmmm', 'siggraph', 'siggraphasia'])
     parser.add_argument('--years', nargs='+', help='years', default=range(2024, 2012, -1)) # use
     
     # 
@@ -40,7 +40,7 @@ def set_arguments():
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
     
     parser.add_argument('--save', action='store_true', help='save the results', default=True)
-    parser.add_argument('--mp', action='store_true', help='load the results', default=False)
+    parser.add_argument('--mp', action='store_true', help='load the results', default=True)
 
 def test_pipeline(args):
     p = paperbot.Pipeline(args)
@@ -54,8 +54,10 @@ if __name__ == "__main__":
     # args.confs = ['nips', 'icml', 'corl', 'emnlp'] # openreview + site
     # args.confs = ['cvpr', 'iccv'] # openaccess + site
     # args.confs = ['icml', 'acl', 'kdd', 'uai', 'acmmm'] # gform
-    args.confs = ['acl']
-    args.years = [2024]
+    # args.confs = ['siggraph']
+    
+    # args.years = [2023, 2022, 2021, 2020, 2019, 2018]
+    # args.years = [2023]
     
     # check iclr 2024/23 summary
     # check cvpr 2022 site
