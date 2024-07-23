@@ -348,7 +348,36 @@ class StBotICML(CCBot):
         if not e_container: return {}
         
         ret = {'site': url_paper,}
-        if year == 2023:
+        if year == 2024:
+            e_proceeding = tree_paper.xpath("//a[normalize-space()='Paper PDF']")
+            ret['proceeding'] = '' if not e_proceeding else e_proceeding[0].xpath("./@href")[0]
+            
+            if ret['proceeding']:
+            
+                response_proceeding = sitebot.SiteBot.session_request(ret['proceeding'])
+                tree_proceeding = html.fromstring(response_proceeding.content)
+                
+                e_pdf = tree_proceeding.xpath("//a[normalize-space()='Download PDF']")
+                ret['pdf'] = '' if not e_pdf else e_pdf[0].xpath("./@href")[0]
+                
+                e_openreview = tree_proceeding.xpath("//a[normalize-space()='OpenReview']")
+                ret['openreview'] = '' if not e_openreview else e_openreview[0].xpath("./@href")[0]
+                
+            if 'openreview' not in ret:
+                # TODO: JMLR has no openreview but the following is not working for now
+                pass
+                
+            # e_jmlr = tree_paper.xpath("//a[normalize-space(@title)='JMLR']")
+            # ret['proceeding'] = '' if not e_jmlr else e_jmlr[0].xpath("./@href")[0]
+            
+            # if ret['proceeding']:
+            #     response_proceeding = sitebot.SiteBot.session_request(ret['proceeding'])
+            #     tree_proceeding = html.fromstring(response_proceeding.content)
+                
+            #     e_pdf = tree_proceeding.xpath("//a[normalize-space()='pdf']")
+            #     ret['pdf'] = '' if not e_pdf else e_pdf[0].xpath("./@href")[0]
+            
+        elif year == 2023:
             e_pdf = tree_paper.xpath("//a[normalize-space()='PDF']")
             ret['pdf'] = '' if not e_pdf else e_pdf[0].xpath("./@href")[0]
             

@@ -267,7 +267,14 @@ class Merger:
         if 'openreview' in self._paperlist_site[0] and self._paperlist_site[0]['openreview']:
             # has paperlist by openreview id
             paperdict_openreview = {paper['id']: i for i, paper in enumerate(self._paperlist_openreview) if (paper['status'] != 'Withdraw' and paper['status'] != 'Reject' and paper['status'] != 'Desk Reject')}
-            paperdict_site = {paper['openreview'].split('forum?id=')[-1]: i for i, paper in enumerate(self._paperlist_site)}
+            paperdict_site = {paper['openreview'].split('forum?id=')[-1]: i for i, paper in enumerate(self._paperlist_site) if 'openreview' in paper and paper['openreview']}
+            
+            for i, paper in enumerate(self._paperlist_site):
+                if 'openreview' in paper and paper['openreview']:
+                    paper['openreview'] = paper['openreview'].split('forum?id=')[-1]
+                    self._paperlist_site[i] = paper
+                else:
+                    print(f'No openreview id for {paper["title"]}')
             
             cutoff = 100/100
             if cutoff not in total_matched: total_matched[cutoff] = 0

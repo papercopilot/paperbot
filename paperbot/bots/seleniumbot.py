@@ -111,8 +111,8 @@ class SeleniumBot(sitebot.SiteBot):
                     'status': self.status_map[ssid_type],
                     'title': title.strip(),
                     'author': ', '.join(author),
-                    'track': 'main', # TODO: update later
                     'aff': '',
+                    'track': 'main', # TODO: update later
                     'sess': '',
                     'doi': '',
                 })
@@ -159,29 +159,30 @@ class SnBotSIGGRAPH(SeleniumBot):
         if page == 'fastforward':
             super().crawl(url, page, track)
         
-        return
-        # replace psid with session name
-        for p in tqdm(self._paperlist):
-            ssid, psid = p['ssid'], p['psid']
-            try:
-                if self._year >= 2023:
-                    url_paper = f"{self._baseurl}{self._args['track'][track]['pages']['paper']}"
-                    self.driver.get(url_paper.replace('[psid]', psid).replace('[ssid]', ssid))
-                    # self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, "abstract")))
-                    e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess'))
-                    sess = e_sess.get_attribute('textContent').split(':')[-1].split('Session')[0]
-                    e_aff = self.driver.find_elements(By.XPATH, self.get_xpath('aff'))
-                    affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
-                elif self._year >= 2019:
-                    e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess').replace('[psid]', psid))
-                    sess = e_sess.get_attribute('textContent').split(':')[-1].split('.')[-1]
-                elif self._year >= 2018:
-                    sess = ''
-            except:
-                cprint('error', 'page could be down')
-                
-            p['sess'] = sess.strip()
-            p['aff'] = '; '.join(affs)
+            # return
+            # replace psid with session name
+            for idx, p in enumerate(tqdm(self._paperlist)):
+                ssid, psid = p['ssid'], p['psid']
+                sess, affs = '', ''
+                try:
+                    if self._year >= 2023:
+                        url_paper = f"{self._baseurl}{self._args['track'][track]['pages']['paper']}"
+                        self.driver.get(url_paper.replace('[psid]', psid).replace('[ssid]', ssid))
+                        # self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, "abstract")))
+                        e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess'))
+                        sess = e_sess.get_attribute('textContent').split(':')[-1].split('Session')[0]
+                        e_aff = self.driver.find_elements(By.XPATH, self.get_xpath('aff'))
+                        affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
+                    elif self._year >= 2019:
+                        e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess').replace('[psid]', psid))
+                        sess = e_sess.get_attribute('textContent').split(':')[-1].split('.')[-1]
+                    elif self._year >= 2018:
+                        pass
+                except:
+                    cprint('error', 'page could be down')
+                    
+                self._paperlist[idx]['sess'] = sess.strip()
+                self._paperlist[idx]['aff'] = '; '.join(affs)
             
     def get_xpath(self, key, sec_idx=0):
         xpath = {
@@ -191,7 +192,12 @@ class SnBotSIGGRAPH(SeleniumBot):
             'aff': '',
         }
         
-        if self._year == 2023:
+        if self._year == 2024:
+            xpath["title"] =  "./td[contains(@class, 'title-speakers-td')]"
+            xpath["author"] =  ".//div[contains(@class, 'presenter-name')]"
+            xpath["sess"] =  "//span[contains(@class, 'session-title')]/a"
+            xpath["aff"] =  "//div[contains(@class, 'presenter-institution')]/a"
+        elif self._year == 2023:
             xpath["title"] =  "./td[contains(@class, 'title-speakers-td')]"
             xpath["author"] =  ".//div[contains(@class, 'presenter-name')]"
             xpath["sess"] =  "//span[contains(@class, 'session-title')]/a"
@@ -236,29 +242,31 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
         if page == 'fastforward':
             super().crawl(url, page, track)
         
-        return
-        # replace psid with session name
-        for p in self._paperlist:
-            ssid, psid = p['ssid'], p['psid']
-            if self._year >= 2018:
-                url_paper = f"{self._baseurl}{self._args['track'][track]['pages']['paper']}"
-                self.driver.get(url_paper.replace('[psid]', psid).replace('[ssid]', ssid))
-                e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess'))
+            # return
+            # replace psid with session name
+            for idx, p in enumerate(tqdm(self._paperlist)):
+                ssid, psid = p['ssid'], p['psid']
+                sess, affs = '', ''
                 
-                if self._year == 2021:
-                    separator = {
-                        'sess': {'.': -1, '[Q&A Session]': 0}
-                    }
-                    sess = e_sess.get_attribute('textContent')
-                    for sep in separator['sess']:
-                        sess = sess.split(sep)[separator['sess'][sep]]
-                else:
-                    sess = e_sess.get_attribute('textContent')
-                e_aff = self.driver.find_elements(By.XPATH, self.get_xpath('aff'))
-                affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
-                
-            p['sess'] = sess.strip()
-            p['aff'] = '; '.join(affs)
+                if self._year >= 2018:
+                    url_paper = f"{self._baseurl}{self._args['track'][track]['pages']['paper']}"
+                    self.driver.get(url_paper.replace('[psid]', psid).replace('[ssid]', ssid))
+                    e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess'))
+                    
+                    if self._year == 2021:
+                        separator = {
+                            'sess': {'.': -1, '[Q&A Session]': 0}
+                        }
+                        sess = e_sess.get_attribute('textContent')
+                        for sep in separator['sess']:
+                            sess = sess.split(sep)[separator['sess'][sep]]
+                    else:
+                        sess = e_sess.get_attribute('textContent')
+                    e_aff = self.driver.find_elements(By.XPATH, self.get_xpath('aff'))
+                    affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
+                    
+                self._paperlist[idx]['sess'] = sess.strip()
+                self._paperlist[idx]['aff'] = '; '.join(affs)
             
     def get_xpath(self, key, sec_idx=0):
         xpath = {

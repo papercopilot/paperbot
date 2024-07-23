@@ -1,10 +1,26 @@
 {
     "2024": {
-        "gform": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "ICML.cc",
+                "review": "",
+                "decision": "in_venue"
+            },
             "track": {
-                "main": "icml"
+                "main": {
+                    "Active": "Conference/-/Submission"
+                }
             },
             "tname": {
+                "main": {
+                    "ICML 2024 Spotlight": "Spotlight",
+                    "ICML 2024 Poster": "Poster",
+                    "ICML 2024 Oral": "Oral",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
                 "main": {}
             }
         },
@@ -18,6 +34,14 @@
                         "oral": "Oral"
                     }
                 }
+            }
+        },
+        "gform": {
+            "track": {
+                "main": "icml"
+            },
+            "tname": {
+                "main": {}
             }
         }
     },
