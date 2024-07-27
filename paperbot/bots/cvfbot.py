@@ -2,7 +2,6 @@ import requests
 from pypdf import PdfReader
 from io import BytesIO
 import re
-import multiprocessing as mp
 from urllib.parse import urlparse
 from tqdm import tqdm
 from lxml import html
@@ -12,6 +11,7 @@ import json
 
 from . import sitebot
 from ..utils.util import color_print as cprint
+from ..utils.util import mp
         
 class CVFBot(sitebot.SiteBot):
     

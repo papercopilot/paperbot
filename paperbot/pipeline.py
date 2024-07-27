@@ -2,11 +2,11 @@ from .utils.assigner import *
 from .utils.util import color_print as cprint
 from .utils import util
 from .config import PipelineConfig
+from .utils.util import mp
 import json
 import os
 import pandas as pd
 from collections import defaultdict
-import multiprocessing as mp
 
 from rich.console import Console
 from rich.table import Table

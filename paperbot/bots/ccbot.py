@@ -6,7 +6,6 @@ from collections import Counter
 from lxml import html
 import spacy
 import os
-import multiprocessing as mp
 import difflib
 from urllib.parse import urlparse, urljoin
 from pycookiecheat import BrowserType, chrome_cookies
@@ -14,6 +13,7 @@ from pycookiecheat import BrowserType, chrome_cookies
 from . import sitebot
 from ..utils import util, summarizer
 from ..utils.util import color_print as cprint
+from ..utils.util import mp
 
 class CCBot(sitebot.SiteBot):
     

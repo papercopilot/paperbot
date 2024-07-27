@@ -2,7 +2,6 @@ import requests
 from pypdf import PdfReader
 from io import BytesIO
 import re
-import multiprocessing as mp
 from urllib.parse import urlparse, urljoin
 from tqdm import tqdm
 from lxml import html
@@ -16,6 +15,7 @@ import gc
 
 from . import sitebot
 from ..utils.util import color_print as cprint
+from ..utils.util import mp
         
 class OpenaccessBot(sitebot.SiteBot):
     

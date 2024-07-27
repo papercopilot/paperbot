@@ -3,6 +3,7 @@ import json
 import gspread
 import pandas as pd
 from .. import settings
+import multiprocessing as mp
 
 class bcolors:
     HEADER = '\033[95m'

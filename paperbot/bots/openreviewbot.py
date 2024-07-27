@@ -8,13 +8,13 @@ from collections import Counter
 import os
 import pandas as pd
 import re
-import multiprocessing as mp
 import random
 import time
 
 from . import sitebot
 from ..utils import util, summarizer
 from ..utils.util import color_print as cprint
+from ..utils.util import mp
     
 class OpenreviewBot(sitebot.SiteBot):
     
