@@ -166,9 +166,12 @@ class GFormBot(sitebot.SiteBot):
             for k in ['Total', 'Total0']:
                 kid = self.summarizer.get_tid(k)
                 if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
-                self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
-                self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
-                self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
+                if kid in self.summarizer.tier_hist:
+                    self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
+                    self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
+                    self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
+                else:
+                    del self._summary_all_tracks[track]['tid'][kid]
             
     def auto_split(self, content):
         non_digits = set([x for x in content if (not x.isdigit() and x!='.')])
@@ -592,6 +595,72 @@ class GFormBotACMMM(GFormBot):
                 paper_id = row['Paper ID (hash it if you prefer more anonymity)']
                 rating = self.auto_split(row['Initial Ratings'])
                 confidence = self.auto_split(row['Initial Confidence'])
+
+        # list to numpy
+        list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
+        rating = list2np(rating)
+        confidence = list2np(confidence)
+
+        np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+        np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+        np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+        
+        # if len(rating) != len(confidence):
+            # raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
+        
+        if np2avg(rating) > 6:
+            cprint('warning', f"Rating > 6: {np2avg(rating)}, skipping")
+            return ret
+        
+        ret = {
+            'id': paper_id,
+            'track': track,
+            'status': 'Active',
+            'rating': {
+                'str': np2str(rating),
+                'avg': np2avg(rating)
+            },
+            'confidence': {
+                'str': np2str(confidence),
+                'avg': np2avg(confidence)
+            },
+            'corr_rating_confidence': np2coef(rating, confidence),
+        }
+            
+        return ret
+    
+    
+        
+class GFormBotEMNLP(GFormBot):
+    
+    
+    def process_row(self, index, row, track, mode=None, as_init=False):
+        
+        ret = {}
+        # remove invalide response
+        # https://stackoverflow.com/questions/9576384/use-regular-expression-to-match-any-chinese-character-in-utf-8-encoding
+        match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Overall Assessment']) # \u4E00-\u9FFF chinese
+        if match: return ret
+        
+        if mode == 'Rebuttal':
+        
+            # remove nan data
+            if pd.isna(row['[Optional] Overall Assessment after Rebuttal']) or not row['[Optional] Confidence after Rebuttal']: return ret
+            paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
+            
+            if as_init:
+                rating = self.auto_split(row['Initial Overall Assessment'])
+                confidence = self.auto_split(row['Initial Confidence'])
+            else:
+                rating = self.auto_split(row['[Optional] Overall Assessment after Rebuttal'])
+                confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+        else:
+            # remove redundant data
+            # if row['Paper ID']: return ret
+            
+            paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
+            rating = self.auto_split(row['Initial Overall Assessment'])
+            confidence = self.auto_split(row['Initial Confidence'])
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)

@@ -475,7 +475,7 @@ class Merger:
     def update_total(self, s, year, track, tier_num):
         df = pd.read_csv(os.path.join(settings.__path__[0], 'meta.csv'), sep=',', keep_default_na=False)
         df.set_index('conference', inplace=True)
-        v = df.to_dict('index')[self.get_cid(track)]
+        v = df.to_dict('index')[self.get_cid(track)] # missing key will result an error but this is necessary. Otherwise, the server-side rendering will failed.
         
         # 
         if v['total']: s['total'] = int(v['total'].replace(',',''))
@@ -835,7 +835,7 @@ class Merger:
         if len(stats) == 1:
             
             
-            if self._conf == 'cvpr' and self._year == 2024:
+            if self._conf == 'cvpr' and self._year == 2024 and False:
     
                 # TODO: hack now, improve later
                 path_paperlist = '/home/jyang/projects/papercopilot/logs/paperlists/cvpr/cvpr2024.json'
@@ -1033,6 +1033,7 @@ class MergerEMNLP(Merger):
     def normalize_tier_num(self, tier_num):
         
         # long main/short main/long findings/short findings
+        if "Reject" not in tier_num: tier_num["Reject"] = 0
         if 'Long Main' not in tier_num: tier_num['Long Main'] = 0
         if 'Short Main' not in tier_num: tier_num['Short Main'] = 0
         if 'Long Findings' not in tier_num: tier_num['Long Findings'] = 0

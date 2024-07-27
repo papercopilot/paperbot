@@ -70,6 +70,8 @@ class AssignerEMNLP(Assigner):
             return openreviewbot.ORBotEMNLP
         elif botname == 'st':
             return sitebot.StBotEMNLP
+        elif botname == 'gform':
+            return gformbot.GFormBotEMNLP
         elif botname == 'merge':
             return merger.MergerEMNLP
         else: super().__new__(cls, botname)

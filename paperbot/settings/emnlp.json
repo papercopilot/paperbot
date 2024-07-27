@@ -1,4 +1,14 @@
 {
+    "2024": {
+        "gform": {
+            "track": {
+                "main": "emnlp"
+            },
+            "tname": {
+                "main": {}
+            }
+        }
+    },
     "2023": {
         "openreview": {
             "api": "api2",

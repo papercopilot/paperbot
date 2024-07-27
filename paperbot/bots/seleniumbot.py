@@ -163,16 +163,21 @@ class SnBotSIGGRAPH(SeleniumBot):
             # replace psid with session name
             for idx, p in enumerate(tqdm(self._paperlist)):
                 ssid, psid = p['ssid'], p['psid']
-                sess, affs = '', ''
+                sess, affs, keywords, url_paper, url_sess = '', '', '', '', ''
                 try:
                     if self._year >= 2023:
                         url_paper = f"{self._baseurl}{self._args['track'][track]['pages']['paper']}"
-                        self.driver.get(url_paper.replace('[psid]', psid).replace('[ssid]', ssid))
+                        url_paper = url_paper.replace('[psid]', psid).replace('[ssid]', ssid)
+                        url_sess = f"{self._baseurl}{self._args['track'][track]['pages']['sess']}"
+                        url_sess = url_sess.replace('[psid]', psid).replace('[ssid]', ssid)
+                        self.driver.get(url_paper)
                         # self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, "abstract")))
                         e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess'))
                         sess = e_sess.get_attribute('textContent').split(':')[-1].split('Session')[0]
                         e_aff = self.driver.find_elements(By.XPATH, self.get_xpath('aff'))
                         affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
+                        e_keywords = self.driver.find_elements(By.XPATH, self.get_xpath('keyword'))
+                        keywords = list(set([e.get_attribute('textContent').strip() for e in e_keywords]))
                     elif self._year >= 2019:
                         e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess').replace('[psid]', psid))
                         sess = e_sess.get_attribute('textContent').split(':')[-1].split('.')[-1]
@@ -183,6 +188,9 @@ class SnBotSIGGRAPH(SeleniumBot):
                     
                 self._paperlist[idx]['sess'] = sess.strip()
                 self._paperlist[idx]['aff'] = '; '.join(affs)
+                self._paperlist[idx]['keywords'] = '; '.join(keywords)
+                self._paperlist[idx]['url_paper'] = url_paper
+                self._paperlist[idx]['url_sess'] = url_sess
             
     def get_xpath(self, key, sec_idx=0):
         xpath = {
@@ -190,6 +198,7 @@ class SnBotSIGGRAPH(SeleniumBot):
             'author': '',
             'sess': '',
             'aff': '',
+            'keyword': '',
         }
         
         if self._year == 2024:
@@ -197,11 +206,13 @@ class SnBotSIGGRAPH(SeleniumBot):
             xpath["author"] =  ".//div[contains(@class, 'presenter-name')]"
             xpath["sess"] =  "//span[contains(@class, 'session-title')]/a"
             xpath["aff"] =  "//div[contains(@class, 'presenter-institution')]/a"
+            xpath['keyword'] = "//div[contains(@class, 'keyword tag-group-list')]//div"
         elif self._year == 2023:
             xpath["title"] =  "./td[contains(@class, 'title-speakers-td')]"
             xpath["author"] =  ".//div[contains(@class, 'presenter-name')]"
             xpath["sess"] =  "//span[contains(@class, 'session-title')]/a"
             xpath["aff"] =  "//div[contains(@class, 'presenter-institution')]/a"
+            xpath['keyword'] = "//div[contains(@class, 'keyword tag-group-list')]//div"
         elif self._year == 2022:
             xpath["title"] =  "./td[contains(@class, 'title-speakers-td')]"
             xpath["author"] =  ".//div[contains(@class, 'presenter-name')]"
