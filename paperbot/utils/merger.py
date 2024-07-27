@@ -264,17 +264,18 @@ class Merger:
         paperdict_site = {paper['title']: i for i, paper in enumerate(self._paperlist_site)}
         total_matched = {}
         
-        if 'openreview' in self._paperlist_site[0] and self._paperlist_site[0]['openreview']:
+        # for site papers with openreview id, we simply pair the paper emtry using the openreview id
+        if 'openreview' in self._paperlist_site[0]:
             # has paperlist by openreview id
             paperdict_openreview = {paper['id']: i for i, paper in enumerate(self._paperlist_openreview) if (paper['status'] != 'Withdraw' and paper['status'] != 'Reject' and paper['status'] != 'Desk Reject')}
             paperdict_site = {paper['openreview'].split('forum?id=')[-1]: i for i, paper in enumerate(self._paperlist_site) if 'openreview' in paper and paper['openreview']}
             
-            for i, paper in enumerate(self._paperlist_site):
-                if 'openreview' in paper and paper['openreview']:
-                    paper['openreview'] = paper['openreview'].split('forum?id=')[-1]
-                    self._paperlist_site[i] = paper
-                else:
-                    print(f'No openreview id for {paper["title"]}')
+            # for i, paper in enumerate(self._paperlist_site):
+            #     if 'openreview' in paper and paper['openreview']:
+            #         # paper['openreview'] = paper['openreview'].split('forum?id=')[-1]
+            #         self._paperlist_site[i] = paper
+            #     else:
+            #         print(f'No openreview id for {paper["title"]}')
             
             cutoff = 100/100
             if cutoff not in total_matched: total_matched[cutoff] = 0
@@ -298,6 +299,11 @@ class Merger:
             # swap keys to title for the following proceeding
             paperdict_openreview = {self._paperlist_openreview[paperdict_openreview[key]]['title']: paperdict_openreview[key] for key in paperdict_openreview}
             paperdict_site = {self._paperlist_site[paperdict_site[key]]['title']: paperdict_site[key] for key in paperdict_site}
+        
+        # append those without openreview id to paperdict_site
+        for i, paper in enumerate(self._paperlist_site):
+            if 'openreview' in paper and not paper['openreview']:
+                paperdict_site[paper['title']] = i
         
         # check if title in openreview is in site
         for c in tqdm(range(100, 70, -1), desc='Iterative Merging papers by title'):
