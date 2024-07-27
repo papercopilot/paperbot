@@ -73,6 +73,7 @@ def download_gspread_setting(key, json_path=None):
         gc.open_by_key(key)
     except:
         authorized_user_path = '~/.config/gspread/authorized_user.json'
+        authorized_user_path = os.path.expanduser(authorized_user_path)
         if os.path.isfile(authorized_user_path):
             os.remove(authorized_user_path)
         
@@ -87,6 +88,7 @@ def download_gspread_meta(key, csv_path=None):
         gc.open_by_key(key)
     except:
         authorized_user_path = '~/.config/gspread/authorized_user.json'
+        authorized_user_path = os.path.expanduser(authorized_user_path)
         if os.path.isfile(authorized_user_path):
             os.remove(authorized_user_path)
         
