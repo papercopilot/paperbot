@@ -257,7 +257,7 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
             # replace psid with session name
             for idx, p in enumerate(tqdm(self._paperlist)):
                 ssid, psid = p['ssid'], p['psid']
-                sess, affs = '', ''
+                sess, affs, keywords, url_paper, url_sess = '', '', '', '', ''
                 
                 if self._year >= 2018:
                     url_paper = f"{self._baseurl}{self._args['track'][track]['pages']['paper']}"
@@ -278,6 +278,9 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
                     
                 self._paperlist[idx]['sess'] = sess.strip()
                 self._paperlist[idx]['aff'] = '; '.join(affs)
+                self._paperlist[idx]['keywords'] = '; '.join(keywords)
+                self._paperlist[idx]['url_paper'] = url_paper
+                self._paperlist[idx]['url_sess'] = url_sess
             
     def get_xpath(self, key, sec_idx=0):
         xpath = {
@@ -285,6 +288,7 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
             'author': '',
             'sess': '',
             'aff': '',
+            'keyword': '',
         }
         
         if self._year == 2023:
