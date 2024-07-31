@@ -32,6 +32,8 @@ class AssignerNIPS(Assigner):
             return openreviewbot.ORBotNIPS
         elif botname == 'st':
             return ccbot.StBotNIPS
+        elif botname == 'gform':
+            return gformbot.GFormBotNIPS
         elif botname == 'merge':
             return merger.MergerNIPS
         else: super().__new__(cls, botname)

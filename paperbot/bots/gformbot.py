@@ -194,6 +194,8 @@ class GFormBot(sitebot.SiteBot):
                 return content.split('-')
             elif ';' in non_digits:
                 return content.split(';')
+            elif '-' in non_digits:
+                return content.split('-')
             else:
                 raise ValueError(f"Unknown separator: {non_digits}")
         
@@ -676,6 +678,82 @@ class GFormBotEMNLP(GFormBot):
         
         if np2avg(rating) > 6:
             cprint('warning', f"Rating > 6: {np2avg(rating)}, skipping")
+            return ret
+        
+        ret = {
+            'id': paper_id,
+            'track': track,
+            'status': 'Active',
+            'rating': {
+                'str': np2str(rating),
+                'avg': np2avg(rating)
+            },
+            'confidence': {
+                'str': np2str(confidence),
+                'avg': np2avg(confidence)
+            },
+            'corr_rating_confidence': np2coef(rating, confidence),
+        }
+            
+        return ret
+    
+    
+        
+class GFormBotNIPS(GFormBot):
+    
+    
+    def process_row(self, index, row, track, mode=None, as_init=False):
+        
+        ret = {}
+        # remove invalide response
+        # https://stackoverflow.com/questions/9576384/use-regular-expression-to-match-any-chinese-character-in-utf-8-encoding
+        match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Ratings']) # \u4E00-\u9FFF chinese
+        if match: return ret
+        
+        if mode == 'Rebuttal':
+        
+            # remove nan data
+            if pd.isna(row['[Optional] Ratings after Rebuttal']) or not row['[Optional] Confidence after Rebuttal']: return ret
+            paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
+            
+            if as_init:
+                rating = self.auto_split(row['Initial Ratings'])
+                confidence = self.auto_split(row['Initial Confidence'])
+            else:
+                rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
+                confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+        else:
+            # remove redundant data
+            # if row['Paper ID']: return ret
+            
+            paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
+            rating = self.auto_split(row['Initial Ratings'])
+            confidence = self.auto_split(row['Initial Confidence'])
+        track = row['Track'].strip()
+        
+        # TODO: the keys in settings should be consistent with the track names, otherwise it needs an extra mapping step as follows, improve this in the future
+        track_map = {
+            'Main Conference': 'main',
+            'Datasets & Benchmarks Track': 'Datasets & Benchmarks',
+            'Creative AI Track': 'Creative AI',
+            'High School Projects Track': 'High School Projects',
+        }
+        track = track_map[track]
+
+        # list to numpy
+        list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
+        rating = list2np(rating)
+        confidence = list2np(confidence)
+
+        np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+        np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+        np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+        
+        # if len(rating) != len(confidence):
+            # raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
+        
+        if np2avg(rating) >= 10:
+            cprint('warning', f"Rating > 10: {np2avg(rating)}, skipping")
             return ret
         
         ret = {

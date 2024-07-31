@@ -1,6 +1,19 @@
 {
     "2024": {
-
+        "gform": {
+            "track": {
+                "main": "nips",
+                "Datasets & Benchmarks": "nips",
+                "Creative AI": "nips",
+                "High School Projects": "nips"
+            },
+            "tname": {
+                "main": {},
+                "Datasets & Benchmarks": {},
+                "Creative AI": {},
+                "High School Projects": {}
+            }
+        }
     },
     "2023": {
         "openreview": {
