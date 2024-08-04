@@ -1,4 +1,41 @@
 {
+    "2025": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "ICLR.cc",
+                "review": "Official_Review",
+                "decision": "in_venue"
+            },
+            "track": {
+                "main": {
+                    "Total": "Conference/-/Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "ICLR 2025 Conference Submission": "Active",
+                    "ICLR 2025 Conference Withdrawn Submission": "Withdraw",
+                    "ICLR 2025 Conference Desk Rejected Submission": "Desk Reject",
+                    "ICLR 2025 poster": "Poster",
+                    "ICLR 2025 oral": "Oral",
+                    "ICLR 2025 spotlight": "Spotlight",
+                    "Submitted to ICLR 2025": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence",
+                    "correctness": "soundness",
+                    "novelty": "contribution",
+                    "presentation": "presentation"
+                }
+            }
+        }
+    },
     "2024": {
         "openreview": {
             "api": "api2",

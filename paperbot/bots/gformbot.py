@@ -91,7 +91,7 @@ class GFormBot(sitebot.SiteBot):
             cprint('info', f'{self._conf} {self._year}: Google Form Not available.')
             return
         
-        for track in self._tracks:
+        for track in self._tracks: # TODO: this will craw multiple times, e.g. nips will crawl forth, should be optimized
             
             self.summarizer.clear_summary()
             

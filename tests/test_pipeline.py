@@ -34,17 +34,21 @@ def set_arguments():
     parser.add_argument('--fetch_openaccess_extra', action='store_true', help='fetch extra information on openaccess', default=True)
     
     parser.add_argument('--fetch_openreview_extra_mp', action='store_true', help='fetch from openreview using multiprocessing', default=False)
-    parser.add_argument('--fetch_site_extra_mp', action='store_true', help='fetch from site using multiprocessing', default=True)
+    parser.add_argument('--fetch_site_extra_mp', action='store_true', help='fetch from site using multiprocessing', default=False)
     parser.add_argument('--fetch_openaccess_extra_mp', action='store_true', help='fetch from openaccess using multiprocessing', default=True)
     
     parser.add_argument('--parse_keywords', action='store_true', help='parse keywords', default=False)
     
     parser.add_argument('--save', action='store_true', help='save the results', default=True)
-    parser.add_argument('--mp', action='store_true', help='load the results', default=True)
+    parser.add_argument('--mp', action='store_true', help='load the results', default=False)
 
 def test_pipeline(args):
     p = paperbot.Pipeline(args)
     assert p is not None
+    
+    if args.fetch_openreview and args.fetch_site and args.fetch_openaccess and args.fetch_gform:
+        args.mp = False
+    
     p.launch(is_save=args.save, is_mp=args.mp)
 
 if __name__ == "__main__":
@@ -54,10 +58,11 @@ if __name__ == "__main__":
     # args.confs = ['nips', 'icml', 'corl', 'emnlp'] # openreview + site
     # args.confs = ['cvpr', 'iccv'] # openaccess + site
     # args.confs = ['icml', 'acl', 'kdd', 'uai', 'acmmm'] # gform
-    # args.confs = ['siggraph']
+    args.confs = ['nips', 'emnlp']
+    # args.confs = ['corl']
     
     # args.years = [2023, 2022, 2021, 2020, 2019, 2018]
-    # args.years = [2023]
+    args.years = [2024]
     
     # check iclr 2024/23 summary
     # check cvpr 2022 site
