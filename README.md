@@ -13,7 +13,7 @@ run the following to use sphinx_rtd_theme
 pip install sphinx-rtd-theme
 ```
 
-pip install gspread pandas tqdm spacy pypdf lxml pycookiecheat openai 'transformers[torch]' selenium openpyxl
+pip install gspread pandas tqdm spacy pypdf lxml pycookiecheat openai transformers[torch] selenium openpyxl
 python -m spacy download en_core_web_lg
 https://chromedriver.storage.googleapis.com/index.html?path=104.0.5112.79/
 https://developer.chrome.com/docs/chromedriver/downloads/version-selection

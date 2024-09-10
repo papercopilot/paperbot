@@ -24,12 +24,12 @@ def set_arguments():
     parser.add_argument('--use_openaccess', action='store_true', help='use data from openaccess', default=True)
     parser.add_argument('--use_gform', action='store_true', help='use data from google form', default=True)
     
-    parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview, disabled automatically when not using openreview data', default=False)
+    parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview, disabled automatically when not using openreview data', default=True)
     parser.add_argument('--fetch_site', action='store_true', help='fetch from site, disabled automatically when not using site data', default=False)
     parser.add_argument('--fetch_openaccess', action='store_true', help='fetch from openaccess, disabled automatically when not using openaccess data ', default=False)
     parser.add_argument('--fetch_gform', action='store_true', help='fetch from google form, disabled automatically when not using google form data', default=True)
     
-    parser.add_argument('--fetch_openreview_extra', action='store_true', help='fetch extra information on openreview', default=True)
+    parser.add_argument('--fetch_openreview_extra', action='store_true', help='fetch extra information on openreview', default=False)
     parser.add_argument('--fetch_site_extra', action='store_true', help='fetch extra information on site', default=True)
     parser.add_argument('--fetch_openaccess_extra', action='store_true', help='fetch extra information on openaccess', default=True)
     
@@ -58,11 +58,11 @@ if __name__ == "__main__":
     # args.confs = ['nips', 'icml', 'corl', 'emnlp'] # openreview + site
     # args.confs = ['cvpr', 'iccv'] # openaccess + site
     # args.confs = ['icml', 'acl', 'kdd', 'uai', 'acmmm'] # gform
-    args.confs = ['nips', 'emnlp']
-    # args.confs = ['corl']
+    # args.confs = ['nips', 'emnlp']
+    args.confs = ['corl']
     
     # args.years = [2023, 2022, 2021, 2020, 2019, 2018]
-    args.years = [2024]
+    # args.years = [2024]
     
     # check iclr 2024/23 summary
     # check cvpr 2022 site

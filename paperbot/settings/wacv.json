@@ -1,4 +1,18 @@
 {
+    "2025": {
+        "gform": {
+            "track": {
+                "main": "wacv"
+            },
+            "tname": {
+                "main": {
+                    "Accept": "Accept",
+                    "Revision": "Revision",
+                    "Reject": "Reject"
+                }
+            }
+        }
+    },
     "2024": {
         "site": {
             "domain": "https://wacv2024.thecvf.com/",

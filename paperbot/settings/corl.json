@@ -1,4 +1,48 @@
 {
+    "2024": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "robot-learning.org/CoRL",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept (Poster)": "Poster",
+                    "Accept (Oral)": "Oral",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "recommendation",
+                    "confidence": "confidence"
+                }
+            },
+            "rmap": {
+                "main": {
+                    "Strong Reject": "1",
+                    "Reject": "3",
+                    "Weak Reject": "4",
+                    "Boarderline": "5",
+                    "Weak Accept": "6",
+                    "Accept": "8",
+                    "Strong Accept": "10"
+                }
+            }
+        },
+        "site": {
+
+        }
+    },
     "2023": {
         "openreview": {
             "api": "api",

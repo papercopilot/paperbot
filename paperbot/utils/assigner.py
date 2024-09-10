@@ -143,6 +143,8 @@ class AssignerWACV(Assigner):
     def __new__(cls, botname, year=0):
         if botname == 'st':
             return cvfbot.StBotWACV
+        elif botname == 'gform':
+            return gformbot.GFormBotWACV
         elif botname == 'oa':
             return openaccessbot.OABotWACV
         elif botname == 'merge':

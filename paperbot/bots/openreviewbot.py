@@ -120,7 +120,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 def getvalue(key, rname, src):
                     if key not in rname: return '0'
                     k = rname[key] # get json key, which is updated every year
-                    if k in src: return getstr(src[k])
+                    if k in src: return str(getstr(src[k]))
                     else: return '0'
                     
                 # fill empty space with 0
