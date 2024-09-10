@@ -16,8 +16,7 @@
             },
             "tname": {
                 "main": {
-                    "Accept (Poster)": "Poster",
-                    "Accept (Oral)": "Oral",
+                    "Accept": "Accept",
                     "Reject": "Reject"
                 }
             },
