@@ -1,5 +1,16 @@
 {
     "2024": {
+        "site": {
+            "domain": "https://eccv2024.ecva.net/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "oral": "Oral"
+                    }
+                }
+            }
+        },
         "gform": {
             "track": {
                 "main": "eccv"

@@ -589,10 +589,60 @@ class StBotCVPR(CCBot):
         return ret
         
 class StBotECCV(CCBot):
-                        
-    def __init__(self, conf='', year=None, root_dir=''):
-        super().__init__(conf, year, root_dir)
+    
+    def process_card(self, e):
+        return super().process_card(e)
+    
+    def get_highest_status(self, status_new, status):
+        status_priority = super().get_highest_status()
         
+        status_new = status if not status_new else status_new
+        status_new = status_new if status_priority[status_new] > status_priority[status] else status
+        
+        return status_new
+    
+    @staticmethod
+    def process_url(url_paper, year):
+        
+        # get cookies to surpass login
+        cookies = chrome_cookies(url_paper)
+        
+        # open paper url to load status
+        response_paper = sitebot.SiteBot.session_request(url_paper, cookies=cookies)
+        tree_paper = html.fromstring(response_paper.content)
+        
+        # get the div element that contains a <a> element with text 'Abstract'
+        e_container = tree_paper.xpath("//div[./a[normalize-space()='Abstract']]")
+        if not e_container: return {}
+        
+        ret = {'site': url_paper,}
+        if year == 2024:
+
+            # get project page if exist
+            e_project = tree_paper.xpath("//a[normalize-space()='Project Page']")
+            url_project = '' if not e_project else e_project[0].xpath("./@href")[0]
+            
+            # get github link if exist
+            ret['github'] = '' if 'github.com' not in url_project else url_project
+            ret['project'] = '' if 'github.com' in url_project else url_project
+            
+            # find if there is a div with id='after-abstract-media'
+            e_after_abstract_media = tree_paper.xpath("//div[@id='after-abstract-media']")
+            ret['video'] = '' if not e_after_abstract_media else f'https://youtu.be/{e_after_abstract_media[0].xpath(".//iframe/@src")[0].split("/")[-1]}'
+            
+            e_url_pdf = tree_paper.xpath("//a[@title='Paper PDF']")
+            url_oa = '' if not e_url_pdf else e_url_pdf[0].xpath("./@href")[0]
+            ret['pdf'] = url_oa.replace('/html/', '/papers/').replace('.html', '.pdf')
+            
+            ret['oa'] = url_oa
+        
+            e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
+            ret['poster'] = '' if not e_poster else e_poster[0].xpath("./@href")[0]
+            
+            e_url_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
+            ret['openreview'] = '' if not e_url_openreview else e_url_openreview[0].xpath("./@href")[0]
+        
+        return ret
             
 class StBotICCV(CCBot):
                             

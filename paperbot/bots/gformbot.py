@@ -103,10 +103,11 @@ class GFormBot(sitebot.SiteBot):
         
             self.summarizer.paperlist = self.get_paperlist(track=track)
             
+            # TODO: hack now improve in the futhre
             if self._conf == 'eccv' and self._year == 2024:
-                # TODO: hack now improve in the futhre
-                # update paper ids from announced paper ids
+                # after the decision is announced, the paper id is available from official
                 
+                # update paper ids from announced paper ids
                 def update_paperlist_status(paperlist):
                     for i, p in enumerate(paperlist):
                         if p['id'] in self.df_extra['Paper ID'].values:
@@ -145,7 +146,51 @@ class GFormBot(sitebot.SiteBot):
                     self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
                     self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
                 
-                return
+                continue
+            
+            elif self._conf == 'nips' and self._year == 2024:
+                
+                # update paper ids from announced paper ids
+                def update_paperlist_status(paperlist):
+                    for i, p in enumerate(paperlist):
+                        if p['status'] == '':
+                            paperlist[i]['status'] = 'Unknown'
+                                
+                update_paperlist_status(self.summarizer.paperlist)
+                    
+                # update tids and get initial histogram
+                for k in self._args['tname'][track]:
+                    self.summarizer.update_summary(k, 0)
+                self.summarizer.update_summary('Withdraw', 0)
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
+        
+                # update paperlist and get rebuttal histogram
+                self.summarizer.paperlist = self.get_paperlist(track=track, mode='Rebuttal')
+                self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
+                update_paperlist_status(self.summarizer.paperlist)
+                update_paperlist_status(self.summarizer.paperlist_init)
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
+                self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf
+                self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence
+                self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum
+                
+                # update total and total0 since usually rebuttal data is less than initial data
+                for k in ['Total', 'Total0']:
+                    kid = self.summarizer.get_tid(k)
+                    if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                    if kid in self.summarizer.tier_hist:
+                        self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
+                        self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
+                        self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
+                    else:
+                        del self._summary_all_tracks[track]['tid'][kid]
+                        
+                continue
+                
+            # the following:
+            # for gform data that without explicit status, which is before decision, everything is marked as 'Active'
                     
             # update tids and get initial histogram
             self.summarizer.update_summary('Active', 0)
@@ -722,6 +767,7 @@ class GFormBotNIPS(GFormBot):
             else:
                 rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
                 confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+            status = row['[Optional] Final Decision']
         else:
             # remove redundant data
             # if row['Paper ID']: return ret
@@ -729,6 +775,7 @@ class GFormBotNIPS(GFormBot):
             paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
             rating = self.auto_split(row['Initial Ratings'])
             confidence = self.auto_split(row['Initial Confidence'])
+            status = row['[Optional] Final Decision']
         track = row['Track'].strip()
         
         # TODO: the keys in settings should be consistent with the track names, otherwise it needs an extra mapping step as follows, improve this in the future
@@ -759,7 +806,7 @@ class GFormBotNIPS(GFormBot):
         ret = {
             'id': paper_id,
             'track': track,
-            'status': 'Active',
+            'status': status, # force to 'Active' before decision
             'rating': {
                 'str': np2str(rating),
                 'avg': np2avg(rating)

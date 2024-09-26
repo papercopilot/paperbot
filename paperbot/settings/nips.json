@@ -8,8 +8,17 @@
                 "High School Projects": "nips"
             },
             "tname": {
-                "main": {},
-                "Datasets & Benchmarks": {},
+                "main": {
+                    "Poster": "Poster",
+                    "Spotlight": "Spotlight",
+                    "Reject": "Reject",
+                    "Unknown": "Unknown"
+                },
+                "Datasets & Benchmarks": {
+                    "Poster": "Poster",
+                    "Reject": "Reject",
+                    "Unknown": "Unknown"
+                },
                 "Creative AI": {},
                 "High School Projects": {}
             }
