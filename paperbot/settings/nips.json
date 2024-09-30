@@ -1,5 +1,26 @@
 {
     "2024": {
+        "site": {
+            "domain": "https://nips.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "oral": "Oral"
+                    }
+                },
+                "Datasets & Benchmarks": {
+                    "pages": {
+                        
+                    }
+                },
+                "Journal": {
+                    "pages": {
+                        
+                    }
+                }
+            }
+        },
         "gform": {
             "track": {
                 "main": "nips",

@@ -521,17 +521,20 @@ class Merger:
             's0': '', 's1': '', 's2': '', 's3': '',
             'su0': '', 'su1': '', 'su2': '', 'su3': '',
             'city': '', 'country': '',
+            'affs': '', 'authors': '',
         }
         
         # table in db
         return header
             
-    def count_affiliations(self, n_top=None):
+    def count_affiliations(self, status='', track='', n_top=None):
         
+        # TODO: count affiliations for each status
         counter = Counter()
         for paper in self._paperlist_merged:
             if 'aff' not in paper: continue
-            counter.update([aff.strip() for aff in paper['aff'].split(';') if aff.strip()])
+            if (not status or paper['status'] == status) and (not track or paper['track'] == track):
+                counter.update([aff.strip() for aff in paper['aff'].split(';') if aff.strip()])
             
         remove_keys = [
             'double-blind' # iclr
@@ -544,12 +547,14 @@ class Merger:
             
         return ';'.join([f'{aff}:{num}' for aff, num in counter.most_common(n_top)])
     
-    def count_authors(self, n_top=None):
+    def count_authors(self, status='', track='', n_top=None):
         
+        # TODO: count authors for each status
         couhter = Counter()
         for paper in self._paperlist_merged:
             if 'author' not in paper: continue
-            couhter.update([author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()])
+            if (not status or paper['status'] == status) and (not track or paper['track'] == track):
+                couhter.update([author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()])
         return ';'.join([f'{author}:{num}' for author, num in couhter.most_common(n_top)])
     
     def get_cid(self, track):
@@ -840,8 +845,8 @@ class Merger:
         # if there is only one key
         if len(stats) == 1:
             
-            
-            if self._conf == 'cvpr' and self._year == 2024 and False:
+            # hack for cvpr using good data
+            if self._conf == 'cvpr' and self._year == 2024:
     
                 # TODO: hack now, improve later
                 path_paperlist = '/home/jyang/projects/papercopilot/logs/paperlists/cvpr/cvpr2024.json'
@@ -870,9 +875,12 @@ class Merger:
                 self._paperlist_merged = paperlist
             
             
-            k = list(stats.keys())[0]
-            stats[k]['affs'] = self.count_affiliations()
-            stats[k]['authors'] = self.count_authors()
+        # count affs and authors for each track
+        # TODO: affs and authors should be counted for each status as well
+        for k in stats:
+            track = stats[k]['track']
+            stats[k]['affs'] = self.count_affiliations(track=track)
+            stats[k]['authors'] = self.count_authors(track=track)
                                     
         # return stats as list
         stats = dict(sorted(stats.items()))

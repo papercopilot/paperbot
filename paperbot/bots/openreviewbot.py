@@ -10,6 +10,7 @@ import pandas as pd
 import re
 import random
 import time
+from datetime import datetime
 
 from . import sitebot
 from ..utils import util, summarizer
@@ -82,6 +83,7 @@ class OpenreviewBot(sitebot.SiteBot):
         id = note['id']
         title = getstr(note['content']['title'])
         keywords = '' if 'keywords' not in note['content'] else getstr(note['content']['keywords'])
+        primary_area = '' if 'primary_area' not in note['content'] else getstr(note['content']['primary_area'])
         status = self.get_status(note, tier_name, decision_invitation)
         
         # process title
@@ -210,7 +212,7 @@ class OpenreviewBot(sitebot.SiteBot):
             'corr_rating_correctness': np2coef(rating, correctness),
         }
                 
-        return id, title, keywords, status, extra
+        return id, title, keywords, primary_area, status, extra
 
     def crawl(self, url, tid=None, track='', ivt='', offset=0, batch=1000):
         
@@ -230,7 +232,7 @@ class OpenreviewBot(sitebot.SiteBot):
             # process data here
             for note in tqdm(data['notes'], leave=False, desc='Processing'):
                 
-                id, title, keywords, status, extra = self.process_note(note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation)
+                id, title, keywords, primary_area, status, extra = self.process_note(note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation)
                 
                 # fill empty status, this need to be placed before redundancy check to avoid fill empty status
                 status = ivt if not status else status
@@ -246,6 +248,37 @@ class OpenreviewBot(sitebot.SiteBot):
                 # rename status by tiers if available, this need to be placed after redundancy check to avoid fill renamed status
                 status = status if (not tier_name or status not in tier_name) else tier_name[status]
                 
+                # get author profile including name, affiliation, and position
+                get_str_list = lambda x: x if not isinstance(x, dict) else x['value']
+                get_unique_list = lambda x: list(set(x))
+                list2str = lambda x, separator=';': separator.join([item for item in x if item]) # remove empty string
+                affs_name_on_submit = []
+                affs_domain_on_submit = []
+                position_on_submit = []
+                author_ids = get_str_list(note['content']['authorids'])
+                author_ids = [author_id for author_id in author_ids if re.match(r'^~.*\d+$', author_id)] # filter author_ids that match '^~.*\d+$'
+                author_ids = list2str(author_ids, separator=',')
+                profiles_url = f'https://api2.openreview.net/profiles?ids={author_ids}'
+                profiles_response = sitebot.SiteBot.session_request(profiles_url)
+                profiles = profiles_response.json()
+                
+                # check user's affiliation form history
+                if profiles and 'profiles' in profiles and profiles['profiles']:
+                    for profile in profiles['profiles']:
+                        history = profile['content'].get('history', [])
+                        year_on_submit = self._year - 1 # for iclr
+                        entry_on_submit = None
+                        for entry in history:
+                            start, end = entry.get('start', ''), entry.get('end', '')
+                            start = 0 if start is None or not start else int(start) # avoid None or ''
+                            end = datetime.now().year if end is None or not end else int(end)
+                            if start <= year_on_submit and end >= year_on_submit:
+                                entry_on_submit = entry
+                        if entry_on_submit:
+                            affs_name_on_submit.append(entry_on_submit['institution'].get('name', ''))
+                            affs_domain_on_submit.append(entry_on_submit['institution'].get('domain', ''))
+                            position_on_submit.append(entry_on_submit.get('position', ''))
+                    
                 # append
                 self._paperlist.append({
                     'id': id,
@@ -253,8 +286,12 @@ class OpenreviewBot(sitebot.SiteBot):
                     'track': track,
                     'status': status,
                     'keywords': keywords,
-                    'author': '',
-                    'aff': '',
+                    'primary_area': primary_area,
+                    'author': list2str(get_str_list(note['content']['authors'])),
+                    'authorids': list2str(get_str_list(note['content']['authorids'])),
+                    'aff': list2str(get_unique_list(affs_name_on_submit)),
+                    'aff_domain': list2str(get_unique_list(affs_domain_on_submit)),
+                    'position': list2str(position_on_submit),
                     
                     'rating': extra['rating']['str'],
                     'confidence': extra['confidence']['str'],
@@ -272,6 +309,9 @@ class OpenreviewBot(sitebot.SiteBot):
                     
                     'corr_rating_confidence': extra['corr_rating_confidence'],
                     'corr_rating_correctness': extra['corr_rating_correctness'],
+                    
+                    'project': '',
+                    'github': '',
                 })
             
             offset += batch
