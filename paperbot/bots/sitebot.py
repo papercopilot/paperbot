@@ -117,6 +117,11 @@ class StBotCORL(SiteBot):
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
+class StBotCOLM(SiteBot):
+    
+    def __init__(self, conf='', year=None, root_dir=''):
+        super().__init__(conf, year, root_dir)
+        
 class StBotEMNLP(SiteBot):
     
     def __init__(self, conf='', year=None, root_dir=''):

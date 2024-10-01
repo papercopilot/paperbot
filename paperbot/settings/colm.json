@@ -1,0 +1,31 @@
+{
+    "2024": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "colmweb.org/COLM",
+                "review": "Official_Review",
+                "decision": "Decision"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission",
+                    "Withdraw": "Conference/-/Withdrawn_Submission",
+                    "Desk Reject": "Conference/-/Desk_Rejected_Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "Accept": "Accept",
+                    "Reject": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        }
+    }
+}

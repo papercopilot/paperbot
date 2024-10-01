@@ -63,6 +63,17 @@ class AssignerCORL(Assigner):
         elif botname == 'merge':
             return merger.MergerCORL
         else: super().__new__(cls, botname)
+        
+class AssignerCOLM(Assigner):
+    
+    def __new__(cls, botname, year=0):
+        if botname == 'or':
+            return openreviewbot.ORBotCOLM
+        elif botname == 'st':
+            return sitebot.StBotCOLM
+        elif botname == 'merge':
+            return merger.MergerCOLM
+        else: super().__new__(cls, botname)
             
             
 class AssignerEMNLP(Assigner):

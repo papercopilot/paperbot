@@ -879,8 +879,8 @@ class Merger:
         # TODO: affs and authors should be counted for each status as well
         for k in stats:
             track = stats[k]['track']
-            stats[k]['affs'] = self.count_affiliations(track=track)
-            stats[k]['authors'] = self.count_authors(track=track)
+            stats[k]['affs'] = self.count_affiliations(track=track, n_top=200)
+            stats[k]['authors'] = self.count_authors(track=track, n_top=200)
                                     
         # return stats as list
         stats = dict(sorted(stats.items()))
@@ -1027,6 +1027,18 @@ class MergerICML(Merger):
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
 class MergerCORL(Merger):
+    
+    def merge_paper_site_openreview(self, p1, p2):
+        paper = super().merge_paper_site_openreview(p1, p2)
+        return paper
+    
+    def update_total(self, s, year, track, tier_num):
+        _, v = super().update_total(s, year, track, tier_num)
+        
+        s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
+        s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
+        
+class MergerCOLM(Merger):
     
     def merge_paper_site_openreview(self, p1, p2):
         paper = super().merge_paper_site_openreview(p1, p2)

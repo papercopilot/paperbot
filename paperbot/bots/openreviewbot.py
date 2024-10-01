@@ -181,7 +181,7 @@ class OpenreviewBot(sitebot.SiteBot):
         np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
         np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
-        keywords = np2str(keywords)
+        keywords = np2str(keywords) if isinstance(keywords, list) else keywords
         
         extra = {
             'rating': {
@@ -264,7 +264,18 @@ class OpenreviewBot(sitebot.SiteBot):
                 
                 # check user's affiliation form history
                 if profiles and 'profiles' in profiles and profiles['profiles']:
-                    for profile in profiles['profiles']:
+                    
+                    # sort the profiles in the order of note['content']['authorids']
+                    # Step 1: Create a mapping from ID to its index in desired_ids
+                    id_order = {id_: index for index, id_ in enumerate(get_str_list(note['content']['authorids']))}
+
+                    # Step 2: Sort the profiles using the mapping, handling missing IDs
+                    sorted_profiles = sorted(
+                        profiles['profiles'],
+                        key=lambda x: id_order.get(x['id'], float('inf'))
+                    )
+                    
+                    for profile in sorted_profiles:
                         history = profile['content'].get('history', [])
                         year_on_submit = self._year - 1 # for iclr
                         entry_on_submit = None
@@ -538,6 +549,31 @@ class ORBotCORL(OpenreviewBot):
         if status: self.summarizer.update_summary(status)
         return status
     
+    
+class ORBotCOLM(OpenreviewBot):
+    
+    def get_status(self, note, tier_name, decision_invitation):
+    
+        getstr = lambda x: x if not isinstance(x, dict) else x['value']
+        for reply in note['details']['directReplies']:
+            reply_invitation = reply['invitation'] if 'invitation' in reply else reply['invitations'][0]
+            
+            if decision_invitation in reply_invitation:
+                if 'decision' in reply['content']: status = getstr(reply['content']['decision'])
+                elif 'recommendation' in reply['content']: status = getstr(reply['content']['recommendation'])
+
+        if status: self.summarizer.update_summary(status)
+        return status
+    
+    def process_note(self, note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation):
+        ret = super().process_note(note, decision_invitation, tier_name, review_invitation, review_map, review_name, meta_invitation)
+
+        if self._year == 2024:
+            id, title, keywords, primary_area, status, extra = ret
+            keywords = ';'.join([keyword.strip() for keyword in keywords.split(',')]) # replace ',' with ';' and remove white spaces
+            
+        return id, title, keywords, primary_area, status, extra
+        
 class ORBotEMNLP(OpenreviewBot):
     
     def get_status(self, note, tier_name, decision_invitation):
