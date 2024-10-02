@@ -300,8 +300,8 @@ class OpenreviewBot(sitebot.SiteBot):
                     'primary_area': primary_area,
                     'author': list2str(get_str_list(note['content']['authors'])),
                     'authorids': list2str(get_str_list(note['content']['authorids'])),
-                    'aff': list2str(get_unique_list(affs_name_on_submit)),
-                    'aff_domain': list2str(get_unique_list(affs_domain_on_submit)),
+                    'aff': list2str(affs_name_on_submit), # don't remove duplicates to keep author and affliation in some dimension
+                    'aff_domain': list2str(affs_domain_on_submit),
                     'position': list2str(position_on_submit),
                     
                     'rating': extra['rating']['str'],

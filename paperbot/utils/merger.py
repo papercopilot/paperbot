@@ -521,41 +521,165 @@ class Merger:
             's0': '', 's1': '', 's2': '', 's3': '',
             'su0': '', 'su1': '', 'su2': '', 'su3': '',
             'city': '', 'country': '',
-            'affs': '', 'authors': '',
+            'authors': '', 'authors_first': '', 'authors_last': '',
+            'authors_id': '', 'authors_id_first': '', 'authors_id_last': '',
+            'affs': '', 'affs_unique': '',  'affs_first': '', 'affs_last': '',
+            'pos': '', 'pos_unique': '', 'pos_first': '', 'pos_last': '',
+            'keywords': '', 'keywords_first': '',
         }
         
         # table in db
         return header
             
-    def count_affiliations(self, status='', track='', n_top=None):
-        
-        # TODO: count affiliations for each status
+    def count_affiliations(self, status='', track='', n_top=None, mode='affs_all'):
         counter = Counter()
         for paper in self._paperlist_merged:
-            if 'aff' not in paper: continue
+            if 'aff' not in paper:
+                continue
             if (not status or paper['status'] == status) and (not track or paper['track'] == track):
-                counter.update([aff.strip() for aff in paper['aff'].split(';') if aff.strip()])
-            
+                if mode == 'affs_all':
+                    affs = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
+                elif mode == 'affs_unique_per_record':
+                    affs = set([aff.strip() for aff in paper['aff'].split(';') if aff.strip()])
+                elif mode == 'affs_first_only':
+                    affs_list = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
+                    if affs_list:
+                        affs = [affs_list[0]]
+                    else:
+                        continue
+                elif mode == 'affs_last_only':
+                    affs_list = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
+                    if affs_list:
+                        affs = [affs_list[-1]]
+                    else:
+                        continue
+                else:
+                    raise ValueError(f"Invalid mode: {mode}")
+                counter.update(affs)
+        
         remove_keys = [
-            'double-blind' # iclr
+            'double-blind'  # iclr
         ]
         
         for k in list(counter.keys()):
             for remove_key in remove_keys:
-                if remove_key in k: # check if the top affiliation conatins the remove keys
+                if remove_key in k:
                     del counter[k]
-            
+        
         return ';'.join([f'{aff}:{num}' for aff, num in counter.most_common(n_top)])
     
-    def count_authors(self, status='', track='', n_top=None):
+    def count_authors(self, status='', track='', n_top=None, mode='authors_all'):
+        # Initialize a counter to keep track of author IDs or names
+        counter_ids = Counter()
+        # Dictionary to map author IDs back to author names
+        authorid_to_name = {}
         
-        # TODO: count authors for each status
-        couhter = Counter()
+        # Iterate over each paper in the merged paper list
         for paper in self._paperlist_merged:
-            if 'author' not in paper: continue
+            # Continue to next paper if 'author' field is missing
+            if 'author' not in paper:
+                continue
+            # Check if the paper matches the specified status and track filters
             if (not status or paper['status'] == status) and (not track or paper['track'] == track):
-                couhter.update([author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()])
-        return ';'.join([f'{author}:{num}' for author, num in couhter.most_common(n_top)])
+                # Split the 'author' field into a list of author names
+                authors = [author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()]
+                # Split the 'authorids' field into a list of author IDs if available
+                if 'authorids' in paper and paper['authorids']:
+                    authorids = [authorid.strip() for authorid in paper['authorids'].replace(',', ';').split(';') if authorid.strip()]
+                    # Check if the lengths of authors and authorids are the same
+                    if len(authors) != len(authorids):
+                        # Handle the mismatch, for example, issue a warning and skip this paper
+                        print(f"Warning: Mismatch in number of authors and author IDs in paper: {paper.get('title', 'Unknown Title')}")
+                        continue
+                else:
+                    # If 'authorids' is not available, use None for each author
+                    authorids = [None] * len(authors)
+        
+                # Determine which authors to consider based on the specified mode
+                if mode == 'authors_all':
+                    # Use all authors in the list
+                    indices = range(len(authors))
+                elif mode == 'author_first_only':
+                    # Use only the first author
+                    indices = [0] if authors else []
+                elif mode == 'authors_last_only':
+                    # Use only the last author
+                    indices = [len(authors) - 1] if authors else []
+                else:
+                    # Raise an error if an invalid mode is specified
+                    raise ValueError(f"Invalid mode: {mode}")
+        
+                # Iterate over the selected authors based on the mode
+                for idx in indices:
+                    author = authors[idx]
+                    # Get the corresponding author ID if available
+                    authorid = authorids[idx] if idx < len(authorids) else None
+                    if authorid:
+                        # Update the counter using the author ID
+                        counter_ids.update([authorid])
+                        # Map the author ID to the author name
+                        authorid_to_name[authorid] = author
+                    else:
+                        # If author ID is not available, use the author name
+                        counter_ids.update([author])
+                        authorid_to_name[author] = author
+        
+        # Get the most common authors up to the specified limit
+        authorid_counts = counter_ids.most_common(n_top)
+        # Create a string of author IDs and their counts
+        id_string = ';'.join([f'{authorid}:{count}' for authorid, count in authorid_counts])
+        # Create a string of author names and their counts
+        name_string = ';'.join([f'{authorid_to_name[authorid]}:{count}' for authorid, count in authorid_counts])
+        
+        # Return both the name string and the ID string
+        return name_string, id_string
+
+    
+    def count_positions(self, status='', track='', n_top=None, mode='position_all'):
+        counter = Counter()
+        for paper in self._paperlist_merged:
+            if 'position' not in paper:
+                continue
+            if (not status or paper['status'] == status) and (not track or paper['track'] == track):
+                if mode == 'position_all':
+                    positions = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
+                elif mode == 'position_unique_per_record':
+                    positions = set([pos.strip() for pos in paper['position'].split(';') if pos.strip()])
+                elif mode == 'position_first_only':
+                    pos_list = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
+                    if pos_list:
+                        positions = [pos_list[0]]
+                    else:
+                        continue
+                elif mode == 'position_last_only':
+                    pos_list = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
+                    if pos_list:
+                        positions = [pos_list[-1]]
+                    else:
+                        continue
+                else:
+                    raise ValueError(f"Invalid mode: {mode}")
+                counter.update(positions)
+        return ';'.join([f'{pos}:{num}' for pos, num in counter.most_common(n_top)])
+    
+    def count_keywords(self, status='', track='', n_top=None, mode='keywords_all'):
+        counter = Counter()
+        for paper in self._paperlist_merged:
+            if 'keywords' not in paper:
+                continue
+            if (not status or paper['status'] == status) and (not track or paper['track'] == track):
+                if mode == 'keywords_all':
+                    keywords = [kw.strip() for kw in paper['keywords'].split(';') if kw.strip()]
+                elif mode == 'keywords_first':
+                    kw_list = [kw.strip() for kw in paper['keywords'].split(';') if kw.strip()]
+                    if kw_list:
+                        keywords = [kw_list[0]]
+                    else:
+                        continue
+                else:
+                    raise ValueError(f"Invalid mode: {mode}")
+                counter.update(keywords)
+        return ';'.join([f'{kw}:{num}' for kw, num in counter.most_common(n_top)])
     
     def get_cid(self, track):
         f = filter(str.isalpha, track[:4])
@@ -877,10 +1001,25 @@ class Merger:
             
         # count affs and authors for each track
         # TODO: affs and authors should be counted for each status as well
+        n_top = 200
         for k in stats:
             track = stats[k]['track']
-            stats[k]['affs'] = self.count_affiliations(track=track, n_top=200)
-            stats[k]['authors'] = self.count_authors(track=track, n_top=200)
+            tier_order = stats[k]['t_order']
+            
+            stats[k]['authors'], stats[k]['authors_id'] = self.count_authors(track=track, n_top=n_top, mode='authors_all')
+            stats[k]['authors_first'], stats[k]['authors_id_first'] = self.count_authors(track=track, n_top=n_top, mode='author_first_only')
+            stats[k]['authors_last'], stats[k]['authors_id_last'] = self.count_authors(track=track, n_top=n_top, mode='authors_last_only')
+            stats[k]['affs'] = self.count_affiliations(track=track, n_top=n_top, mode='affs_all')
+            stats[k]['affs_unique'] = self.count_affiliations(track=track, n_top=n_top, mode='affs_unique_per_record')
+            stats[k]['affs_first'] = self.count_affiliations(track=track, n_top=n_top, mode='affs_first_only')
+            stats[k]['affs_last'] = self.count_affiliations(track=track, n_top=n_top, mode='affs_last_only')
+            stats[k]['pos'] = self.count_positions(track=track, n_top=n_top, mode='position_all')
+            stats[k]['pos_unique'] = self.count_positions(track=track, n_top=n_top, mode='position_unique_per_record')
+            stats[k]['pos_first'] = self.count_positions(track=track, n_top=n_top, mode='position_first_only')
+            stats[k]['pos_last'] = self.count_positions(track=track, n_top=n_top, mode='position_last_only')
+            stats[k]['keywords'] = self.count_keywords(track=track, n_top=n_top, mode='keywords_all')
+            stats[k]['keywords_first'] = self.count_keywords(track=track, n_top=n_top, mode='keywords_first')
+            
                                     
         # return stats as list
         stats = dict(sorted(stats.items()))
