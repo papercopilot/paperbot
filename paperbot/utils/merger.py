@@ -531,155 +531,529 @@ class Merger:
         # table in db
         return header
             
-    def count_affiliations(self, status='', track='', n_top=None, mode='affs_all'):
-        counter = Counter()
+    def count_affiliations(self, statuses=None, track='', n_top=None, mode='affs_all'):
+        """
+        Counts the number of papers associated with each affiliation, optionally classified by statuses.
+
+        Parameters:
+        - statuses (list or None): A list of statuses to filter and classify papers.
+        If None or an empty list, the function counts affiliations without classifying by status.
+        - track (str): A specific track to filter papers. If empty, all tracks are considered.
+        - n_top (int or None): The number of top affiliations to return based on the total count. If None, all affiliations are returned.
+        - mode (str): Determines how affiliations are counted:
+            - 'affs_all': Counts all affiliations listed in each paper.
+            - 'affs_unique_per_record': Counts each unique affiliation once per paper.
+            - 'affs_first_only': Counts only the first affiliation listed in each paper.
+            - 'affs_last_only': Counts only the last affiliation listed in each paper.
+
+        Returns:
+        - aff_string_by_status (str): A semicolon-separated string of affiliations with their counts.
+        Format when statuses are provided: 'Affiliation:TotalCount:Status0Count,Status1Count,...'.
+        Format when statuses are not provided: 'Affiliation:TotalCount'.
+
+        Note:
+        - The function removes certain unwanted affiliations (e.g., 'double-blind') before counting.
+
+        Example:
+        >>> aff_string_by_status = count_affiliations(
+                statuses=['accepted', 'rejected'],
+                mode='affs_all'
+            )
+        >>> print(aff_string_by_status)
+        'University A:10:6,4;Institute B:8:5,3'
+        """
+        # Initialize a dictionary to keep counts per affiliation
+        counts = {}
+
+        # If statuses is None or an empty list, we count affiliations without status classification
+        classify_by_status = statuses is not None and len(statuses) > 0
+
+        # Iterate over each paper in the merged paper list
         for paper in self._paperlist_merged:
+            # Continue to next paper if 'aff' field is missing
             if 'aff' not in paper:
                 continue
-            if (not status or paper['status'] == status) and (not track or paper['track'] == track):
-                if mode == 'affs_all':
-                    affs = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
-                elif mode == 'affs_unique_per_record':
-                    affs = set([aff.strip() for aff in paper['aff'].split(';') if aff.strip()])
-                elif mode == 'affs_first_only':
-                    affs_list = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
-                    if affs_list:
-                        affs = [affs_list[0]]
+            # Check if the paper matches the specified track filter
+            if track and paper.get('track') != track:
+                continue
+
+            # If classifying by status, get the paper's status
+            paper_status = paper.get('status') if classify_by_status else None
+
+            # If classifying by status, continue if the paper's status is not in the statuses list
+            if classify_by_status and paper_status not in statuses:
+                continue
+
+            # Extract affiliations based on the selected mode
+            if mode == 'affs_all':
+                affs = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
+            elif mode == 'affs_unique_per_record':
+                affs = set([aff.strip() for aff in paper['aff'].split(';') if aff.strip()])
+            elif mode == 'affs_first_only':
+                affs_list = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
+                affs = [affs_list[0]] if affs_list else []
+            elif mode == 'affs_last_only':
+                affs_list = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
+                affs = [affs_list[-1]] if affs_list else []
+            else:
+                raise ValueError(f"Invalid mode: {mode}")
+
+            # Update counts for each affiliation
+            for aff in affs:
+                if aff not in counts:
+                    if classify_by_status:
+                        # Initialize a dictionary to count papers per status
+                        counts[aff] = {status: 0 for status in statuses}
                     else:
-                        continue
-                elif mode == 'affs_last_only':
-                    affs_list = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
-                    if affs_list:
-                        affs = [affs_list[-1]]
-                    else:
-                        continue
+                        # Initialize total count only if not classifying by status
+                        counts[aff] = 0
+
+                # Increment the count
+                if classify_by_status:
+                    counts[aff][paper_status] += 1
                 else:
-                    raise ValueError(f"Invalid mode: {mode}")
-                counter.update(affs)
+                    counts[aff] += 1
+
+        # Remove unwanted affiliations (e.g., 'double-blind')
+        remove_keys = ['double-blind']
+        for remove_key in remove_keys:
+            counts = {k: v for k, v in counts.items() if remove_key not in k}
+
+        # Prepare the output strings
+        # Create a list of (affiliation, total count) tuples
+        affiliation_total_counts = []
         
-        remove_keys = [
-            'double-blind'  # iclr
-        ]
+        for aff, count_data in counts.items():
+            if classify_by_status:
+                # Calculate the total count by summing over all statuses
+                total_count = sum(count_data.values())
+            else:
+                # Total count is directly stored when not classifying by status
+                total_count = count_data
+            affiliation_total_counts.append((aff, total_count))
+
+        # Sort the affiliations by total count in descending order
+        affiliation_total_counts.sort(key=lambda x: x[1], reverse=True)
+
+        # Apply the n_top limit if specified
+        if n_top is not None:
+            affiliation_total_counts = affiliation_total_counts[:n_top]
+
+        # Build the output strings
+        aff_strings = []
         
-        for k in list(counter.keys()):
-            for remove_key in remove_keys:
-                if remove_key in k:
-                    del counter[k]
-        
-        return ';'.join([f'{aff}:{num}' for aff, num in counter.most_common(n_top)])
+        for aff, total_count in affiliation_total_counts:
+            if classify_by_status:
+                # Create a list of counts corresponding to each status
+                status_counts = counts[aff]
+                counts_list = [str(status_counts.get(status, 0)) for status in statuses]
+                counts_str = f':{",".join(counts_list)}'
+            else:
+                # No status classification, so only the total count is used
+                counts_str = ''
+            
+            # Append the formatted string to the list
+            aff_strings.append(f'{aff}:{total_count}{counts_str}')
+
+        # Join the list into a semicolon-separated string
+        aff_string_by_status = ';'.join(aff_strings)
+
+        # Return the affiliation string
+        return aff_string_by_status
+
     
-    def count_authors(self, status='', track='', n_top=None, mode='authors_all'):
-        # Initialize a counter to keep track of author IDs or names
-        counter_ids = Counter()
+    def count_authors(self, statuses=None, track='', n_top=None, mode='authors_all'):
+        """
+        Counts the number of papers associated with each author, optionally classified by statuses.
+
+        Parameters:
+        - statuses (list or None): A list of statuses to filter and classify papers (e.g., ['accepted', 'rejected']).
+        If None or an empty list, the function counts authors without classifying by status.
+        - track (str): A specific track to filter papers. If empty, all tracks are considered.
+        - n_top (int or None): The number of top authors to return based on the total count. If None, all authors are returned.
+        - mode (str): Determines which authors to count:
+            - 'authors_all': Counts all authors listed in each paper.
+            - 'author_first_only': Counts only the first author of each paper.
+            - 'authors_last_only': Counts only the last author of each paper.
+
+        Returns:
+        - name_string_by_status (str): A semicolon-separated string of author names with their counts.
+        Format when statuses are provided: 'AuthorName:TotalCount:Status0Count,Status1Count,...'.
+        Format when statuses are not provided: 'AuthorName:TotalCount'.
+        - id_string_by_status (str): A semicolon-separated string of author IDs with their counts.
+        Format is similar to name_string_by_status.
+
+        Example:
+        >>> name_string_by_status, id_string_by_status = count_authors(
+                statuses=['accepted', 'rejected'],
+                mode='authors_all'
+            )
+        >>> print(name_string_by_status)
+        'Alice:5:3,2;Bob:4:1,3;Charlie:3:2,1'
+        """
+        # Initialize a dictionary to keep counts per author
+        counts = {}
         # Dictionary to map author IDs back to author names
         authorid_to_name = {}
+        
+        # If statuses is None or an empty list, we count authors without status classification
+        classify_by_status = statuses is not None and len(statuses) > 0
         
         # Iterate over each paper in the merged paper list
         for paper in self._paperlist_merged:
             # Continue to next paper if 'author' field is missing
             if 'author' not in paper:
                 continue
-            # Check if the paper matches the specified status and track filters
-            if (not status or paper['status'] == status) and (not track or paper['track'] == track):
-                # Split the 'author' field into a list of author names
-                authors = [author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()]
-                # Split the 'authorids' field into a list of author IDs if available
-                if 'authorids' in paper and paper['authorids']:
-                    authorids = [authorid.strip() for authorid in paper['authorids'].replace(',', ';').split(';') if authorid.strip()]
-                    # Check if the lengths of authors and authorids are the same
-                    if len(authors) != len(authorids):
-                        # Handle the mismatch, for example, issue a warning and skip this paper
-                        print(f"Warning: Mismatch in number of authors and author IDs in paper: {paper.get('title', 'Unknown Title')}")
-                        continue
-                else:
-                    # If 'authorids' is not available, use None for each author
-                    authorids = [None] * len(authors)
+            # Check if the paper matches the specified track filter
+            if track and paper.get('track') != track:
+                continue
+            
+            # If classifying by status, get the paper's status
+            paper_status = paper.get('status') if classify_by_status else None
+            
+            # If classifying by status, continue if the paper's status is not in the statuses list
+            if classify_by_status and paper_status not in statuses:
+                continue
+            
+            # Split the 'author' field into a list of author names
+            authors = [author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()]
+            
+            # Split the 'authorids' field into a list of author IDs if available
+            if 'authorids' in paper:
+                authorids = [authorid.strip() for authorid in paper['authorids'].replace(',', ';').split(';') if authorid.strip()]
+                # Check if the lengths of authors and authorids are the same
+                if len(authors) != len(authorids):
+                    # Handle the mismatch, issue a warning and skip this paper
+                    print(f"Warning: Mismatch in number of authors and author IDs in paper: {paper.get('title', 'Unknown Title')}")
+                    continue
+            else:
+                # If 'authorids' is not available, use None for each author
+                authorids = [None] * len(authors)
         
-                # Determine which authors to consider based on the specified mode
-                if mode == 'authors_all':
-                    # Use all authors in the list
-                    indices = range(len(authors))
-                elif mode == 'author_first_only':
-                    # Use only the first author
-                    indices = [0] if authors else []
-                elif mode == 'authors_last_only':
-                    # Use only the last author
-                    indices = [len(authors) - 1] if authors else []
-                else:
-                    # Raise an error if an invalid mode is specified
-                    raise ValueError(f"Invalid mode: {mode}")
+            # Determine which authors to consider based on the specified mode
+            if mode == 'authors_all':
+                # Use all authors in the list
+                indices = range(len(authors))
+            elif mode == 'author_first_only':
+                # Use only the first author
+                indices = [0] if authors else []
+            elif mode == 'authors_last_only':
+                # Use only the last author
+                indices = [len(authors) - 1] if authors else []
+            else:
+                # Raise an error if an invalid mode is specified
+                raise ValueError(f"Invalid mode: {mode}")
         
-                # Iterate over the selected authors based on the mode
-                for idx in indices:
-                    author = authors[idx]
-                    # Get the corresponding author ID if available
-                    authorid = authorids[idx] if idx < len(authorids) else None
-                    if authorid:
-                        # Update the counter using the author ID
-                        counter_ids.update([authorid])
-                        # Map the author ID to the author name
-                        authorid_to_name[authorid] = author
+            # Iterate over the selected authors based on the mode
+            for idx in indices:
+                author = authors[idx]
+                # Get the corresponding author ID if available
+                authorid = authorids[idx] if idx < len(authorids) else None
+                key = authorid if authorid else author  # Use authorid if available, else use author name
+                
+                # Initialize counts for the author if not already done
+                if key not in counts:
+                    if classify_by_status:
+                        # Initialize a dictionary to count papers per status
+                        counts[key] = {status: 0 for status in statuses}
                     else:
-                        # If author ID is not available, use the author name
-                        counter_ids.update([author])
-                        authorid_to_name[author] = author
+                        # Initialize total count only if not classifying by status
+                        counts[key] = 0
+                    authorid_to_name[key] = author
+                
+                # Increment the count
+                if classify_by_status:
+                    counts[key][paper_status] += 1
+                else:
+                    counts[key] += 1
         
-        # Get the most common authors up to the specified limit
-        authorid_counts = counter_ids.most_common(n_top)
-        # Create a string of author IDs and their counts
-        id_string = ';'.join([f'{authorid}:{count}' for authorid, count in authorid_counts])
-        # Create a string of author names and their counts
-        name_string = ';'.join([f'{authorid_to_name[authorid]}:{count}' for authorid, count in authorid_counts])
+        # Prepare the output strings
+        # Create a list of (author ID, total count) tuples
+        authorid_total_counts = []
+        
+        for key, count_data in counts.items():
+            if classify_by_status:
+                # Calculate the total count by summing over all statuses
+                total_count = sum(count_data.values())
+            else:
+                # Total count is directly stored when not classifying by status
+                total_count = count_data
+            authorid_total_counts.append((key, total_count))
+        
+        # Sort the authors by total count in descending order
+        authorid_total_counts.sort(key=lambda x: x[1], reverse=True)
+        
+        # Apply the n_top limit if specified
+        if n_top is not None:
+            authorid_total_counts = authorid_total_counts[:n_top]
+        
+        # Build the output strings
+        id_strings = []
+        name_strings = []
+        
+        for key, total_count in authorid_total_counts:
+            if classify_by_status:
+                # Create a list of counts corresponding to each status
+                status_counts = counts[key]
+                counts_list = [str(status_counts.get(status, 0)) for status in statuses]
+                counts_str = f':{",".join(counts_list)}'
+            else:
+                # No status classification, so only the total count is used
+                counts_str = ''
+            
+            # Get the author name from the mapping
+            author_name = authorid_to_name.get(key, key)
+            
+            # Append the formatted strings to the lists
+            id_strings.append(f'{key}:{total_count}{counts_str}')
+            name_strings.append(f'{author_name}:{total_count}{counts_str}')
+        
+        # Join the lists into semicolon-separated strings
+        id_string_by_status = ';'.join(id_strings)
+        name_string_by_status = ';'.join(name_strings)
         
         # Return both the name string and the ID string
-        return name_string, id_string
+        return name_string_by_status, id_string_by_status
 
     
-    def count_positions(self, status='', track='', n_top=None, mode='position_all'):
-        counter = Counter()
+    def count_positions(self, statuses=None, track='', n_top=None, mode='position_all'):
+        """
+        Counts the number of papers associated with each position, optionally classified by statuses.
+
+        Parameters:
+        - statuses (list or None): A list of statuses to filter and classify papers.
+        If None or an empty list, the function counts positions without classifying by status.
+        - track (str): A specific track to filter papers. If empty, all tracks are considered.
+        - n_top (int or None): The number of top positions to return based on the total count. If None, all positions are returned.
+        - mode (str): Determines how positions are counted:
+            - 'position_all': Counts all positions listed in each paper.
+            - 'position_unique_per_record': Counts each unique position once per paper.
+            - 'position_first_only': Counts only the first position listed in each paper.
+            - 'position_last_only': Counts only the last position listed in each paper.
+
+        Returns:
+        - pos_string_by_status (str): A semicolon-separated string of positions with their counts.
+        Format when statuses are provided: 'Position:TotalCount:Status0Count,Status1Count,...'.
+        Format when statuses are not provided: 'Position:TotalCount'.
+
+        Example:
+        >>> pos_string_by_status = count_positions(
+                statuses=['accepted', 'rejected'],
+                mode='position_all'
+            )
+        >>> print(pos_string_by_status)
+        'Professor:12:7,5;Researcher:9:5,4;Student:6:3,3'
+        """
+        # Initialize a dictionary to keep counts per position
+        counts = {}
+
+        # If statuses is None or an empty list, we count positions without status classification
+        classify_by_status = statuses is not None and len(statuses) > 0
+
+        # Iterate over each paper in the merged paper list
         for paper in self._paperlist_merged:
+            # Continue to next paper if 'position' field is missing
             if 'position' not in paper:
                 continue
-            if (not status or paper['status'] == status) and (not track or paper['track'] == track):
-                if mode == 'position_all':
-                    positions = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
-                elif mode == 'position_unique_per_record':
-                    positions = set([pos.strip() for pos in paper['position'].split(';') if pos.strip()])
-                elif mode == 'position_first_only':
-                    pos_list = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
-                    if pos_list:
-                        positions = [pos_list[0]]
+            # Check if the paper matches the specified track filter
+            if track and paper.get('track') != track:
+                continue
+
+            # If classifying by status, get the paper's status
+            paper_status = paper.get('status') if classify_by_status else None
+
+            # If classifying by status, continue if the paper's status is not in the statuses list
+            if classify_by_status and paper_status not in statuses:
+                continue
+
+            # Extract positions based on the selected mode
+            if mode == 'position_all':
+                positions = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
+            elif mode == 'position_unique_per_record':
+                positions = set([pos.strip() for pos in paper['position'].split(';') if pos.strip()])
+            elif mode == 'position_first_only':
+                pos_list = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
+                positions = [pos_list[0]] if pos_list else []
+            elif mode == 'position_last_only':
+                pos_list = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
+                positions = [pos_list[-1]] if pos_list else []
+            else:
+                raise ValueError(f"Invalid mode: {mode}")
+
+            # Update counts for each position
+            for pos in positions:
+                if pos not in counts:
+                    if classify_by_status:
+                        # Initialize a dictionary to count papers per status
+                        counts[pos] = {status: 0 for status in statuses}
                     else:
-                        continue
-                elif mode == 'position_last_only':
-                    pos_list = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
-                    if pos_list:
-                        positions = [pos_list[-1]]
-                    else:
-                        continue
+                        # Initialize total count only if not classifying by status
+                        counts[pos] = 0
+
+                # Increment the count
+                if classify_by_status:
+                    counts[pos][paper_status] += 1
                 else:
-                    raise ValueError(f"Invalid mode: {mode}")
-                counter.update(positions)
-        return ';'.join([f'{pos}:{num}' for pos, num in counter.most_common(n_top)])
+                    counts[pos] += 1
+
+        # Prepare the output strings
+        # Create a list of (position, total count) tuples
+        position_total_counts = []
+
+        for pos, count_data in counts.items():
+            if classify_by_status:
+                # Calculate the total count by summing over all statuses
+                total_count = sum(count_data.values())
+            else:
+                # Total count is directly stored when not classifying by status
+                total_count = count_data
+            position_total_counts.append((pos, total_count))
+
+        # Sort the positions by total count in descending order
+        position_total_counts.sort(key=lambda x: x[1], reverse=True)
+
+        # Apply the n_top limit if specified
+        if n_top is not None:
+            position_total_counts = position_total_counts[:n_top]
+
+        # Build the output strings
+        pos_strings = []
+
+        for pos, total_count in position_total_counts:
+            if classify_by_status:
+                # Create a list of counts corresponding to each status
+                status_counts = counts[pos]
+                counts_list = [str(status_counts.get(status, 0)) for status in statuses]
+                counts_str = f':{",".join(counts_list)}'
+            else:
+                # No status classification, so only the total count is used
+                counts_str = ''
+
+            # Append the formatted string to the list
+            pos_strings.append(f'{pos}:{total_count}{counts_str}')
+
+        # Join the list into a semicolon-separated string
+        pos_string_by_status = ';'.join(pos_strings)
+
+        # Return the position string
+        return pos_string_by_status
+
     
-    def count_keywords(self, status='', track='', n_top=None, mode='keywords_all'):
-        counter = Counter()
+    def count_keywords(self, statuses=None, track='', n_top=None, mode='keywords_all'):
+        """
+        Counts the number of papers associated with each keyword, optionally classified by statuses.
+
+        Parameters:
+        - statuses (list or None): A list of statuses to filter and classify papers.
+        If None or an empty list, the function counts keywords without classifying by status.
+        - track (str): A specific track to filter papers. If empty, all tracks are considered.
+        - n_top (int or None): The number of top keywords to return based on the total count. If None, all keywords are returned.
+        - mode (str): Determines how keywords are counted:
+            - 'keywords_all': Counts all keywords listed in each paper.
+            - 'keywords_first': Counts only the first keyword listed in each paper.
+
+        Returns:
+        - kw_string_by_status (str): A semicolon-separated string of keywords with their counts.
+        Format when statuses are provided: 'Keyword:TotalCount:Status0Count,Status1Count,...'.
+        Format when statuses are not provided: 'Keyword:TotalCount'.
+
+        Example:
+        >>> kw_string_by_status = count_keywords(
+                statuses=['accepted', 'rejected'],
+                mode='keywords_all'
+            )
+        >>> print(kw_string_by_status)
+        'Machine Learning:15:9,6;Deep Learning:10:6,4;Computer Vision:8:5,3'
+        """
+        
+        # Initialize a dictionary to keep counts per keyword
+        counts = {}
+
+        # If statuses is None or an empty list, we count keywords without status classification
+        classify_by_status = statuses is not None and len(statuses) > 0
+
+        # Iterate over each paper in the merged paper list
         for paper in self._paperlist_merged:
+            # Continue to next paper if 'keywords' field is missing
             if 'keywords' not in paper:
                 continue
-            if (not status or paper['status'] == status) and (not track or paper['track'] == track):
-                if mode == 'keywords_all':
-                    keywords = [kw.strip() for kw in paper['keywords'].split(';') if kw.strip()]
-                elif mode == 'keywords_first':
-                    kw_list = [kw.strip() for kw in paper['keywords'].split(';') if kw.strip()]
-                    if kw_list:
-                        keywords = [kw_list[0]]
+            # Check if the paper matches the specified track filter
+            if track and paper.get('track') != track:
+                continue
+
+            # If classifying by status, get the paper's status
+            paper_status = paper.get('status') if classify_by_status else None
+
+            # If classifying by status, continue if the paper's status is not in the statuses list
+            if classify_by_status and paper_status not in statuses:
+                continue
+
+            # Extract keywords based on the selected mode
+            if mode == 'keywords_all':
+                keywords = [kw.strip() for kw in paper['keywords'].split(';') if kw.strip()]
+            elif mode == 'keywords_first':
+                kw_list = [kw.strip() for kw in paper['keywords'].split(';') if kw.strip()]
+                keywords = [kw_list[0]] if kw_list else []
+            else:
+                raise ValueError(f"Invalid mode: {mode}")
+
+            # Update counts for each keyword
+            for kw in keywords:
+                if kw not in counts:
+                    if classify_by_status:
+                        # Initialize a dictionary to count papers per status
+                        counts[kw] = {status: 0 for status in statuses}
                     else:
-                        continue
+                        # Initialize total count only if not classifying by status
+                        counts[kw] = 0
+
+                # Increment the count
+                if classify_by_status:
+                    counts[kw][paper_status] += 1
                 else:
-                    raise ValueError(f"Invalid mode: {mode}")
-                counter.update(keywords)
-        return ';'.join([f'{kw}:{num}' for kw, num in counter.most_common(n_top)])
+                    counts[kw] += 1
+
+        # Prepare the output strings
+        # Create a list of (keyword, total count) tuples
+        keyword_total_counts = []
+
+        for kw, count_data in counts.items():
+            if classify_by_status:
+                # Calculate the total count by summing over all statuses
+                total_count = sum(count_data.values())
+            else:
+                # Total count is directly stored when not classifying by status
+                total_count = count_data
+            keyword_total_counts.append((kw, total_count))
+
+        # Sort the keywords by total count in descending order
+        keyword_total_counts.sort(key=lambda x: x[1], reverse=True)
+
+        # Apply the n_top limit if specified
+        if n_top is not None:
+            keyword_total_counts = keyword_total_counts[:n_top]
+
+        # Build the output strings
+        kw_strings = []
+
+        for kw, total_count in keyword_total_counts:
+            if classify_by_status:
+                # Create a list of counts corresponding to each status
+                status_counts = counts[kw]
+                counts_list = [str(status_counts.get(status, 0)) for status in statuses]
+                counts_str = f':{",".join(counts_list)}'
+            else:
+                # No status classification, so only the total count is used
+                counts_str = ''
+            # Append the formatted string to the list
+            kw_strings.append(f'{kw}:{total_count}{counts_str}')
+
+        # Join the list into a semicolon-separated string
+        kw_string_by_status = ';'.join(kw_strings)
+
+        # Return the keyword string
+        return kw_string_by_status
+
     
     def get_cid(self, track):
         f = filter(str.isalpha, track[:4])
@@ -1004,21 +1378,21 @@ class Merger:
         n_top = 200
         for k in stats:
             track = stats[k]['track']
-            tier_order = stats[k]['t_order']
+            tier_names = [stats[k][f'n{i}'] for i in stats[k]['t_order'].split(',')] + ['Withdraw', 'Desk Reject']
             
-            stats[k]['authors'], stats[k]['authors_id'] = self.count_authors(track=track, n_top=n_top, mode='authors_all')
-            stats[k]['authors_first'], stats[k]['authors_id_first'] = self.count_authors(track=track, n_top=n_top, mode='author_first_only')
-            stats[k]['authors_last'], stats[k]['authors_id_last'] = self.count_authors(track=track, n_top=n_top, mode='authors_last_only')
-            stats[k]['affs'] = self.count_affiliations(track=track, n_top=n_top, mode='affs_all')
-            stats[k]['affs_unique'] = self.count_affiliations(track=track, n_top=n_top, mode='affs_unique_per_record')
-            stats[k]['affs_first'] = self.count_affiliations(track=track, n_top=n_top, mode='affs_first_only')
-            stats[k]['affs_last'] = self.count_affiliations(track=track, n_top=n_top, mode='affs_last_only')
-            stats[k]['pos'] = self.count_positions(track=track, n_top=n_top, mode='position_all')
-            stats[k]['pos_unique'] = self.count_positions(track=track, n_top=n_top, mode='position_unique_per_record')
-            stats[k]['pos_first'] = self.count_positions(track=track, n_top=n_top, mode='position_first_only')
-            stats[k]['pos_last'] = self.count_positions(track=track, n_top=n_top, mode='position_last_only')
-            stats[k]['keywords'] = self.count_keywords(track=track, n_top=n_top, mode='keywords_all')
-            stats[k]['keywords_first'] = self.count_keywords(track=track, n_top=n_top, mode='keywords_first')
+            stats[k]['authors'], stats[k]['authors_id'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='authors_all')
+            stats[k]['authors_first'], stats[k]['authors_id_first'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='author_first_only')
+            stats[k]['authors_last'], stats[k]['authors_id_last'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='authors_last_only')
+            stats[k]['affs'] = self.count_affiliations(statuses=tier_names, track=track, n_top=n_top, mode='affs_all')
+            stats[k]['affs_unique'] = self.count_affiliations(statuses=tier_names, track=track, n_top=n_top, mode='affs_unique_per_record')
+            stats[k]['affs_first'] = self.count_affiliations(statuses=tier_names, track=track, n_top=n_top, mode='affs_first_only')
+            stats[k]['affs_last'] = self.count_affiliations(statuses=tier_names, track=track, n_top=n_top, mode='affs_last_only')
+            stats[k]['pos'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_all')
+            stats[k]['pos_unique'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_unique_per_record')
+            stats[k]['pos_first'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_first_only')
+            stats[k]['pos_last'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_last_only')
+            stats[k]['keywords'] = self.count_keywords(statuses=tier_names, track=track, n_top=n_top, mode='keywords_all')
+            stats[k]['keywords_first'] = self.count_keywords(statuses=tier_names, track=track, n_top=n_top, mode='keywords_first')
             
                                     
         # return stats as list
