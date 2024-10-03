@@ -255,7 +255,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 affs_name_on_submit = []
                 affs_domain_on_submit = []
                 position_on_submit = []
-                author_ids = get_str_list(note['content']['authorids'])
+                author_ids = get_str_list(note['content'].get('authorids', ''))
                 author_ids = [author_id for author_id in author_ids if re.match(r'^~.*\d+$', author_id)] # filter author_ids that match '^~.*\d+$'
                 author_ids = list2str(author_ids, separator=',')
                 profiles_url = f'https://api2.openreview.net/profiles?ids={author_ids}'
@@ -277,7 +277,11 @@ class OpenreviewBot(sitebot.SiteBot):
                     
                     for profile in sorted_profiles:
                         history = profile['content'].get('history', [])
-                        year_on_submit = self._year - 1 # for iclr
+                        confsubmissioncrossyear = ['iclr']
+                        if self._conf in confsubmissioncrossyear:
+                            year_on_submit = self._year - 1 # for iclr
+                        else:
+                            year_on_submit = self._year
                         entry_on_submit = None
                         for entry in history:
                             start, end = entry.get('start', ''), entry.get('end', '')
@@ -298,8 +302,8 @@ class OpenreviewBot(sitebot.SiteBot):
                     'status': status,
                     'keywords': keywords,
                     'primary_area': primary_area,
-                    'author': list2str(get_str_list(note['content']['authors'])),
-                    'authorids': list2str(get_str_list(note['content']['authorids'])),
+                    'author': list2str(get_str_list(note['content'].get('authors', ''))),
+                    'authorids': list2str(get_str_list(note['content'].get('authorids', ''))),
                     'aff': list2str(affs_name_on_submit), # don't remove duplicates to keep author and affliation in some dimension
                     'aff_domain': list2str(affs_domain_on_submit),
                     'position': list2str(position_on_submit),
