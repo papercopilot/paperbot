@@ -1,4 +1,16 @@
 {
+    "2025": {
+        "gform": {
+            "track": {
+                "main": "kdd",
+                "Applied Data Science": "kdd"
+            },
+            "tname": {
+                "main": {},
+                "Applied Data Science": {}
+            }
+        }
+    },
     "2024": {
         "gform": {
             "track": {

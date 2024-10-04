@@ -527,12 +527,10 @@ class OABotECCV(OpenaccessBot):
     
     def crawl(self, url_paper, page, track):
     
-        if self._year >= 2024:
-            pass
-        elif self._year >= 2018:
+        if self._year >= 2018:
             response = sitebot.SiteBot.session_request(url_paper)
             tree_page = html.fromstring(response.content)
-            e_papers = tree_page.xpath(f"//button[contains(., '2022')]/following-sibling::div[1]//dt[contains(@class, 'ptitle')]/a")
+            e_papers = tree_page.xpath(f"//button[contains(., '{self._year}')]/following-sibling::div[1]//dt[contains(@class, 'ptitle')]/a")
             
             # parse each entry
             for e in tqdm(e_papers, leave=False):

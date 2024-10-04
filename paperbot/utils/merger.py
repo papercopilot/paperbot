@@ -811,6 +811,7 @@ class Merger:
         # Join the lists into semicolon-separated strings
         id_string_by_status = ';'.join(id_strings)
         name_string_by_status = ';'.join(name_strings)
+        id_string_by_status = '' if id_string_by_status == name_string_by_status else id_string_by_status
         
         # Return both the name string and the ID string
         return name_string_by_status, id_string_by_status

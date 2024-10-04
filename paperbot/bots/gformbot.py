@@ -400,6 +400,11 @@ class GFormBotKDD(GFormBot):
                 # remove nan data
                 if pd.isna(row['[Optional] Novelty after Rebuttal']) or not row['[Optional] Novelty after Rebuttal']: return ret
                 
+                if self._year >= 2025:
+                    paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
+                else:
+                    paper_id = index
+                
                 if as_init:
                     novelty = self.auto_split(row['Initial Novelty'])
                     tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
@@ -410,8 +415,13 @@ class GFormBotKDD(GFormBot):
                     confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
                 track = 'main' if 'Research Track' in row['Track'].strip() else 'Applied Data Science'
             else:
-                # remove redundant data
-                if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
+                
+                if self._year >= 2025:
+                    paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
+                else:
+                    paper_id = index
+                    # remove redundant data
+                    if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
                 
                 novelty = self.auto_split(row['Initial Novelty'])
                 tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
@@ -423,6 +433,7 @@ class GFormBotKDD(GFormBot):
         novelty = list2np(novelty)
         tech_quality = list2np(tech_quality)
         rating = 0.5 * novelty + 0.5 * tech_quality if track == 'main' else tech_quality
+        # rating = tech_quality if track == 'main' else tech_quality
         confidence = list2np(confidence)
         
         np2avg = lambda x: 0 if not any(x) else x.mean()
@@ -436,7 +447,7 @@ class GFormBotKDD(GFormBot):
             raise ValueError(f"Rating > 6: {np2avg(rating)}")
         
         ret = {
-            'id': index,
+            'id': paper_id,
             'track': track,
             'status': 'Active',
             'rating': {
