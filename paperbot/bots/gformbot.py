@@ -443,8 +443,10 @@ class GFormBotKDD(GFormBot):
         if len(rating) != len(confidence):
             raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
         
-        if np2avg(rating) > 6:
-            raise ValueError(f"Rating > 6: {np2avg(rating)}")
+        if self._year == 2025:
+            if np2avg(rating) > 4: raise ValueError(f"Rating > 6: {np2avg(rating)}")
+        elif self._year == 2024:
+            if np2avg(rating) > 6: raise ValueError(f"Rating > 6: {np2avg(rating)}")
         
         ret = {
             'id': paper_id,
