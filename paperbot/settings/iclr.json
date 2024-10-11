@@ -117,8 +117,8 @@
                     "rating": "recommendation",
                     "confidence": "confidence",
                     "correctness": "correctness",
-                    "novelty": "technical_novelty_and_significance",
-                    "novelty_emp": "empirical_novelty_and_significance"
+                    "technical_novelty": "technical_novelty_and_significance",
+                    "empirical_novelty": "empirical_novelty_and_significance"
                 }
             }
         },
@@ -166,8 +166,8 @@
                     "rating": "recommendation",
                     "confidence": "confidence",
                     "correctness": "correctness",
-                    "novelty": "technical_novelty_and_significance",
-                    "novelty_emp": "empirical_novelty_and_significance"
+                    "technical_novelty": "technical_novelty_and_significance",
+                    "empirical_novelty": "empirical_novelty_and_significance"
                 }
             }
         },
