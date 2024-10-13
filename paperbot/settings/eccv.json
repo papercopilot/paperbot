@@ -21,6 +21,11 @@
                     "Reject": "Reject",
                     "Unknown": "Unknown"
                 }
+            },
+            "rname": {
+                "main": {
+                    "rating": "Initial Ratings"
+                }
             }
         }
     },

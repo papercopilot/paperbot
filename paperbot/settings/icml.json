@@ -21,7 +21,9 @@
                 }
             },
             "rname": {
-                "main": {}
+                "main": {
+                    "rating": "rating"
+                }
             }
         },
         "site": {
@@ -42,6 +44,12 @@
             },
             "tname": {
                 "main": {}
+            },
+            "rname": {
+                "main": {
+                    "rating": "Initial Ratings",
+                    "confidence": "Initial Confidence"
+                }
             }
         }
     },
@@ -65,7 +73,9 @@
                 }
             },
             "rname": {
-                "main": {}
+                "main": {
+                    "rating": "rating"
+                }
             }
         },
         "site": {

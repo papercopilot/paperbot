@@ -6,6 +6,12 @@
             },
             "tname": {
                 "main": {}
+            },
+            "rname": {
+                "main": {
+                    "overall_accessment": "Initial Overall Assessment",
+                    "confidence": "Initial Confidence"
+                }
             }
         }
     },
@@ -36,6 +42,8 @@
                 "main": {
                     "rating": "recommendation",
                     "confidence": "Reviewer_Confidence",
+                    "excitement": "Excitement",
+                    "reproducibility": "Reproducibility",
                     "correctness": "Soundness"
                 }
             }

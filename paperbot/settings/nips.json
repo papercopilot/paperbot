@@ -42,6 +42,25 @@
                 },
                 "Creative AI": {},
                 "High School Projects": {}
+            },
+            "rname": {
+                "main": {
+                    "rating": "Initial Ratings",
+                    "confidence": "Initial Confidence",
+                    "correctness": "[Optional] Initial Soundness",
+                    "novelty": "[Optional] Initial Contribution",
+                    "presentation": "[Optional] Initial Presentation"
+                },
+                "Datasets & Benchmarks": {
+                    "rating": "Initial Ratings",
+                    "confidence": "Initial Confidence"
+                },
+                "Creative AI": {
+                    "rating": "Initial Ratings"
+                },
+                "High School Projects": {
+                    "rating": "Initial Ratings"
+                }
             }
         }
     },

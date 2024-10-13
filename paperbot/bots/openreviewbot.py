@@ -91,12 +91,15 @@ class OpenreviewBot(sitebot.SiteBot):
         title = ' '.join(title.split()).strip() # remove consecutive spaces in the middle
         
         # init container
-        confidence, confidence_avg = [], 0
-        correctness, correctness_avg = [], 0
-        rating, rating_avg = [], 0
-        novelty, novelty_avg = [], 0
-        novelty_emp, novelty_emp_avg = [], 0
-        presentation, presentation_avg = [], 0
+        # confidence, confidence_avg = [], 0
+        # correctness, correctness_avg = [], 0
+        # rating, rating_avg = [], 0
+        # novelty, novelty_avg = [], 0
+        # novelty_emp, novelty_emp_avg = [], 0
+        # presentation, presentation_avg = [], 0
+        review_scores = {} # used to store review scores for each dimension
+        for key in review_name:
+            review_scores[key] = []
         
         # # for different decision
         # if decision_invitation == 'in_notes': 
@@ -132,12 +135,15 @@ class OpenreviewBot(sitebot.SiteBot):
                     x = review_map[x] if x in review_map else x.split()[0]
                     return x if x.isdigit() else '0'
                 
-                rating.append(parse(getvalue('rating', review_name, reply['content'])))
-                confidence.append(parse(getvalue('confidence', review_name, reply['content'])))
-                correctness.append(parse(getvalue('correctness', review_name, reply['content'])))
-                novelty.append(parse(getvalue('novelty', review_name, reply['content'])))
-                novelty_emp.append(parse(getvalue('novelty_emp', review_name, reply['content'])))
-                presentation.append(parse(getvalue('presentation', review_name, reply['content'])))
+                # rating.append(parse(getvalue('rating', review_name, reply['content'])))
+                # confidence.append(parse(getvalue('confidence', review_name, reply['content'])))
+                # correctness.append(parse(getvalue('correctness', review_name, reply['content'])))
+                # novelty.append(parse(getvalue('novelty', review_name, reply['content'])))
+                # novelty_emp.append(parse(getvalue('novelty_emp', review_name, reply['content'])))
+                # presentation.append(parse(getvalue('presentation', review_name, reply['content'])))
+                for key in review_name:
+                    review_scores[key].append(parse(getvalue(key, review_name, reply['content'])))
+                    
             # elif decision_invitation in key_invitation:
             #     # decision_invitation: Decision/Acceptance_Decision/acceptance - reply['content']['decision']
             #     # decision_invitation: Meta_Review - reply['content']['recommendation']
@@ -150,67 +156,83 @@ class OpenreviewBot(sitebot.SiteBot):
             #         status = status if 'reject' not in status.lower() else 'Reject'
             #     self.summarizer.update_summary(status)
             elif meta_invitation and meta_invitation in key_invitation:
-                # EMNLP2023
-                rating_avg = parse(getvalue('rating', review_name, reply['content']))
-                rating_avg = float(rating_avg) if rating_avg.isdigit() else 0
+                # EMNLP2023, rating in 'Meta_Review'
+                meta_key = list(review_name)[0] # get the main review dimension
+                rating_avg = parse(getvalue(meta_key, review_name, reply['content']))
+                # rating_avg = float(rating_avg) if rating_avg.isdigit() else 0
+                review_scores[meta_key] = [rating_avg] * len(review_scores[meta_key]) # fill with the same value, TODO, this could cause issue if count score frequency
                 
         # to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.int32)
-        rating = list2np(rating)
-        confidence = list2np(confidence)
-        correctness = list2np(correctness)
-        novelty = list2np(novelty)
-        novelty_emp = list2np(novelty_emp)
-        presentation = list2np(presentation)
+        # rating = list2np(rating)
+        # confidence = list2np(confidence)
+        # correctness = list2np(correctness)
+        # novelty = list2np(novelty)
+        # novelty_emp = list2np(novelty_emp)
+        # presentation = list2np(presentation)
+        for key in review_name:
+            review_scores[key] = list2np(review_scores[key])
         
         # get sorting index before clearing empty values
-        idx = rating.argsort()
+        # idx = rating.argsort()
+        idx = review_scores[list(review_name)[0]].argsort() # sort by the main review dimension
         
         def clean_and_sort(x, idx):
             cleanup = lambda x: np.array([]) if (x==0).sum() == len(x) else x # empty array when all values are 0
             sort_by_idx = lambda x, idx: x if not any(x) else x[idx] # sort by idx
             return sort_by_idx(cleanup(x), idx)
         
-        rating = clean_and_sort(rating, idx)
-        confidence = clean_and_sort(confidence, idx)
-        correctness = clean_and_sort(correctness, idx)
-        novelty = clean_and_sort(novelty, idx)
-        novelty_emp = clean_and_sort(novelty_emp, idx)
-        presentation = clean_and_sort(presentation, idx)
+        # rating = clean_and_sort(rating, idx)
+        # confidence = clean_and_sort(confidence, idx)
+        # correctness = clean_and_sort(correctness, idx)
+        # novelty = clean_and_sort(novelty, idx)
+        # novelty_emp = clean_and_sort(novelty_emp, idx)
+        # presentation = clean_and_sort(presentation, idx)
+        for key in review_name:
+            review_scores[key] = clean_and_sort(review_scores[key], idx)
         
         np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
         np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
         keywords = np2str(keywords) if isinstance(keywords, list) else keywords
         
-        extra = {
-            'rating': {
-                'str': np2str(rating),
-                'avg': rating_avg if rating_avg else np2avg(rating) # if rating_avg is available EMNLP2023,
-            },
-            'confidence': {
-                'str': np2str(confidence),
-                'avg': np2avg(confidence),
-            },
-            'correctness': {
-                'str': np2str(correctness),
-                'avg': np2avg(correctness),
-            },
-            'novelty': {
-                'str': np2str(novelty),
-                'avg': np2avg(novelty),
-            },
-            'novelty_emp': {
-                'str': np2str(novelty_emp),
-                'avg': np2avg(novelty_emp),
-            },
-            'presentation': {
-                'str': np2str(presentation),
-                'avg': np2avg(presentation),
-            },
-            'corr_rating_confidence': np2coef(rating, confidence),
-            'corr_rating_correctness': np2coef(rating, correctness),
-        }
+        # extra = {
+        #     'rating': {
+        #         'str': np2str(rating),
+        #         'avg': rating_avg if rating_avg else np2avg(rating) # if rating_avg is available EMNLP2023,
+        #     },
+        #     'confidence': {
+        #         'str': np2str(confidence),
+        #         'avg': np2avg(confidence),
+        #     },
+        #     'correctness': {
+        #         'str': np2str(correctness),
+        #         'avg': np2avg(correctness),
+        #     },
+        #     'novelty': {
+        #         'str': np2str(novelty),
+        #         'avg': np2avg(novelty),
+        #     },
+        #     'novelty_emp': {
+        #         'str': np2str(novelty_emp),
+        #         'avg': np2avg(novelty_emp),
+        #     },
+        #     'presentation': {
+        #         'str': np2str(presentation),
+        #         'avg': np2avg(presentation),
+        #     },
+        #     'corr_rating_confidence': np2coef(rating, confidence),
+        #     'corr_rating_correctness': np2coef(rating, correctness),
+        # }
+        extra = {}
+        for key in review_name:
+            extra[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key]),
+            }
+        for i, key in enumerate(review_name):
+            if i > 0:
+                extra[key][f'corr_{list(review_name)[0]}_{key}'] = np2coef(review_scores[list(review_name)[0]], review_scores[key])
                 
         return id, title, keywords, primary_area, status, extra
 
@@ -220,8 +242,8 @@ class OpenreviewBot(sitebot.SiteBot):
         review_invitation = self._args['invitation'].get('review', '')
         meta_invitation = self._args['invitation'].get('meta', '')
         tier_name = self._args['tname'][track]
-        review_name = {} if track not in self._args['rname'] else self._args['rname'][track]
-        review_map = {} if ('rmap' not in self._args or track not in self._args['rmap']) else self._args['rmap'][track]
+        review_name = {} if track not in self._args['rname'] else self._args['rname'][track] # used to configure the review dimension
+        review_map = {} if ('rmap' not in self._args or track not in self._args['rmap']) else self._args['rmap'][track] # used to quantize the review if just string is given instead of number
         
         pbar = tqdm(total=self.summarizer.tier_num[tid], desc=ivt, leave=False)
         while (offset < self.summarizer.tier_num[tid]):
@@ -242,7 +264,9 @@ class OpenreviewBot(sitebot.SiteBot):
                 if idx and len(self._paperlist[idx[0]]['title']) > 10:
                     # some withdraw paper also rename to withdraw or NA or soemthing
                     self.summarizer.update_summary(status, -1)
-                    if extra['rating']['avg'] > self._paperlist[idx[0]]['rating_avg']: del self._paperlist[idx[0]]
+                    rating_key = list(extra.keys())[0]
+                    # if extra['rating']['avg'] > self._paperlist[idx[0]]['rating_avg']: del self._paperlist[idx[0]]
+                    if extra[rating_key]['avg'] > self._paperlist[idx[0]][rating_key + '_avg']: del self._paperlist[idx[0]]
                     else: continue
                     
                 # rename status by tiers if available, this need to be placed after redundancy check to avoid fill renamed status
@@ -259,43 +283,77 @@ class OpenreviewBot(sitebot.SiteBot):
                 author_ids = [author_id for author_id in author_ids if re.match(r'^~.*\d+$', author_id)] # filter author_ids that match '^~.*\d+$'
                 author_ids = list2str(author_ids, separator=',')
                 profiles_url = f'https://api2.openreview.net/profiles?ids={author_ids}'
-                profiles_response = sitebot.SiteBot.session_request(profiles_url)
-                profiles = profiles_response.json()
+                # profiles_response = sitebot.SiteBot.session_request(profiles_url)
+                # profiles = profiles_response.json()
                 
-                # check user's affiliation form history
-                if profiles and 'profiles' in profiles and profiles['profiles']:
+                # # check user's affiliation form history
+                # if profiles and 'profiles' in profiles and profiles['profiles']:
                     
-                    # sort the profiles in the order of note['content']['authorids']
-                    # Step 1: Create a mapping from ID to its index in desired_ids
-                    id_order = {id_: index for index, id_ in enumerate(get_str_list(note['content']['authorids']))}
+                #     # sort the profiles in the order of note['content']['authorids']
+                #     # Step 1: Create a mapping from ID to its index in desired_ids
+                #     id_order = {id_: index for index, id_ in enumerate(get_str_list(note['content']['authorids']))}
 
-                    # Step 2: Sort the profiles using the mapping, handling missing IDs
-                    sorted_profiles = sorted(
-                        profiles['profiles'],
-                        key=lambda x: id_order.get(x['id'], float('inf'))
-                    )
+                #     # Step 2: Sort the profiles using the mapping, handling missing IDs
+                #     sorted_profiles = sorted(
+                #         profiles['profiles'],
+                #         key=lambda x: id_order.get(x['id'], float('inf'))
+                #     )
                     
-                    for profile in sorted_profiles:
-                        history = profile['content'].get('history', [])
-                        confsubmissioncrossyear = ['iclr']
-                        if self._conf in confsubmissioncrossyear:
-                            year_on_submit = self._year - 1 # for iclr
-                        else:
-                            year_on_submit = self._year
-                        entry_on_submit = None
-                        for entry in history:
-                            start, end = entry.get('start', ''), entry.get('end', '')
-                            start = 0 if start is None or not start else int(start) # avoid None or ''
-                            end = datetime.now().year if end is None or not end else int(end)
-                            if start <= year_on_submit and end >= year_on_submit:
-                                entry_on_submit = entry
-                        if entry_on_submit:
-                            affs_name_on_submit.append(entry_on_submit['institution'].get('name', ''))
-                            affs_domain_on_submit.append(entry_on_submit['institution'].get('domain', ''))
-                            position_on_submit.append(entry_on_submit.get('position', ''))
+                #     for profile in sorted_profiles:
+                #         history = profile['content'].get('history', [])
+                #         confsubmissioncrossyear = ['iclr']
+                #         if self._conf in confsubmissioncrossyear:
+                #             year_on_submit = self._year - 1 # for iclr
+                #         else:
+                #             year_on_submit = self._year
+                #         entry_on_submit = None
+                #         for entry in history:
+                #             start, end = entry.get('start', ''), entry.get('end', '')
+                #             start = 0 if start is None or not start else int(start) # avoid None or ''
+                #             end = datetime.now().year if end is None or not end else int(end)
+                #             if start <= year_on_submit and end >= year_on_submit:
+                #                 entry_on_submit = entry
+                #         if entry_on_submit:
+                #             affs_name_on_submit.append(entry_on_submit['institution'].get('name', ''))
+                #             affs_domain_on_submit.append(entry_on_submit['institution'].get('domain', ''))
+                #             position_on_submit.append(entry_on_submit.get('position', ''))
                     
                 # append
-                self._paperlist.append({
+                # self._paperlist.append({
+                #     'id': id,
+                #     'title': title,
+                #     'track': track,
+                #     'status': status,
+                #     'keywords': keywords,
+                #     'primary_area': primary_area,
+                #     'author': list2str(get_str_list(note['content'].get('authors', ''))),
+                #     'authorids': list2str(get_str_list(note['content'].get('authorids', ''))),
+                #     'aff': list2str(affs_name_on_submit), # don't remove duplicates to keep author and affliation in some dimension
+                #     'aff_domain': list2str(affs_domain_on_submit),
+                #     'position': list2str(position_on_submit),
+                    
+                #     'rating': extra['rating']['str'],
+                #     'confidence': extra['confidence']['str'],
+                #     'correctness': extra['correctness']['str'],
+                #     'technical_novelty': extra['novelty']['str'],
+                #     'empirical_novelty': extra['novelty_emp']['str'],
+                #     'presentation': extra['presentation']['str'],
+                    
+                #     'rating_avg': extra['rating']['avg'],
+                #     'confidence_avg': extra['confidence']['avg'],
+                #     'correctness_avg': extra['correctness']['avg'],
+                #     'technical_novelty_avg': extra['novelty']['avg'],
+                #     'empirical_novelty_avg': extra['novelty_emp']['avg'],
+                #     'presentation_avg': extra['presentation']['avg'],
+                    
+                #     'corr_rating_confidence': extra['corr_rating_confidence'],
+                #     'corr_rating_correctness': extra['corr_rating_correctness'],
+                    
+                #     'project': '',
+                #     'github': '',
+                # })       
+                
+                paper_entry = {
                     'id': id,
                     'title': title,
                     'track': track,
@@ -307,27 +365,18 @@ class OpenreviewBot(sitebot.SiteBot):
                     'aff': list2str(affs_name_on_submit), # don't remove duplicates to keep author and affliation in some dimension
                     'aff_domain': list2str(affs_domain_on_submit),
                     'position': list2str(position_on_submit),
-                    
-                    'rating': extra['rating']['str'],
-                    'confidence': extra['confidence']['str'],
-                    'correctness': extra['correctness']['str'],
-                    'technical_novelty': extra['novelty']['str'],
-                    'empirical_novelty': extra['novelty_emp']['str'],
-                    'presentation': extra['presentation']['str'],
-                    
-                    'rating_avg': extra['rating']['avg'],
-                    'confidence_avg': extra['confidence']['avg'],
-                    'correctness_avg': extra['correctness']['avg'],
-                    'technical_novelty_avg': extra['novelty']['avg'],
-                    'empirical_novelty_avg': extra['novelty_emp']['avg'],
-                    'presentation_avg': extra['presentation']['avg'],
-                    
-                    'corr_rating_confidence': extra['corr_rating_confidence'],
-                    'corr_rating_correctness': extra['corr_rating_correctness'],
-                    
-                    'project': '',
-                    'github': '',
-                })
+                }
+                for key in extra:
+                    paper_entry[key] = extra[key]['str']
+                for key in extra:
+                    paper_entry[key + '_avg'] = extra[key]['avg']
+                for i, key in enumerate(review_name):
+                    if i > 0:
+                        if not key in ['confidence', 'correctness']: continue # hack for now before validate the correctness of implementation
+                        paper_entry[f'corr_{list(review_name)[0]}_{key}'] = extra[key][f'corr_{list(review_name)[0]}_{key}']
+                paper_entry['project'] = ''
+                paper_entry['github'] = ''
+                self._paperlist.append(paper_entry)
             
             offset += batch
             pbar.update(batch)
@@ -427,6 +476,14 @@ class OpenreviewBot(sitebot.SiteBot):
                     'url': self._src_url,
                 }
             }
+            
+            # initialize the review container
+            review_name = {} if track not in self._args['rname'] else self._args['rname'][track] # used to configure the review dimension
+            for i, key in enumerate(review_name):
+                self.summarizer.tier_hists[key] = {}
+                self.summarizer.tier_tsfs[key] = {}
+                self.summarizer.review_dimensions[i] = key
+            self.summarizer.tier_sums = {'hist': {},'tsf': {},}
             
             # fetch paperlist
             if fetch_site:

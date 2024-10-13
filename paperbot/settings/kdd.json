@@ -8,6 +8,18 @@
             "tname": {
                 "main": {},
                 "Applied Data Science": {}
+            },
+            "rname": {
+                "main": {
+                    "novelty": "Initial Novelty",
+                    "technical_quality": "Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)",
+                    "confidence": "Initial Confidence"
+                },
+                "Applied Data Science": {
+                    "novelty": "Initial Novelty",
+                    "overall_rating": "Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)",
+                    "confidence": "Initial Confidence"
+                }
             }
         }
     },
@@ -20,6 +32,18 @@
             "tname": {
                 "main": {},
                 "Applied Data Science": {}
+            },
+            "rname": {
+                "main": {
+                    "novelty": "Initial Novelty",
+                    "technical_quality": "Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)",
+                    "confidence": "Initial Confidence"
+                },
+                "Applied Data Science": {
+                    "novelty": "Initial Novelty",
+                    "overall_rating": "Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)",
+                    "confidence": "Initial Confidence"
+                }
             }
         }
     }

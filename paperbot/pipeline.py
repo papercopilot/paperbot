@@ -173,7 +173,8 @@ class Pipeline:
                 available_openreview = True
             except Exception as e:
                 if type(e) == ValueError:
-                    cprint('warning', e)
+                    # cprint('warning', e)
+                    raise e
                 elif type(e) == NameError: log_unavailable('openreview')
                 else: log_error('openreview', e)
             return available_openreview, summary_openreview, keywords_openreview, paperlist_openreview

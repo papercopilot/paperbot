@@ -54,33 +54,51 @@ class GFormBot(sitebot.SiteBot):
             
             paper_id = ret['id']
             if paper_id not in paper_idx:
-                paperlist.append({
+                # paperlist.append({
+                #     'id': paper_id,
+                #     'title': '',
+                #     'track': ret['track'],
+                #     'status': ret['status'],
+                #     'keywords': '',
+                #     'author': '',
+                    
+                #     'rating': ret['rating']['str'],
+                #     'confidence': ret['confidence']['str'],
+                    
+                #     'rating_avg': ret['rating']['avg'],
+                #     'confidence_avg': ret['confidence']['avg'],
+                    
+                #     # 'corr_rating_confidence': ret['corr_rating_confidence'],
+                # })
+                paper_entry = {
                     'id': paper_id,
                     'title': '',
                     'track': ret['track'],
                     'status': ret['status'],
                     'keywords': '',
                     'author': '',
-                    
-                    'rating': ret['rating']['str'],
-                    'confidence': ret['confidence']['str'],
-                    
-                    'rating_avg': ret['rating']['avg'],
-                    'confidence_avg': ret['confidence']['avg'],
-                    
-                    'corr_rating_confidence': ret['corr_rating_confidence'],
-                })
+                }
+                for key in self.review_name:
+                    paper_entry[key] = ret[key]['str']
+                for key in self.review_name:
+                    paper_entry[key+'_avg'] = ret[key]['avg']
+                paperlist.append(paper_entry)
+                
                 paper_idx[paper_id] = len(paperlist) - 1
             else:
                 # update duplicate data
                 cprint('warning', f'Duplicate paper id: {paper_id}')
                 idx = paper_idx[paper_id]
-                paperlist[idx]['rating'] = ret['rating']['str']
-                paperlist[idx]['confidence'] = ret['confidence']['str']
-                paperlist[idx]['rating_avg'] = ret['rating']['avg']
-                paperlist[idx]['confidence_avg'] = ret['confidence']['avg']
-                paperlist[idx]['corr_rating_confidence'] = ret['corr_rating_confidence']
-                
+                # paperlist[idx]['rating'] = ret['rating']['str']
+                # paperlist[idx]['confidence'] = ret['confidence']['str']
+                # paperlist[idx]['rating_avg'] = ret['rating']['avg']
+                # paperlist[idx]['confidence_avg'] = ret['confidence']['avg']
+                # paperlist[idx]['corr_rating_confidence'] = ret['corr_rating_confidence']
+                for key in self.review_name:
+                    paperlist[idx][key] = ret[key]['str']
+                for key in self.review_name:
+                    paperlist[idx][key+'_avg'] = ret[key]['avg']
+                    
         return paperlist
     
     def process_row(self, mode=None, as_init=False):
@@ -94,6 +112,14 @@ class GFormBot(sitebot.SiteBot):
         for track in self._tracks: # TODO: this will craw multiple times, e.g. nips will crawl forth, should be optimized
             
             self.summarizer.clear_summary()
+            
+            # initialize the review container
+            self.review_name = {} if track not in self._args['rname'] else self._args['rname'][track] # used to configure the review dimension
+            for i, key in enumerate(self.review_name):
+                self.summarizer.tier_hists[key] = {}
+                self.summarizer.tier_tsfs[key] = {}
+                self.summarizer.review_dimensions[i] = key
+            self.summarizer.tier_sums = {'hist': {},'tsf': {},}
             
             if fetch_site:
                 self.df = self.crawl(track)
@@ -134,18 +160,33 @@ class GFormBot(sitebot.SiteBot):
                 update_paperlist_status(self.summarizer.paperlist_init)
                 self.summarizer.get_histogram(self._args['tname'][track], track=track)
                 self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
-                self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf
-                self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence
-                self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum
+                # self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf
+                # self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence
+                # self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum
+                self._summary_all_tracks[track]['tsf'] = {}
+                for key in self.summarizer.review_dimensions:
+                    self._summary_all_tracks[track]['tsf'][key] = self.summarizer.tier_tsfs[self.summarizer.review_dimensions[key]]
+                self._summary_all_tracks[track]['sum']['tsf'] = self.summarizer.tier_sums['tsf']
                 
                 # update total and total0 since usually rebuttal data is less than initial data
                 for k in ['Total', 'Total0']:
                     kid = self.summarizer.get_tid(k)
-                    if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
-                    self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
-                    self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
-                    self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
+                    # if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                    # self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
+                    # self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
+                    # self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
                 
+                    for key in self.summarizer.review_dimensions:
+                        if k == 'Total0': 
+                            # temporary add k to the id list for the following loop check
+                            self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                        rname = self.summarizer.review_dimensions[key]
+                        if kid in self.summarizer.tier_hists[rname]:
+                            self._summary_all_tracks[track]['hist'][key][kid] = self.summarizer.tier_hists[rname][kid]
+                            self._summary_all_tracks[track]['sum']['hist'][kid] = self.summarizer.tier_sums['hist'][kid]
+                        else:
+                            # there's no data for this key, usually total0, remove the key to keep consistency for the merger
+                            del self._summary_all_tracks[track]['tid'][kid]
                 continue
             
             elif self._conf == 'nips' and self._year == 2024:
@@ -172,20 +213,36 @@ class GFormBot(sitebot.SiteBot):
                 update_paperlist_status(self.summarizer.paperlist_init)
                 self.summarizer.get_histogram(self._args['tname'][track], track=track)
                 self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
-                self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf
-                self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence
-                self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum
+                # self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf
+                # self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence
+                # self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum
+                self._summary_all_tracks[track]['tsf'] = {}
+                for key in self.summarizer.review_dimensions:
+                    self._summary_all_tracks[track]['tsf'][key] = self.summarizer.tier_tsfs[self.summarizer.review_dimensions[key]]
+                self._summary_all_tracks[track]['sum']['tsf'] = self.summarizer.tier_sums['tsf']
+                
                 
                 # update total and total0 since usually rebuttal data is less than initial data
                 for k in ['Total', 'Total0']:
                     kid = self.summarizer.get_tid(k)
-                    if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
-                    if kid in self.summarizer.tier_hist:
-                        self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
-                        self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
-                        self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
-                    else:
-                        del self._summary_all_tracks[track]['tid'][kid]
+                    # if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                    # if kid in self.summarizer.tier_hist:
+                        # self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
+                        # self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
+                        # self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
+                    # else:
+                        # del self._summary_all_tracks[track]['tid'][kid]
+                    for key in self.summarizer.review_dimensions:
+                        if k == 'Total0': 
+                            # temporary add k to the id list for the following loop check
+                            self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                        rname = self.summarizer.review_dimensions[key]
+                        if kid in self.summarizer.tier_hists[rname]:
+                            self._summary_all_tracks[track]['hist'][key][kid] = self.summarizer.tier_hists[rname][kid]
+                            self._summary_all_tracks[track]['sum']['hist'][kid] = self.summarizer.tier_sums['hist'][kid]
+                        else:
+                            # there's no data for this key, usually total0, remove the key to keep consistency for the merger
+                            del self._summary_all_tracks[track]['tid'][kid]
                         
                 continue
                 
@@ -195,7 +252,8 @@ class GFormBot(sitebot.SiteBot):
             # update tids and get initial histogram
             self.summarizer.update_summary('Active', 0)
             self.summarizer.get_histogram(self._args['tname'][track], track=track)
-            self.summarizer.update_summary('Active', self.summarizer.tier_hist_sum[self.summarizer.tier_ids['Total']])
+            # self.summarizer.update_summary('Active', self.summarizer.tier_hist_sum[self.summarizer.tier_ids['Total']])
+            self.summarizer.update_summary('Active', self.summarizer.tier_sums['hist'][self.summarizer.tier_ids['Total']])
             self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
         
             # update paperlist and get rebuttal histogram
@@ -203,20 +261,36 @@ class GFormBot(sitebot.SiteBot):
             self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
             self.summarizer.get_histogram(self._args['tname'][track], track=track)
             self.summarizer.get_transfer_matrix(self._args['tname'][track], track=track)
-            self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf.copy()
-            self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence.copy()
-            self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum.copy()
+            # self._summary_all_tracks[track]['ttsf'] = self.summarizer.tier_tsf.copy()
+            # self._summary_all_tracks[track]['ttsf_conf'] = self.summarizer.tier_tsf_confidence.copy()
+            # self._summary_all_tracks[track]['ttsfsum'] = self.summarizer.tier_tsf_sum.copy()
+            self._summary_all_tracks[track]['tsf'] = {}
+            for key in self.summarizer.review_dimensions:
+                self._summary_all_tracks[track]['tsf'][key] = self.summarizer.tier_tsfs[self.summarizer.review_dimensions[key]]
+            self._summary_all_tracks[track]['sum']['tsf'] = self.summarizer.tier_sums['tsf']
                 
             # update total and total0 since usually rebuttal data is less than initial data
             for k in ['Total', 'Total0']:
                 kid = self.summarizer.get_tid(k)
-                if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
-                if kid in self.summarizer.tier_hist:
-                    self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
-                    self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
-                    self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
-                else:
-                    del self._summary_all_tracks[track]['tid'][kid]
+                for key in self.summarizer.review_dimensions:
+                    # if k == 'Total0': self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                    # if kid in self.summarizer.tier_hist:
+                    #     self._summary_all_tracks[track]['thist'][kid] = self.summarizer.tier_hist[kid]
+                    #     self._summary_all_tracks[track]['thist_conf'][kid] = self.summarizer.tier_hist_confidence[kid]
+                    #     self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
+                    # else:
+                    #     del self._summary_all_tracks[track]['tid'][kid]
+                    if k == 'Total0': 
+                        # temporary add k to the id list for the following loop check
+                        self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                    rname = self.summarizer.review_dimensions[key]
+                    if kid in self.summarizer.tier_hists[rname]:
+                        self._summary_all_tracks[track]['hist'][key][kid] = self.summarizer.tier_hists[rname][kid]
+                        self._summary_all_tracks[track]['sum']['hist'][kid] = self.summarizer.tier_sums['hist'][kid]
+                    else:
+                        # there's no data for this key, usually total0, remove the key to keep consistency for the merger
+                        del self._summary_all_tracks[track]['tid'][kid]
+                
             
     def auto_split(self, content):
         non_digits = set([x for x in content if (not x.isdigit() and x!='.')])
@@ -263,6 +337,10 @@ class GFormBotICML(GFormBot):
             if match: return ret
             match = re.search('[a-zA-Z]', row['Initial Confidence'])
             if match: return ret
+        
+            review_scores = {}
+            for key in self.review_name:
+                review_scores[key] = []
             
             if mode == 'Rebuttal':
             
@@ -270,44 +348,59 @@ class GFormBotICML(GFormBot):
                 if pd.isna(row['[Optional] Ratings after Rebuttal']) or not row['[Optional] Ratings after Rebuttal']: return ret
                 
                 if as_init:
-                    rating = self.auto_split(row['Initial Ratings'])
-                    confidence = self.auto_split(row['Initial Confidence'])
+                    # rating = self.auto_split(row['Initial Ratings'])
+                    # confidence = self.auto_split(row['Initial Confidence'])
+                    for key in self.review_name:
+                        review_scores[key] = self.auto_split(row[self.review_name[key]])
                 else:
-                    rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
-                    confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                    # rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
+                    # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                    for key in self.review_name:
+                        rebuttal_key = self.review_name[key].replace('Initial ', '') + ' after Rebuttal'
+                        rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                        review_scores[key] = self.auto_split(row[rebuttal_key])
             else:
                 # remove redundant data
                 if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
                 
-                rating = self.auto_split(row['Initial Ratings'])
-                confidence = self.auto_split(row['Initial Confidence'])
+                # rating = self.auto_split(row['Initial Ratings'])
+                # confidence = self.auto_split(row['Initial Confidence'])
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
-        rating = list2np(rating)
-        confidence = list2np(confidence)
+        # rating = list2np(rating)
+        # confidence = list2np(confidence)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
 
         np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
         np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
         
-        if len(rating) != len(confidence):
-            raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
+        if len(review_scores[list(review_scores.keys())[0]]) != len(review_scores[list(review_scores.keys())[1]]):
+            raise ValueError(f"Rating and confidence length mismatch: {review_scores[list(review_scores.keys())[0]]} vs {review_scores[list(review_scores.keys())[1]]}")
         
         ret = {
             'id': index,
             'track': track,
             'status': 'Active',
-            'rating': {
-                'str': np2str(rating),
-                'avg': np2avg(rating)
-            },
-            'confidence': {
-                'str': np2str(confidence),
-                'avg': np2avg(confidence)
-            },
-            'corr_rating_confidence': np2coef(rating, confidence),
+            # 'rating': {
+            #     'str': np2str(rating),
+            #     'avg': np2avg(rating)
+            # },
+            # 'confidence': {
+            #     'str': np2str(confidence),
+            #     'avg': np2avg(confidence)
+            # },
+            # 'corr_rating_confidence': np2coef(rating, confidence),
         }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
         
         return ret
             
@@ -395,6 +488,10 @@ class GFormBotKDD(GFormBot):
             # remove invalide response
             match = re.search('[a-zA-Z]', row['Initial Novelty'])
             if match: return ret
+        
+            review_scores = {}
+            for key in self.review_name:
+                review_scores[key] = []
             
             if mode == 'Rebuttal':
                 # remove nan data
@@ -406,13 +503,19 @@ class GFormBotKDD(GFormBot):
                     paper_id = index
                 
                 if as_init:
-                    novelty = self.auto_split(row['Initial Novelty'])
-                    tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
-                    confidence = self.auto_split(row['Initial Confidence'])
+                    # novelty = self.auto_split(row['Initial Novelty'])
+                    # tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
+                    # confidence = self.auto_split(row['Initial Confidence'])
+                    for key in self.review_name:
+                        review_scores[key] = self.auto_split(row[self.review_name[key]])
                 else:
-                    novelty = self.auto_split(row['[Optional] Novelty after Rebuttal'])
-                    tech_quality = self.auto_split(row['[Optional] Technical Quality (Research Track) / Overall Rating (ADS Track)  after Rebuttal'])
-                    confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                    # novelty = self.auto_split(row['[Optional] Novelty after Rebuttal'])
+                    # tech_quality = self.auto_split(row['[Optional] Technical Quality (Research Track) / Overall Rating (ADS Track)  after Rebuttal'])
+                    # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                    for key in self.review_name:
+                        rebuttal_key = self.review_name[key].replace('Initial ', '').replace('Initial ', '') + ' after Rebuttal'
+                        rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                        review_scores[key] = self.auto_split(row[rebuttal_key])
                 track = 'main' if 'Research Track' in row['Track'].strip() else 'Applied Data Science'
             else:
                 
@@ -423,45 +526,54 @@ class GFormBotKDD(GFormBot):
                     # remove redundant data
                     if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
                 
-                novelty = self.auto_split(row['Initial Novelty'])
-                tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
-                confidence = self.auto_split(row['Initial Confidence'])
+                # novelty = self.auto_split(row['Initial Novelty'])
+                # tech_quality = self.auto_split(row['Initial Technical Quality (Research Track) / Initial Overall Rating (ADS Track)'])
+                # confidence = self.auto_split(row['Initial Confidence'])
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
                 track = 'main' if 'Research Track' in row['Track'].strip() else 'Applied Data Science'
                 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
-        novelty = list2np(novelty)
-        tech_quality = list2np(tech_quality)
-        rating = 0.5 * novelty + 0.5 * tech_quality if track == 'main' else tech_quality
+        # novelty = list2np(novelty)
+        # tech_quality = list2np(tech_quality)
+        # rating = 0.5 * novelty + 0.5 * tech_quality if track == 'main' else tech_quality
         # rating = tech_quality if track == 'main' else tech_quality
-        confidence = list2np(confidence)
+        # confidence = list2np(confidence)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
         
         np2avg = lambda x: 0 if not any(x) else x.mean()
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1])
         np2str = lambda x: ';'.join([str(y) for y in x])
         
-        if len(rating) != len(confidence):
-            raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
+        if len(review_scores[list(review_scores.keys())[0]]) != len(review_scores[list(review_scores.keys())[2]]):
+            raise ValueError(f"Rating and confidence length mismatch: {review_scores[list(review_scores.keys())[0]]} vs {review_scores[list(review_scores.keys())[2]]}")
         
         if self._year == 2025:
-            if np2avg(rating) > 4: raise ValueError(f"Rating > 6: {np2avg(rating)}")
+            if np2avg(review_scores[list(review_scores.keys())[0]]) > 4: raise ValueError(f"Rating > 6: {np2avg(review_scores[list(review_scores.keys())[0]])}")
         elif self._year == 2024:
-            if np2avg(rating) > 6: raise ValueError(f"Rating > 6: {np2avg(rating)}")
+            if np2avg(review_scores[list(review_scores.keys())[0]]) > 6: raise ValueError(f"Rating > 6: {np2avg(review_scores[list(review_scores.keys())[0]])}")
         
         ret = {
             'id': paper_id,
             'track': track,
             'status': 'Active',
-            'rating': {
-                'str': np2str(rating),
-                'avg': np2avg(rating)
-            },
-            'confidence': {
-                'str': np2str(confidence),
-                'avg': np2avg(confidence)
-            },
-            'corr_rating_confidence': np2coef(rating, confidence),
+            # 'rating': {
+            #     'str': np2str(rating),
+            #     'avg': np2avg(rating)
+            # },
+            # 'confidence': {
+            #     'str': np2str(confidence),
+            #     'avg': np2avg(confidence)
+            # },
+            # 'corr_rating_confidence': np2coef(rating, confidence),
         }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
             
         return ret
                 
@@ -558,6 +670,10 @@ class GFormBotECCV(GFormBot):
             # https://stackoverflow.com/questions/9576384/use-regular-expression-to-match-any-chinese-character-in-utf-8-encoding
             match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Ratings']) # \u4E00-\u9FFF chinese
             if match: return ret
+        
+            review_scores = {}
+            for key in self.review_name:
+                review_scores[key] = []
             
             if mode == 'Rebuttal':
             
@@ -566,26 +682,36 @@ class GFormBotECCV(GFormBot):
                 paper_id = row['Paper ID (hash it if you prefer more anonymity)']
                 
                 if as_init:
-                    rating = self.auto_split(row['Initial Ratings'])
+                    # rating = self.auto_split(row['Initial Ratings'])
                     # confidence = self.auto_split(row['Initial Confidence'])
+                    for key in self.review_name:
+                        review_scores[key] = self.auto_split(row[self.review_name[key]])
                 else:
-                    rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
+                    # rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
                     # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                    for key in self.review_name:
+                        rebuttal_key = self.review_name[key].replace('Initial ', '').replace('Initial ', '') + ' after Rebuttal'
+                        rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                        review_scores[key] = self.auto_split(row[rebuttal_key])
                 status = row['[Optional] Final Decision']
             else:
                 # remove redundant data
                 # if row['Paper ID']: return ret
                 
-                rating = self.auto_split(row['Initial Ratings'])
                 paper_id = row['Paper ID (hash it if you prefer more anonymity)']
                 status = row['[Optional] Final Decision']
+                # rating = self.auto_split(row['Initial Ratings'])
                 # confidence = self.auto_split(row['Initial Confidence'])
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
-        rating = list2np(rating)
+        # rating = list2np(rating)
         # confidence = list2np(confidence)
-        confidence = np.zeros_like(rating)
+        # confidence = np.zeros_like(rating)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
 
         np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
@@ -594,24 +720,29 @@ class GFormBotECCV(GFormBot):
         # if len(rating) != len(confidence):
             # raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
         
-        if np2avg(rating) > 5:
-            cprint('warning', f"Rating > 5: {np2avg(rating)}, skipping")
+        if np2avg(review_scores[list(review_scores.keys())[0]]) > 5:
+            cprint('warning', f"Rating > 5: {np2avg(review_scores[list(review_scores.keys())[0]])}, skipping")
             return ret
         
         ret = {
             'id': paper_id,
             'track': track,
             'status': status,
-            'rating': {
-                'str': np2str(rating),
-                'avg': np2avg(rating)
-            },
-            'confidence': {
-                'str': np2str(confidence),
-                'avg': np2avg(confidence)
-            },
-            'corr_rating_confidence': np2coef(rating, confidence),
+            # 'rating': {
+            #     'str': np2str(rating),
+            #     'avg': np2avg(rating)
+            # },
+            # 'confidence': {
+            #     'str': np2str(confidence),
+            #     'avg': np2avg(confidence)
+            # },
+            # 'corr_rating_confidence': np2coef(rating, confidence),
         }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
             
         return ret
     
@@ -702,6 +833,10 @@ class GFormBotEMNLP(GFormBot):
         match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Overall Assessment']) # \u4E00-\u9FFF chinese
         if match: return ret
         
+        review_scores = {}
+        for key in self.review_name:
+            review_scores[key] = []
+        
         if mode == 'Rebuttal':
         
             # remove nan data
@@ -709,23 +844,33 @@ class GFormBotEMNLP(GFormBot):
             paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
             
             if as_init:
-                rating = self.auto_split(row['Initial Overall Assessment'])
-                confidence = self.auto_split(row['Initial Confidence'])
+                # rating = self.auto_split(row['Initial Overall Assessment'])
+                # confidence = self.auto_split(row['Initial Confidence'])
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
             else:
-                rating = self.auto_split(row['[Optional] Overall Assessment after Rebuttal'])
-                confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                # rating = self.auto_split(row['[Optional] Overall Assessment after Rebuttal'])
+                # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                for key in self.review_name:
+                    rebuttal_key = self.review_name[key].replace('Initial ', '') + ' after Rebuttal'
+                    rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                    review_scores[key] = self.auto_split(row[rebuttal_key])
         else:
             # remove redundant data
             # if row['Paper ID']: return ret
             
             paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
-            rating = self.auto_split(row['Initial Overall Assessment'])
-            confidence = self.auto_split(row['Initial Confidence'])
+            # rating = self.auto_split(row['Initial Overall Assessment'])
+            # confidence = self.auto_split(row['Initial Confidence'])
+            for key in self.review_name:
+                review_scores[key] = self.auto_split(row[self.review_name[key]])
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
-        rating = list2np(rating)
-        confidence = list2np(confidence)
+        # rating = list2np(rating)
+        # confidence = list2np(confidence)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
 
         np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
@@ -734,24 +879,29 @@ class GFormBotEMNLP(GFormBot):
         # if len(rating) != len(confidence):
             # raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
         
-        if np2avg(rating) > 6:
-            cprint('warning', f"Rating > 6: {np2avg(rating)}, skipping")
+        if np2avg(review_scores[list(review_scores.keys())[0]]) > 6:
+            cprint('warning', f"Rating > 6: {np2avg(review_scores[list(review_scores.keys())[0]])}, skipping")
             return ret
         
         ret = {
             'id': paper_id,
             'track': track,
             'status': 'Active',
-            'rating': {
-                'str': np2str(rating),
-                'avg': np2avg(rating)
-            },
-            'confidence': {
-                'str': np2str(confidence),
-                'avg': np2avg(confidence)
-            },
-            'corr_rating_confidence': np2coef(rating, confidence),
+            # 'rating': {
+            #     'str': np2str(rating),
+            #     'avg': np2avg(rating)
+            # },
+            # 'confidence': {
+            #     'str': np2str(confidence),
+            #     'avg': np2avg(confidence)
+            # },
+            # 'corr_rating_confidence': np2coef(rating, confidence),
         }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
             
         return ret
     
@@ -768,6 +918,10 @@ class GFormBotNIPS(GFormBot):
         match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Ratings']) # \u4E00-\u9FFF chinese
         if match: return ret
         
+        review_scores = {}
+        for key in self.review_name:
+            review_scores[key] = []
+        
         if mode == 'Rebuttal':
         
             # remove nan data
@@ -775,20 +929,27 @@ class GFormBotNIPS(GFormBot):
             paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
             
             if as_init:
-                rating = self.auto_split(row['Initial Ratings'])
-                confidence = self.auto_split(row['Initial Confidence'])
+                # rating = self.auto_split(row['Initial Ratings'])
+                # confidence = self.auto_split(row['Initial Confidence'])
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
             else:
-                rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
-                confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                # rating = self.auto_split(row['[Optional] Ratings after Rebuttal'])
+                # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                for key in self.review_name:
+                    rebuttal_key = self.review_name[key].replace('Initial ', '') + ' after Rebuttal'
+                    rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                    review_scores[key] = self.auto_split(row[rebuttal_key])
             status = row['[Optional] Final Decision']
         else:
             # remove redundant data
             # if row['Paper ID']: return ret
-            
             paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
-            rating = self.auto_split(row['Initial Ratings'])
-            confidence = self.auto_split(row['Initial Confidence'])
             status = row['[Optional] Final Decision']
+            # rating = self.auto_split(row['Initial Ratings'])
+            # confidence = self.auto_split(row['Initial Confidence'])
+            for key in self.review_name:
+                review_scores[key] = self.auto_split(row[self.review_name[key]])
         track = row['Track'].strip()
         
         # TODO: the keys in settings should be consistent with the track names, otherwise it needs an extra mapping step as follows, improve this in the future
@@ -802,8 +963,10 @@ class GFormBotNIPS(GFormBot):
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
-        rating = list2np(rating)
-        confidence = list2np(confidence)
+        # rating = list2np(rating)
+        # confidence = list2np(confidence)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
 
         np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
@@ -812,24 +975,32 @@ class GFormBotNIPS(GFormBot):
         # if len(rating) != len(confidence):
             # raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
         
-        if np2avg(rating) >= 10:
-            cprint('warning', f"Rating > 10: {np2avg(rating)}, skipping")
+        # if np2avg(rating) >= 10:
+            # cprint('warning', f"Rating > 10: {np2avg(rating)}, skipping")
+            # return ret
+        if np2avg(review_scores[list(review_scores.keys())[0]]) >= 10:
+            cprint('warning', f"Rating > 10: {np2avg(review_scores[list(review_scores.keys())[0]])}, skipping")
             return ret
         
         ret = {
             'id': paper_id,
             'track': track,
             'status': status, # force to 'Active' before decision
-            'rating': {
-                'str': np2str(rating),
-                'avg': np2avg(rating)
-            },
-            'confidence': {
-                'str': np2str(confidence),
-                'avg': np2avg(confidence)
-            },
-            'corr_rating_confidence': np2coef(rating, confidence),
+            # 'rating': {
+            #     'str': np2str(rating),
+            #     'avg': np2avg(rating)
+            # },
+            # 'confidence': {
+            #     'str': np2str(confidence),
+            #     'avg': np2avg(confidence)
+            # },
+            # 'corr_rating_confidence': np2coef(rating, confidence),
         }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
             
         return ret
     
