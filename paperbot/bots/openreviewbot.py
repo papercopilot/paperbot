@@ -60,8 +60,13 @@ class OpenreviewBot(sitebot.SiteBot):
             if 'Total' == ivt: 
                 self.summarizer.src['openreview']['total'] = count
                 self.summarizer.update_summary(ivt, count)
+            else:
+                if self._conf == 'iclr' and self._year == 2025 and 'Desk Reject' == ivt:
+                    self.summarizer.update_summary(ivt, count) # iclr2025 total exclude desk reject
+                # set other submission_invitation to 0, e.g. 'Withdraw', 'Active'
+                self.summarizer.update_summary(ivt, 0)
         else: 
-            # if there is no total, sum all submission_invitation
+            # if there is no total, sum all submission_invitation for total count
             self.summarizer.src['openreview']['total'] += count
             if 'Active' == ivt: pass
             self.summarizer.update_summary(ivt, count)
@@ -283,40 +288,43 @@ class OpenreviewBot(sitebot.SiteBot):
                 author_ids = [author_id for author_id in author_ids if re.match(r'^~.*\d+$', author_id)] # filter author_ids that match '^~.*\d+$'
                 author_ids = list2str(author_ids, separator=',')
                 profiles_url = f'https://api2.openreview.net/profiles?ids={author_ids}'
-                # profiles_response = sitebot.SiteBot.session_request(profiles_url)
-                # profiles = profiles_response.json()
                 
-                # # check user's affiliation form history
-                # if profiles and 'profiles' in profiles and profiles['profiles']:
+                fetch_user_profiles = True
+                if fetch_user_profiles:
+                    profiles_response = sitebot.SiteBot.session_request(profiles_url)
+                    profiles = profiles_response.json()
                     
-                #     # sort the profiles in the order of note['content']['authorids']
-                #     # Step 1: Create a mapping from ID to its index in desired_ids
-                #     id_order = {id_: index for index, id_ in enumerate(get_str_list(note['content']['authorids']))}
+                    # check user's affiliation form history
+                    if profiles and 'profiles' in profiles and profiles['profiles']:
+                        
+                        # sort the profiles in the order of note['content']['authorids']
+                        # Step 1: Create a mapping from ID to its index in desired_ids
+                        id_order = {id_: index for index, id_ in enumerate(get_str_list(note['content']['authorids']))}
 
-                #     # Step 2: Sort the profiles using the mapping, handling missing IDs
-                #     sorted_profiles = sorted(
-                #         profiles['profiles'],
-                #         key=lambda x: id_order.get(x['id'], float('inf'))
-                #     )
-                    
-                #     for profile in sorted_profiles:
-                #         history = profile['content'].get('history', [])
-                #         confsubmissioncrossyear = ['iclr']
-                #         if self._conf in confsubmissioncrossyear:
-                #             year_on_submit = self._year - 1 # for iclr
-                #         else:
-                #             year_on_submit = self._year
-                #         entry_on_submit = None
-                #         for entry in history:
-                #             start, end = entry.get('start', ''), entry.get('end', '')
-                #             start = 0 if start is None or not start else int(start) # avoid None or ''
-                #             end = datetime.now().year if end is None or not end else int(end)
-                #             if start <= year_on_submit and end >= year_on_submit:
-                #                 entry_on_submit = entry
-                #         if entry_on_submit:
-                #             affs_name_on_submit.append(entry_on_submit['institution'].get('name', ''))
-                #             affs_domain_on_submit.append(entry_on_submit['institution'].get('domain', ''))
-                #             position_on_submit.append(entry_on_submit.get('position', ''))
+                        # Step 2: Sort the profiles using the mapping, handling missing IDs
+                        sorted_profiles = sorted(
+                            profiles['profiles'],
+                            key=lambda x: id_order.get(x['id'], float('inf'))
+                        )
+                        
+                        for profile in sorted_profiles:
+                            history = profile['content'].get('history', [])
+                            confsubmissioncrossyear = ['iclr']
+                            if self._conf in confsubmissioncrossyear:
+                                year_on_submit = self._year - 1 # for iclr
+                            else:
+                                year_on_submit = self._year
+                            entry_on_submit = None
+                            for entry in history:
+                                start, end = entry.get('start', ''), entry.get('end', '')
+                                start = 0 if start is None or not start else int(start) # avoid None or ''
+                                end = datetime.now().year if end is None or not end else int(end)
+                                if start <= year_on_submit and end >= year_on_submit:
+                                    entry_on_submit = entry
+                            if entry_on_submit:
+                                affs_name_on_submit.append(entry_on_submit['institution'].get('name', ''))
+                                affs_domain_on_submit.append(entry_on_submit['institution'].get('domain', ''))
+                                position_on_submit.append(entry_on_submit.get('position', ''))
                     
                 # append
                 # self._paperlist.append({
@@ -539,7 +547,7 @@ class ORBotICLR(OpenreviewBot):
         getstr = lambda x: x if not isinstance(x, dict) else x['value']
     
         status = ''
-        if self._year == 2024:
+        if self._year >= 2024:
             status = note['content']['venue']['value']
             status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
         elif self._year == 2013:
