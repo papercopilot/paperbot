@@ -1,0 +1,21 @@
+{
+    "2025": {
+        "gform": {
+            "track": {
+                "main": "aaai"
+            },
+            "tname": {
+                "main": {
+                    "Reject": "Reject",
+                    "Unknown": "Unknown"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "Initial Ratings",
+                    "confidence": "Initial Confidence"
+                }
+            }
+        }
+    }
+}

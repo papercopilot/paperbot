@@ -189,7 +189,8 @@ class GFormBot(sitebot.SiteBot):
                             del self._summary_all_tracks[track]['tid'][kid]
                 continue
             
-            elif self._conf == 'nips' and self._year == 2024:
+            elif self._conf == 'aaai' and self._year == 2025: # this should be put into the child class
+            # elif self._conf == 'nips' and self._year == 2024:
                 
                 # update paper ids from announced paper ids
                 def update_paperlist_status(paperlist):
@@ -1068,5 +1069,77 @@ class GFormBotWACV(GFormBot):
             },
             'corr_rating_confidence': np2coef(rating, confidence),
         }
+            
+        return ret
+    
+    
+class GFormBotAAAI(GFormBot):
+    
+    def process_row(self, index, row, track, mode=None, as_init=False):
+        
+        ret = {}
+        
+        # remove invalide response
+        match = re.search('[a-zA-Z]', row['Initial Ratings'])
+        if match: return ret
+    
+        review_scores = {}
+        for key in self.review_name:
+            review_scores[key] = []
+        
+        if mode == 'Rebuttal':
+            # remove nan data
+            if pd.isna(row['[Optional] Ratings after Rebuttal']) or not row['[Optional] Confidence after Rebuttal']: return ret
+            
+            if self._year >= 2025:
+                paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
+            else:
+                paper_id = index
+            
+            if as_init:
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
+            else:
+                for key in self.review_name:
+                    rebuttal_key = self.review_name[key].replace('Initial ', '').replace('Initial ', '') + ' after Rebuttal'
+                    rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                    review_scores[key] = self.auto_split(row[rebuttal_key])
+            track = 'main'
+            status = row['[Optional] Final Decision']
+        else:
+            
+            paper_id = row['Paper ID / Openreview Forum ID (hash it if you prefer more anonymity)']
+            for key in self.review_name:
+                review_scores[key] = self.auto_split(row[self.review_name[key]])
+            track = 'main'
+            status = row['[Optional] Final Decision']
+                
+        # list to numpy
+        list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
+        
+        np2avg = lambda x: 0 if not any(x) else x.mean()
+        np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1])
+        np2str = lambda x: ';'.join([str(y) for y in x])
+        
+        if len(review_scores[list(review_scores.keys())[0]]) != len(review_scores[list(review_scores.keys())[1]]):
+            raise ValueError(f"Rating and confidence length mismatch: {review_scores[list(review_scores.keys())[0]]} vs {review_scores[list(review_scores.keys())[2]]}")
+        
+        # if self._year == 2025:
+        #     if np2avg(review_scores[list(review_scores.keys())[0]]) > 4: raise ValueError(f"Rating > 6: {np2avg(review_scores[list(review_scores.keys())[0]])}")
+        # elif self._year == 2024:
+        #     if np2avg(review_scores[list(review_scores.keys())[0]]) > 6: raise ValueError(f"Rating > 6: {np2avg(review_scores[list(review_scores.keys())[0]])}")
+        
+        ret = {
+            'id': paper_id,
+            'track': track,
+            'status': status,
+        }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
             
         return ret
