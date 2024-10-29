@@ -66,8 +66,8 @@
                 "main": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "correctness": "soundness",
-                    "novelty": "contribution",
+                    "soundness": "soundness",
+                    "contribution": "contribution",
                     "presentation": "presentation"
                 }
             }
