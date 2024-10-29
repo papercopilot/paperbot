@@ -29,8 +29,8 @@
                 "main": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "correctness": "soundness",
-                    "novelty": "contribution",
+                    "soundness": "soundness",
+                    "contribution": "contribution",
                     "presentation": "presentation"
                 }
             }
@@ -114,7 +114,7 @@
             },
             "rname": {
                 "main": {
-                    "rating": "recommendation",
+                    "recommendation": "recommendation",
                     "confidence": "confidence",
                     "correctness": "correctness",
                     "technical_novelty": "technical_novelty_and_significance",
@@ -163,7 +163,7 @@
             },
             "rname": {
                 "main": {
-                    "rating": "recommendation",
+                    "recommendation": "recommendation",
                     "confidence": "confidence",
                     "correctness": "correctness",
                     "technical_novelty": "technical_novelty_and_significance",
