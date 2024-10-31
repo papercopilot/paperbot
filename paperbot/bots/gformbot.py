@@ -1016,6 +1016,10 @@ class GFormBotWACV(GFormBot):
         match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Ratings']) # \u4E00-\u9FFF chinese
         if match: return ret
         
+        review_scores = {}
+        for key in self.review_name:
+            review_scores[key] = []
+        
         if mode == 'Rebuttal':
         
             # remove nan data
@@ -1023,11 +1027,17 @@ class GFormBotWACV(GFormBot):
             paper_id = row['Paper ID (hash it if you prefer more anonymity)']
             
             if as_init:
-                rating = self.auto_split(row['Initial Ratings'])
+                # rating = self.auto_split(row['Initial Ratings'])
                 # confidence = self.auto_split(row['Initial Confidence'])
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
             else:
-                rating = self.auto_split(row['[Optional] Ratings after Revision'])
+                # rating = self.auto_split(row['[Optional] Ratings after Revision'])
                 # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                for key in self.review_name:
+                    rebuttal_key = self.review_name[key].replace('Initial ', '').replace('Initial ', '') + ' after Revision'
+                    rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                    review_scores[key] = self.auto_split(row[rebuttal_key])
             status = row['[Optional] Final Decision']
         else:
             # remove redundant data
@@ -1037,12 +1047,16 @@ class GFormBotWACV(GFormBot):
             paper_id = row['Paper ID (hash it if you prefer more anonymity)']
             status = row['[Optional] Final Decision']
             # confidence = self.auto_split(row['Initial Confidence'])
+            for key in self.review_name:
+                review_scores[key] = self.auto_split(row[self.review_name[key]])
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
-        rating = list2np(rating)
+        # rating = list2np(rating)
         # confidence = list2np(confidence)
-        confidence = np.zeros_like(rating)
+        # confidence = np.zeros_like(rating)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
 
         np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
@@ -1051,24 +1065,29 @@ class GFormBotWACV(GFormBot):
         # if len(rating) != len(confidence):
             # raise ValueError(f"Rating and confidence length mismatch: {len(rating)} vs {len(confidence)}; {rating} vs {confidence}")
         
-        if np2avg(rating) > 5:
-            cprint('warning', f"Rating > 5: {np2avg(rating)}, skipping")
+        if np2avg(review_scores[list(review_scores.keys())[0]]) > 5:
+            cprint('warning', f"Rating > 5: {np2avg(review_scores[list(review_scores.keys())[0]])}, skipping")
             return ret
         
         ret = {
             'id': paper_id,
             'track': track,
             'status': 'Active', # if status is empty, set it to Active
-            'rating': {
-                'str': np2str(rating),
-                'avg': np2avg(rating)
-            },
-            'confidence': {
-                'str': np2str(confidence),
-                'avg': np2avg(confidence)
-            },
-            'corr_rating_confidence': np2coef(rating, confidence),
+            # 'rating': {
+            #     'str': np2str(rating),
+            #     'avg': np2avg(rating)
+            # },
+            # 'confidence': {
+            #     'str': np2str(confidence),
+            #     'avg': np2avg(confidence)
+            # },
+            # 'corr_rating_confidence': np2coef(rating, confidence),
         }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
             
         return ret
     
