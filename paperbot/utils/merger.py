@@ -1493,9 +1493,9 @@ class Merger:
                         # s[f'tsf{i}'] = '' if k not in tier_tsf else tier_tsf[k]
                         # s[f'tsf_conf_{i}'] = '' if k not in tier_tsf_conf else tier_tsf_conf[k]
                         for key in tier_hists:
-                            s[f'h_r{key}_{i}'] = '' if k not in tier_hists[key] else tier_hists[key][k]
+                            s[f'h_r{key+len(openreview_rname)}_{i}'] = '' if k not in tier_hists[key] else tier_hists[key][k]
                         for key in tier_tsfs:
-                            s[f'tsf_r{key}_{i}'] = '' if k not in tier_tsfs[key] else tier_tsfs[key][k]
+                            s[f'tsf_r{key+len(openreview_rname)}_{i}'] = '' if k not in tier_tsfs[key] else tier_tsfs[key][k]
                     
                     # update keys
                     for key in summary['rname']:
@@ -1560,6 +1560,7 @@ class Merger:
             track = stats[k]['track']
             tier_names = [stats[k][f'n{i}'] for i in stats[k]['t_order'].split(',')] + ['Withdraw', 'Desk Reject']
             
+            # usually, the paper are in 'active' status, the authors are not released, but the keywords are available
             stats[k]['authors'], stats[k]['authors_id'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='authors_all')
             stats[k]['authors_first'], stats[k]['authors_id_first'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='author_first_only')
             stats[k]['authors_last'], stats[k]['authors_id_last'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='authors_last_only')
@@ -1573,6 +1574,8 @@ class Merger:
             stats[k]['pos_last'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_last_only')
             stats[k]['keywords'] = self.count_keywords(statuses=tier_names, track=track, n_top=n_top, mode='keywords_all')
             stats[k]['keywords_first'] = self.count_keywords(statuses=tier_names, track=track, n_top=n_top, mode='keywords_first')
+            # stats[k]['keywords'] = self.count_keywords(statuses=tier_names + ['Active'], track=track, n_top=n_top, mode='keywords_all')
+            # stats[k]['keywords_first'] = self.count_keywords(statuses=tier_names + ['Active'], track=track, n_top=n_top, mode='keywords_first')
             
                                     
         # return stats as list
@@ -2016,3 +2019,6 @@ class MergerWACV(Merger):
     
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
+        
+class MergerAAAI(Merger):
+    pass

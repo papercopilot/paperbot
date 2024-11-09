@@ -290,6 +290,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 profiles_url = f'https://api2.openreview.net/profiles?ids={author_ids}'
                 
                 fetch_user_profiles = True
+                fetch_user_profiles = False
                 if fetch_user_profiles:
                     profiles_response = sitebot.SiteBot.session_request(profiles_url)
                     profiles = profiles_response.json()
@@ -521,7 +522,7 @@ class OpenreviewBot(sitebot.SiteBot):
             else:
                 # load previous
                 cprint('info', f'{self._conf} {self._year} {track}: Fetching Skipped.')
-                self.summarizer.load_summary(os.path.join(self._paths['summary'], f'{self._conf}.json'), self._year, track)
+                self.summarizer.load_summary(os.path.join(self._paths['summary'], f'{self._conf}.json'), self._year, track) # need to remove this, since this will cause the inconsistency between various version
                 self._paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'))
             
             # update paperlist
@@ -575,7 +576,7 @@ class ORBotNIPS(OpenreviewBot):
         getstr = lambda x: x if not isinstance(x, dict) else x['value']
     
         status = ''
-        if self._year == 2023:
+        if self._year >= 2023:
             status = note['content']['venue']['value']
             status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
         else:

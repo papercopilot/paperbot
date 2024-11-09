@@ -1,5 +1,49 @@
 {
     "2024": {
+        "openreview": {
+            
+            "api": "api2",
+            "invitation": {
+                "root": "NeurIPS.cc",
+                "review": "Official_Review",
+                "decision": "in_venue"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission"
+                },
+                "Datasets & Benchmarks": {
+                    "Active": "Track/Datasets_and_Benchmarks/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "NeurIPS 2024 spotlight": "Spotlight",
+                    "NeurIPS 2024 poster": "Poster",
+                    "NeurIPS 2024 oral": "Oral",
+                    "Submitted to NeurIPS 2024": "Reject"
+                },
+                "Datasets & Benchmarks": {
+                    "NeurIPS 2024 Datasets and Benchmarks Spotlight": "Spotlight",
+                    "NeurIPS 2024 Datasets and Benchmarks Poster": "Poster",
+                    "NeurIPS 2024 Datasets and Benchmarks Oral": "Oral",
+                    "Submitted to NeurIPS 2024 Datasets and Benchmarks": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence",
+                    "correctness": "soundness",
+                    "novelty": "contribution",
+                    "presentation": "presentation"
+                },
+                "Datasets & Benchmarks": {
+                    "rating": "rating",
+                    "confidence": "confidence"
+                }
+            }
+        },
         "site": {
             "domain": "https://nips.cc",
             "track": {
