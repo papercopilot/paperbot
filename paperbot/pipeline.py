@@ -28,6 +28,7 @@ class Pipeline:
             fetch_openreview=args.fetch_openreview, fetch_site=args.fetch_site, fetch_openaccess=args.fetch_openaccess, fetch_gform=args.fetch_gform, 
             fetch_openreview_extra=args.fetch_openreview_extra, fetch_site_extra=args.fetch_site_extra, fetch_openaccess_extra=args.fetch_openaccess_extra,
             fetch_openreview_extra_mp=args.fetch_openreview_extra_mp, fetch_site_extra_mp=args.fetch_site_extra_mp, fetch_openaccess_extra_mp=args.fetch_openaccess_extra_mp,
+            save_mode=args.save_mode,
             dump_keywords=args.parse_keywords
         )
         
@@ -44,7 +45,7 @@ class Pipeline:
     def __call__(self):
         self.openreviewbot()
         
-    def save_summary(self, conf=None):
+    def save_summary(self, conf=None, mode='overwrite'):
         
         # sort the summary by year in descending order
         self.summary_openreview[conf] = dict(sorted(self.summary_openreview[conf].items(), reverse=True))
@@ -54,32 +55,65 @@ class Pipeline:
         
         if conf in self.summary_openreview and self.summary_openreview[conf]:
             summary_path = os.path.join(self.paths['openreview'], f'summary/{conf}.json')
-            util.save_json(summary_path, self.summary_openreview[conf])
+            if not os.path.isfile(summary_path) or mode == 'overwrite':
+                util.save_json(summary_path, self.summary_openreview[conf])
+            elif mode == 'update':
+                summary = util.load_json(summary_path, convert_int_keys=True)
+                summary.update(self.summary_openreview[conf])
+                util.save_json(summary_path, summary)
         else:
             cprint('info', f"No summary for {conf} in openreview")
         
         if conf in self.summary_site and self.summary_site[conf]:
             summary_path = os.path.join(self.paths['site'], f'summary/{conf}.json')
-            util.save_json(summary_path, self.summary_site[conf])
+            if not os.path.isfile(summary_path) or mode == 'overwrite':
+                util.save_json(summary_path, self.summary_site[conf])
+            elif mode == 'update':
+                summary = util.load_json(summary_path, convert_int_keys=True)
+                summary.update(self.summary_site[conf])
+                util.save_json(summary_path, summary)
         else:
             cprint('info', f"No summary for {conf} in site")
         
         if conf in self.summary_openaccess and self.summary_openaccess[conf]:
             summary_path = os.path.join(self.paths['openaccess'], f'summary/{conf}.json')
-            util.save_json(summary_path, self.summary_openaccess[conf])
+            if not os.path.isfile(summary_path) or mode == 'overwrite':
+                util.save_json(summary_path, self.summary_openaccess[conf])
+            elif mode == 'update':
+                summary = util.load_json(summary_path, convert_int_keys=True)
+                summary.update(self.summary_openaccess[conf])
+                util.save_json(summary_path, summary)
         else:
             cprint('info', f"No summary for {conf} in openaccess")
         
         if conf in self.summary_gform and self.summary_gform[conf]:
             summary_path = os.path.join(self.paths['gform'], f'summary/{conf}.json')
-            util.save_json(summary_path, self.summary_gform[conf])
+            if not os.path.isfile(summary_path) or mode == 'overwrite':
+                util.save_json(summary_path, self.summary_gform[conf])
+            elif mode == 'update':
+                summary = util.load_json(summary_path, convert_int_keys=True)
+                summary.update(self.summary_gform[conf])
+                util.save_json(summary_path, summary)
         else:
             cprint('info', f"No summary for {conf} in gform")
             
         # save all the
         if self.summarys:
             summary_path = os.path.join(self.paths['statistics'], 'stats', 'stat.json')
-            util.save_json(summary_path, self.summarys)
+            if not os.path.isfile(summary_path) or mode == 'overwrite':
+                util.save_json(summary_path, self.summarys)
+            elif mode == 'update':
+                summary = util.load_json(summary_path)
+                for s_new in self.summarys:
+                    # Attempt to find an existing summary with the same 'conference'
+                    existing = next((s for s in summary if s['conference'] == s_new['conference']), None)
+                    
+                    # Update the existing summary if found or append the new summary if not
+                    if existing:
+                        summary[summary.index(existing)] = s_new
+                    else:
+                        summary.append(s_new)
+                util.save_json(summary_path, summary)
             
             # convert to xls
             df = pd.DataFrame(self.summarys)
@@ -352,7 +386,7 @@ class Pipeline:
             if is_save:
                 # save should be done per conference per year
                 # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
-                self.save_summary(conf)
+                self.save_summary(conf, self.config.save_mode)
                 self.save_keywords(conf)
         
         # initialization

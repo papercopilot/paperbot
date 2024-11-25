@@ -6,6 +6,7 @@ from collections import Counter
 import spacy
 
 from .compress_uncompress_array import compress_array, uncompress_string
+from .util import load_json
 
 class Summarizer():
 
@@ -79,22 +80,57 @@ class Summarizer():
         if not os.path.exists(path): return
         key_str2int = lambda x: {int(k):v for k,v in x.items()}
         swap_key_value = lambda x: {v:k for k,v in x.items()}
-        with open(path) as f:
-            summary = json.load(f)[str(year)][track]
-            self.src = summary['src']
-            self.tier_num = key_str2int(summary['tnum'])
-            self.tier_names = key_str2int(summary['tname'])
-            self.review_dimensions = key_str2int(summary['rname'])
-            self.tier_ids = swap_key_value(key_str2int(summary['tid']))
-            # self.tier_hist = key_str2int(summary['thist'])
-            # self.tier_hist_confidence = key_str2int(summary['thist_conf'])
-            # self.tier_hist_sum = key_str2int(summary['thsum'])
-            # if 'ttsf' in summary: self.tier_tsf = key_str2int(summary['ttsf'])
-            # if 'ttsf_conf' in summary: self.tier_tsf_confidence = key_str2int(summary['ttsf_conf'])
-            # if 'ttsfsum' in summary: self.tier_tsf_sum = key_str2int(summary['ttsfsum'])
-            self.tier_hists = {self.review_dimensions[int(k)]: key_str2int(summary['hist'][k]) for k in summary['hist']}
-            if 'tsf' in summary: self.tier_tsfs = {self.review_dimensions[int(k)]: key_str2int(summary['tsf'][k]) for k in summary['tsf']}
-            self.tier_sums = {k: key_str2int(summary['sum'][k]) for k in summary['sum']}
+        
+        summary = load_json(path=path, convert_int_keys=True)[year][track]
+        self.src = summary['src']
+        
+        if 'tnum' in summary:
+            # TODO: can be removed in the future once the data is updated
+            self.tier_num = summary['tnum']
+        elif 'count' in summary['sum']:
+            self.tier_num = summary['sum']['count']
+            
+        if 'tname' in summary:
+            # TODO: can be removed in the future once the data is updated
+            self.tier_names = summary['tname']
+        elif 'tier' in summary['name']:
+            self.tier_names = summary['name']['tier']
+            
+        if 'rname' in summary:
+            # TODO: can be removed in the future once the data is updated
+            self.review_dimensions = summary['rname']
+        elif 'review' in summary['name']:
+            self.review_dimensions = summary['name']['review']
+            
+        if 'tid' in summary:
+            # TODO: can be removed in the future once the data is updated
+            self.tier_ids = swap_key_value(summary['tid'])
+        elif 'tier_raw' in summary['name']:
+            self.tier_ids = swap_key_value(summary['name']['tier_raw'])
+            
+        self.tier_hists = {}
+        self.tier_sums = {'hist': {}, 'tsf': {}}
+        for review_key, review_value in summary['hist'].items():
+            for tier_key, tier_value in review_value.items():
+                if type(tier_value) == str:
+                    # TODO: can be removed in the future once the data is updated
+                    self.tier_hists[self.review_dimensions[int(review_key)]] = {int(tier_key): {0: tier_value}}
+                    self.tier_sums['hist'][int(tier_key)] = {0: summary['sum']['hist'][tier_key]}
+                    if tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = summary['sum']['tsf'][tier_key]
+                elif type(tier_value) == dict:
+                    for area_key, area_value in tier_value.items():
+                        review_key_name = self.review_dimensions[int(review_key)]
+                        if review_key_name not in self.tier_hists:
+                            self.tier_hists[review_key_name] = {}
+                        if int(tier_key) not in self.tier_hists[review_key_name]:
+                            self.tier_hists[review_key_name][int(tier_key)] = {}
+                            self.tier_sums['hist'][int(tier_key)] = {}
+                            if tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = {}
+                        self.tier_hists[review_key_name][int(tier_key)][int(area_key)] = area_value
+                        self.tier_sums['hist'][int(tier_key)][int(area_key)] = summary['sum']['hist'][tier_key][area_key] # not split by review dim
+                        if tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = summary['sum']['tsf'][tier_key] # not split by review dim
+        
+        if 'tsf' in summary: self.tier_tsfs = {self.review_dimensions[int(k)]: key_str2int(summary['tsf'][k]) for k in summary['tsf']}
         
     def get_tid(self, key):
         if key not in self.tier_ids:
@@ -202,7 +238,7 @@ class Summarizer():
     def get_primary_areas(paperlist): # TODO: remove to the paperlist class
         primary_areas = set()
         for o in paperlist:
-            if 'primary_area' in o:
+            if 'primary_area' in o and o['primary_area']:
                 primary_areas.add(o['primary_area'])
         return primary_areas
         
@@ -285,7 +321,7 @@ class Summarizer():
                 for area_key in self.area_dimensions:
                     self.tier_hists[key][tid][area_key] = ';'.join(np.char.mod('%d', tier_hists_update[key][area_key]))
                     # self.tier_hists[key][tid][area_key] = compress_array(tier_hists_update[key][area_key])
-            self.tier_sums['hist'][tid] = int(tier_hists_update[key][0].sum())
+                    self.tier_sums['hist'][tid][area_key] = int(tier_hists_update[key][area_key].sum())
             
         # get histogram over all submissions
         tid = self.get_tid('Total')
@@ -604,13 +640,23 @@ class Summarizer():
         
         summary = {
             'src': self.src,
-            'tnum': self.tier_num,
-            'tname': self.tier_names,
-            'rname': self.review_dimensions,
+            # 'tnum': self.tier_num,
+            'name': {
+                'tier_raw': dict((v,k) for k,v in self.tier_ids.items()),
+                'tier': self.tier_names,
+                'review': self.review_dimensions,
+                'area': self.area_dimensions,
+            },
+            'sum': {
+                'count': self.tier_num,
+            },
+            # 'tname': self.tier_names,
+            # 'rname': self.review_dimensions,
+            # 'aname': self.area_dimensions,
         }
-        summary['tid'] = dict((v,k) for k,v in self.tier_ids.items())
+        # summary['tid'] = dict((v,k) for k,v in self.tier_ids.items())
         
-        summary['sum'] = {}
+        # summary['sum'] = {}
         if self.tier_hists:
             # summary['thist'] = self.tier_hist
             # summary['thist_conf'] = self.tier_hist_confidence

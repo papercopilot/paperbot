@@ -516,6 +516,9 @@ class Merger:
             'withdraw': 0,
             'desk_reject': 0,
             'post_withdraw': 0,
+            'tier_dims': '',
+            'review_dims': '',
+            'area_dims': '',
             't_order': '',
             # 'n0': '', 'n1': '', 'n2': '', 'n3': '', 'n4': '', 'n5': '',
             # 't0': '', 't1': '', 't2': '', 't3': '', 't4': '', 't5': '',
@@ -1117,16 +1120,17 @@ class Merger:
                         
                     # merge openreview
                     self._summary_merged[year][track]['openreview'] = {
-                        'tid': summary['tid'],
-                        'tname': summary['tname'],
-                        'tnum': summary['tnum'],
+                        'tid': summary['name']['tier_raw'],
+                        'tname': summary['name']['tier'],
+                        'tnum': summary['sum']['count'],
                         # 'thsum': summary['thsum'],
                         'thsum': summary['sum']['hist'],
-                        'rname': summary['rname'],
+                        'rname': summary['name']['review'],
+                        'aname': summary['name']['area'],
                     }
                     
                     # dump
-                    review_dim = len(summary['rname'])
+                    review_dim = len(summary['name']['review'])
                     s = self.get_template(review_dim=review_dim)
                     
                     # f = filter(str.isalpha, track[:4])
@@ -1140,49 +1144,54 @@ class Merger:
                     s['s0'] = 'openreview'
                     s['su0'] = summary['src']['openreview']['url']
                     s['total'] = summary['src']['openreview']['total']
+                    # s['tier_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['tier'].items()])
+                    s['review_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['review'].items()])
+                    s['area_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['area'].items()])
                     
-                    tier_id = dict((v,k) for k,v in summary['tid'].items())
+                    tier_id = dict((v,k) for k,v in summary['name']['tier_raw'].items())
                     if 'Active' in tier_id:
                         tid = tier_id['Active']
-                        # s['active'] = summary['tnum'].get(tid, summary['thsum'][tid])
+                        # s['active'] = summary['sum']['count'].get(tid, summary['thsum'][tid])
                         # s['h_active'] = summary['thist'][tid]
                         # s['h_conf_active'] = summary['thist_conf'][tid]
-                        s['active'] = summary['tnum'].get(tid, summary['sum']['hist'][tid])
+                        s['active'] = summary['sum']['count'].get(tid, summary['sum']['hist'][tid][0]) # TODO: check iclr 2024 no active in tnum
                         # s['h_active'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_active'] = summary['hist'][1][tid]
-                        for key in summary['rname']:
-                            s[f'h_r{key}_active'] = summary['hist'][key][tid]
+                        for key in summary['name']['review']:
+                            # for area in summary['name']['area']:
+                                # s[f'h_r{key}_active'] = ''.join(summary['hist'][key][tid][area])
+                            s[f'h_r{key}_active'] = summary['hist'][key][tid][0]
                     if 'Withdraw' in tier_id:
                         tid = tier_id['Withdraw']
-                        s['withdraw'] = summary['tnum'][tid]
+                        s['withdraw'] = summary['sum']['count'][tid]
                         # s['h_withdraw'] = summary['thist'][tid]
                         # s['h_conf_withdraw'] = summary['thist_conf'][tid]
                         # s['h_withdraw'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_withdraw'] = summary['hist'][1][tid]
-                        for key in summary['rname']:
-                            s[f'h_r{key}_withdraw'] = summary['hist'][key][tid]
+                        for key in summary['name']['review']:
+                            s[f'h_r{key}_withdraw'] = summary['hist'][key][tid][0]
                     if 'Post Decision Withdraw' in tier_id:
                         tid = tier_id['Post Decision Withdraw']
-                        s['post_withdraw'] = summary['tnum'][tid]
-                    if 'Desk Reject' in summary['tid'].values():
+                        s['post_withdraw'] = summary['sum']['count'][tid]
+                    if 'Desk Reject' in summary['name']['tier_raw'].values():
                         tid = tier_id['Desk Reject']
-                        s['desk_reject'] = summary['tnum'][tid]
+                        s['desk_reject'] = summary['sum']['count'][tid]
                     if 'Total' in tier_id:
                         tid = tier_id['Total']
                         # s['h_total'] = summary['thist'][tid]
                         # s['h_conf_total'] = summary['thist_conf'][tid]
                         # s['h_total'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_total'] = summary['hist'][1][tid]
-                        for key in summary['rname']:
-                            s[f'h_r{key}_total'] = summary['hist'][key][tid]
+                        for key in summary['name']['review']:
+                            s[f'h_r{key}_total'] = summary['hist'][key][tid][0]
                     if 'Total0' in tier_id:
                         tid = tier_id['Total0']
                         # s['h_total0'] = summary['thist'][tid]
                         # s['h_conf_total0'] = summary['thist_conf'][tid]
                         # s['h_total0'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_total0'] = summary['hist'][1][tid]
-                        for key in summary['rname']:
-                            s[f'h_r{key}_total0'] = summary['hist'][key][tid]
+                        for key in summary['name']['review']:
+                            s[f'h_r{key}_total0'] = summary['hist'][key][tid][0]
                         
                         if 'Active' in tier_id:
                             tid = tier_id['Active']
@@ -1190,7 +1199,7 @@ class Merger:
                             # s['tsf_conf_active'] = summary['ttsf_conf'][tid]
                             # s['tsf_active'] = summary['tsf'][0][tid]
                             # if 1 in summary['tsf']: s['tsf_conf_active'] = summary['tsf'][1][tid]
-                            for key in summary['rname']:
+                            for key in summary['name']['review']:
                                 s[f'tsf_r{key}_active'] = summary['tsf'][key][tid]
                         if 'Withdraw' in tier_id: 
                             tid = tier_id['Withdraw']
@@ -1198,7 +1207,7 @@ class Merger:
                             # s['tsf_conf_withdraw'] = summary['ttsf_conf'][tid]
                             # s['tsf_withdraw'] = summary['tsf'][0][tid]
                             # if 1 in summary['tsf']: s['tsf_conf_withdraw'] = summary['tsf'][1][tid]
-                            for key in summary['rname']:
+                            for key in summary['name']['review']:
                                 s[f'tsf_r{key}_withdraw'] = summary['tsf'][key].get(tid, '')
                         if 'Total' in tier_id: 
                             tid = tier_id['Total']
@@ -1206,7 +1215,7 @@ class Merger:
                             # s['tsf_conf_total'] = summary['ttsf_conf'][tid]
                             # s['tsf_total'] = summary['tsf'][0][tid]
                             # if 1 in summary['tsf']: s['tsf_conf_total'] = summary['tsf'][1][tid]
-                            for key in summary['rname']:
+                            for key in summary['name']['review']:
                                 s[f'tsf_r{key}_total'] = summary['tsf'][key].get(tid, '')
                     
                     # load tiers and sort by num
@@ -1214,9 +1223,9 @@ class Merger:
                     tier_hist, tier_tsf = {}, {}
                     tier_hist_conf, tier_tsf_conf = {}, {}
                     tier_hists, tier_tsfs = {}, {}
-                    for k in summary['tname']:
-                        tname = summary['tname'][k]
-                        tier_num[tname] = summary['tnum'][k]
+                    for k in summary['name']['tier']:
+                        tname = summary['name']['tier'][k]
+                        tier_num[tname] = summary['sum']['count'][k]
                         
                         # if 'thist' in summary and k in summary['thist']: 
                         #     tier_hist[tname] = summary['thist'][k]
@@ -1235,20 +1244,20 @@ class Merger:
                         #     tier_tsf[tname] = summary['tsf'][0][k]
                         # if 'tsf' in summary and 1 in summary['tsf'] and k in summary['tsf'][1]:
                         #     tier_tsf_conf[tname] = summary['tsf'][1][k]
-                        for key in summary['rname']:
+                        for key in summary['name']['review']:
                             if key not in tier_hists:
                                 tier_hists[key] = {}
                             if key not in tier_tsfs:
                                 tier_tsfs[key] = {}
                             if 'hist' in summary and k in summary['hist'][key]:
-                                tier_hists[key][tname] = summary['hist'][key][k]
+                                tier_hists[key][tname] = summary['hist'][key][k][0]
                             if 'tsf' in summary and k in summary['tsf'][key]:
                                 tier_tsfs[key][tname] = summary['tsf'][key][k]
                             
                     tier_num = self.normalize_tier_num(tier_num)
                     self.update_total(s, year, track, tier_num)
                     # self.normalize_openreview_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
-                    self.normalize_openreview_tier_names(s, year, track, tier_num, summary['rname'], tier_hists, tier_tsfs) # this function is the wrap of the previous one, need to beimplemented for nips and iclr
+                    self.normalize_openreview_tier_names(s, year, track, tier_num, summary['name']['review'], tier_hists, tier_tsfs) # this function is the wrap of the previous one, need to beimplemented for nips and iclr
                                 
                     # split name and num
                     for i, k in enumerate(tier_num):
@@ -1264,8 +1273,8 @@ class Merger:
                             s[f'tsf_r{key}_{i}'] = '' if k not in tier_tsfs[key] else tier_tsfs[key][k]
                         
                         
-                    for key in summary['rname']:
-                        s[f'r{key}'] = summary['rname'][key] + ' [openreview]'
+                    for key in summary['name']['review']:
+                        s[f'r{key}'] = summary['name']['review'][key] + ' [openreview]'
                         
                     stats[s['conference']] = s
         
@@ -1301,9 +1310,9 @@ class Merger:
                         s['su1'] = summary['src']['site']['url']
                         
                         tier_num = {}
-                        for k in summary['tnum']:
-                            tname = summary['tname'][k]
-                            tier_num[tname] = summary['tnum'][k]
+                        for k in summary['sum']['count']:
+                            tname = summary['name']['tier'][k]
+                            tier_num[tname] = summary['sum']['count'][k]
                             
                         tier_num = self.normalize_tier_num(tier_num)
                         self.update_total(s, year, track, tier_num)
@@ -1357,16 +1366,16 @@ class Merger:
                         
                     # merge gform
                     self._summary_merged[year][track]['gform'] = {
-                        'tid': summary['tid'],
-                        'tname': summary['tname'],
+                        'tid': summary['name']['tier_raw'],
+                        'tname': summary['name']['tier'],
                         # 'thsum': summary['thsum'],
                         'thsum': summary['sum']['hist'],
-                        'rname': summary['rname'],
+                        'rname': summary['name']['review'],
                     }
                     
                     # dump
-                    openreview_rname = {} if 'openreview' not in self._summary_merged[year][track] else self._summary_merged[year][track]['openreview']['rname']
-                    review_dim = len(openreview_rname) + len(summary['rname'])
+                    openreview_rname = {} if 'openreview' not in self._summary_merged[year][track] else self._summary_merged[year][track]['openreview']['name']['review']
+                    review_dim = len(openreview_rname) + len(summary['name']['review'])
                     s = self.get_template(review_dim=review_dim)
                     
                     cid = self.get_cid(track)
@@ -1383,25 +1392,25 @@ class Merger:
                         s['track'] = track
                     s['s3'] = 'Community'
                     
-                    tier_id = dict((v,k) for k,v in summary['tid'].items())
+                    tier_id = dict((v,k) for k,v in summary['name']['tier_raw'].items())
                     if 'Active' in tier_id:
                         tid = tier_id['Active']
-                        # s['active'] = summary['tnum'].get(tid, summary['thsum'][tid])
+                        # s['active'] = summary['sum']['count'].get(tid, summary['thsum'][tid])
                         # s['h_active'] = summary['thist'][tid]
                         # s['h_conf_active'] = summary['thist_conf'][tid]
                         # s['tsf_active'] = summary['ttsf'].get(tid, '')
                         # s['tsf_conf_active'] = summary['ttsf_conf'].get(tid, '')
-                        s['form'] = summary['tnum'].get(tid, summary['sum']['hist'][tid])
+                        s['form'] = summary['sum']['count'].get(tid, summary['sum']['hist'][tid])
                         # s['h_active'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_active'] = summary['hist'][1][tid]
                         # s['tsf_active'] = summary['tsf'][0].get(tid, '')
                         # if 1 in summary['tsf']: s['tsf_conf_active'] = summary['tsf'][1].get(tid, '')
-                        for key in summary['rname']:
+                        for key in summary['name']['review']:
                             s[f'h_r{key+len(openreview_rname)}_active'] = summary['hist'][key][tid]
                             s[f'tsf_r{key+len(openreview_rname)}_active'] = summary['tsf'][key].get(tid, '')
                     if 'Withdraw' in tier_id:
                         tid = tier_id['Withdraw']
-                        s['withdraw'] = summary['tnum'][tid]
+                        s['withdraw'] = summary['sum']['count'][tid]
                         # s['h_withdraw'] = summary['thist'][tid]
                         # s['h_conf_withdraw'] = summary['thist_conf'][tid]
                         # s['tsf_withdraw'] = summary['ttsf'].get(tid, '')
@@ -1410,7 +1419,7 @@ class Merger:
                         # if 1 in summary['hist']: s['h_conf_withdraw'] = summary['hist'][1][tid]
                         # s['tsf_withdraw'] = summary['tsf'][0].get(tid, '')
                         # if 1 in summary['tsf']: s['tsf_conf_withdraw'] = summary['tsf'][1].get(tid, '')
-                        for key in summary['rname']:
+                        for key in summary['name']['review']:
                             s[f'h_r{key+len(openreview_rname)}_withdraw'] = summary['hist'][key][tid]
                             s[f'tsf_r{key+len(openreview_rname)}_withdraw'] = summary['tsf'][key].get(tid, '')
                     if 'Total' in tier_id:
@@ -1419,7 +1428,7 @@ class Merger:
                         # s['h_conf_total'] = summary['thist_conf'][tid]
                         # s['h_total'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_total'] = summary['hist'][1][tid]
-                        for key in summary['rname']:
+                        for key in summary['name']['review']:
                             s[f'h_r{key+len(openreview_rname)}_total'] = summary['hist'][key][tid]
                     if 'Total0' in tier_id:
                         tid = tier_id['Total0']
@@ -1427,7 +1436,7 @@ class Merger:
                         # s['h_conf_total0'] = summary['thist_conf'][tid]
                         # s['h_total0'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_total0'] = summary['hist'][1][tid]
-                        for key in summary['rname']:
+                        for key in summary['name']['review']:
                             s[f'h_r{key+len(openreview_rname)}_total0'] = summary['hist'][key][tid]
                         
                         if 'Total' in tier_id: 
@@ -1436,7 +1445,7 @@ class Merger:
                             # s['tsf_conf_total'] = summary['ttsf_conf'][tid]
                             # s['tsf_total'] = summary['tsf'][0][tid]
                             # if 1 in summary['tsf']: s['tsf_conf_total'] = summary['tsf'][1][tid]
-                            for key in summary['rname']:
+                            for key in summary['name']['review']:
                                 s[f'tsf_r{key+len(openreview_rname)}_total'] = summary['tsf'][key][tid]
                             # s['tsf_active'] = summary['ttsf'][tid]
                             # s['tsf_conf_active'] = summary['ttsf_conf'][tid]
@@ -1446,9 +1455,9 @@ class Merger:
                     tier_hist, tier_tsf = {}, {}
                     tier_hist_conf, tier_tsf_conf = {}, {}
                     tier_hists, tier_tsfs = {}, {}
-                    for k in summary['tname']:
-                        tname = summary['tname'][k]
-                        tier_num[tname] = summary['tnum'][k]
+                    for k in summary['name']['tier']:
+                        tname = summary['name']['tier'][k]
+                        tier_num[tname] = summary['sum']['count'][k]
                         
                         # if 'thist' in summary and k in summary['thist']: 
                         #     tier_hist[tname] = summary['thist'][k]
@@ -1468,7 +1477,7 @@ class Merger:
                         # if 'tsf' in summary and 1 in summary['tsf'] and k in summary['tsf'][1]:
                         #     tier_tsf_conf[tname] = summary['tsf'][1][k]
                         
-                        for key in summary['rname']:
+                        for key in summary['name']['review']:
                             if key not in tier_hists:
                                 tier_hists[key] = {}
                             if key not in tier_tsfs:
@@ -1481,7 +1490,7 @@ class Merger:
                     tier_num = self.normalize_tier_num(tier_num)
                     self.update_total(s, year, track, tier_num)
                     # self.normalize_openreview_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
-                    self.normalize_openreview_tier_names(s, year, track, tier_num, summary['rname'], tier_hists, tier_tsfs) # this function is the wrap of the previous one, need to beimplemented
+                    self.normalize_openreview_tier_names(s, year, track, tier_num, summary['name']['review'], tier_hists, tier_tsfs) # this function is the wrap of the previous one, need to beimplemented
                     
                     # split name and num
                     for i, k in enumerate(tier_num):
@@ -1498,8 +1507,8 @@ class Merger:
                             s[f'tsf_r{key+len(openreview_rname)}_{i}'] = '' if k not in tier_tsfs[key] else tier_tsfs[key][k]
                     
                     # update keys
-                    for key in summary['rname']:
-                        s[f'r{key+len(openreview_rname)}'] = summary['rname'][key] + ' [collected]'
+                    for key in summary['name']['review']:
+                        s[f'r{key+len(openreview_rname)}'] = summary['name']['review'][key] + ' [collected]'
                     
                     # if cid in stats and stats[cid]['s0'] == 'openreview':
                     #     # if openreview data is available, gform data is not used
@@ -1513,7 +1522,7 @@ class Merger:
                     #         # s[f'h_conf_{i}'] = '' if k not in tier_hist_conf else tier_hist_conf[k]
                     #         # s[f'tsf{i}'] = '' if k not in tier_tsf else tier_tsf[k]
                     #         # s[f'tsf_conf_{i}'] = '' if k not in tier_tsf_conf else tier_tsf_conf[k]
-                    #         for rid in summary['rname']:
+                    #         for rid in summary['name']['review']:
                     #             s[f'h_r{rid}_t{i}'] = '' if 'hist' not in summary or k not in summary['hist'][rid] else summary['hist'][rid].get(k, '')
                     #             s[f'tsf_r{rid}_t{i}'] = '' if 'tsf' not in summary or k not in summary['tsf'][rid] else summary['tsf'][rid].get(k, '')
                         
@@ -1669,6 +1678,10 @@ class MergerICLR(Merger):
         
         # get total accepted
         s['accept'] = tier_num['Poster'] + tier_num['Spotlight'] + tier_num['Oral']
+        
+        # if year == 2023:
+            # s['accept'] = tier_num['Poster'] + tier_num['Top-25%'] + tier_num['Top-5%']
+        
         s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
         
     

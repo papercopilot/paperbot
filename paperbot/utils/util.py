@@ -29,9 +29,21 @@ def save_json(path, data, indent=4):
         json.dump(data, f, indent=indent)
     color_print('io', f'{path} saved.')
     
-def load_json(path):
+def load_json(path, convert_int_keys=False):
     with open(path, 'r') as f:
-        return json.load(f)
+        ret = json.load(f)
+    
+    # recursively convert keys to iQnt if possible
+    if convert_int_keys:
+        def convert_keys(obj):
+            if isinstance(obj, dict):
+                return {int(k) if k.isdigit() else k: convert_keys(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [convert_keys(v) for v in obj]
+            return obj
+        ret = convert_keys(ret)
+        
+    return ret
     
 def color_print(type, msg):
     if type == 'info':
