@@ -1158,9 +1158,9 @@ class Merger:
                         # s['h_active'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_active'] = summary['hist'][1][tid]
                         for key in summary['name']['review']:
-                            # for area in summary['name']['area']:
-                                # s[f'h_r{key}_active'] = ''.join(summary['hist'][key][tid][area])
-                            s[f'h_r{key}_active'] = summary['hist'][key][tid][0]
+                            s[f'h_r{key}_active'] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][tid].values())])
+                            # s[f'h_r{key}_active'] = ';'.join([summary['hist'][key][tid][area].replace(';', ',') for area in summary['hist'][key][tid]])
+                            # s[f'h_r{key}_active'] = summary['hist'][key][tid][0]
                     if 'Withdraw' in tier_id:
                         tid = tier_id['Withdraw']
                         s['withdraw'] = summary['sum']['count'][tid]
@@ -1169,7 +1169,8 @@ class Merger:
                         # s['h_withdraw'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_withdraw'] = summary['hist'][1][tid]
                         for key in summary['name']['review']:
-                            s[f'h_r{key}_withdraw'] = summary['hist'][key][tid][0]
+                            # s[f'h_r{key}_withdraw'] = summary['hist'][key][tid][0]
+                            s[f'h_r{key}_withdraw'] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][tid].values())])
                     if 'Post Decision Withdraw' in tier_id:
                         tid = tier_id['Post Decision Withdraw']
                         s['post_withdraw'] = summary['sum']['count'][tid]
@@ -1183,7 +1184,8 @@ class Merger:
                         # s['h_total'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_total'] = summary['hist'][1][tid]
                         for key in summary['name']['review']:
-                            s[f'h_r{key}_total'] = summary['hist'][key][tid][0]
+                            # s[f'h_r{key}_total'] = summary['hist'][key][tid][0]
+                            s[f'h_r{key}_total'] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][tid].values())])
                     if 'Total0' in tier_id:
                         tid = tier_id['Total0']
                         # s['h_total0'] = summary['thist'][tid]
@@ -1191,7 +1193,8 @@ class Merger:
                         # s['h_total0'] = summary['hist'][0][tid]
                         # if 1 in summary['hist']: s['h_conf_total0'] = summary['hist'][1][tid]
                         for key in summary['name']['review']:
-                            s[f'h_r{key}_total0'] = summary['hist'][key][tid][0]
+                            # s[f'h_r{key}_total0'] = summary['hist'][key][tid][0]
+                            s[f'h_r{key}_total0'] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][tid].values())])
                         
                         if 'Active' in tier_id:
                             tid = tier_id['Active']
@@ -1250,7 +1253,8 @@ class Merger:
                             if key not in tier_tsfs:
                                 tier_tsfs[key] = {}
                             if 'hist' in summary and k in summary['hist'][key]:
-                                tier_hists[key][tname] = summary['hist'][key][k][0]
+                                # tier_hists[key][tname] = summary['hist'][key][k][0]
+                                tier_hists[key][tname] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][k].values())])
                             if 'tsf' in summary and k in summary['tsf'][key]:
                                 tier_tsfs[key][tname] = summary['tsf'][key][k]
                             
