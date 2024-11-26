@@ -345,23 +345,44 @@ class Summarizer():
     def get_tsfs(self, tid, paperlist, paperlist0, status='', track=''):
         sanity_check = {}
         for key in self.tier_tsfs:
-            tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track)
-            # if tsf_sum > 0:
-            self.tier_tsfs[key][tid] = tsf_str
-            sanity_check[key] = tsf_sum
+            # tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track)
+            # # if tsf_sum > 0:
+            # self.tier_tsfs[key][tid] = tsf_str
+            # sanity_check[key] = tsf_sum
+            for (area_key, area) in self.area_dimensions.items():
+                if area == 'overall':
+                    tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track)
+                else:
+                    tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track, primary_area=area)
+                    
+                # initialize
+                if tid not in self.tier_tsfs[key]:
+                    self.tier_tsfs[key][tid] = {}
+                    self.tier_sums['tsf'][tid] = {}
+                    
+                # hack for this version, TODO: remove
+                if type(self.tier_tsfs[key][tid]) == str:
+                    self.tier_tsfs[key][tid] = {0: self.tier_tsfs[key][tid]}
+                    self.tier_sums['tsf'][tid] = {0: self.tier_sums['tsf'][tid]}
+                    
+                self.tier_tsfs[key][tid][area_key] = tsf_str
+                self.tier_sums['tsf'][tid][area_key] = tsf_sum
+                
+                if area == 'overall':
+                    sanity_check[key] = tsf_sum
             
         sanity_value_set = set(sanity_check.values())
         if len(sanity_value_set) > 1:
             if len(sanity_value_set) == 2 and 0 in sanity_check.values():
                 # some keys are missing and the rest of the sums are unique
                 tsf_sum = list(sanity_value_set - {0})[0]
-                self.tier_sums['tsf'][tid] = tsf_sum
+                self.tier_sums['tsf'][tid][0] = tsf_sum
                 return tsf_sum
             else:
                 raise ValueError(f'tsf_sum {sanity_check}')
         elif len(sanity_value_set) == 1:
             tsf_sum = list(sanity_value_set)[0]
-            self.tier_sums['tsf'][tid] = tsf_sum
+            self.tier_sums['tsf'][tid][0] = tsf_sum
             return tsf_sum
         else:
             return 0
@@ -400,11 +421,11 @@ class Summarizer():
     #     tsf_sum = int(tsf.sum())
     #     return tsf_sum, tsf_str, tsf
     
-    def get_tsf_by_key_avg(self, paperlist, paperlist0, key, status='', track=''):
+    def get_tsf_by_key_avg(self, paperlist, paperlist0, key, status='', track='', primary_area=''):
         tsf = np.zeros((100, 100))
         for o, o0 in zip(paperlist, paperlist0):
             if o['id'] != o0['id']: continue
-            if (not status or o['status'] == status) and (not track or o['track'] == track):
+            if (not status or o['status'] == status) and (not track or o['track'] == track) and (not primary_area or o['primary_area'] == primary_area):
             # if o['status'] != status: continue
                 if f'{key}_avg' not in o0 or f'{key}_avg' not in o: continue
                 rating0_avg, rating_avg = o0[f'{key}_avg'], o[f'{key}_avg']
@@ -515,10 +536,13 @@ class Summarizer():
             # update_active_from_tiers = True if tid not in self.tier_tsf else False # when no active data or only several data points are available
             # rating_avg_transfer_update = np.zeros((100, 100)).astype(np.int32)
             # confidence_avg_transfer_update = np.zeros((100, 100)).astype(np.int32)
-            update_active_from_tiers = True if self.tier_sums['tsf'].get(tid, 0) == 0 else False # when no active data or only several data points are available
+            update_active_from_tiers = True if self.tier_sums['tsf'].get(tid, 0)[0] == 0 else False # when no active data or only several data points are available
             tier_tsfs_update = {}
             for key in self.tier_tsfs:
-                tier_tsfs_update[key] = np.zeros((100, 100)).astype(np.int32)
+                tier_tsfs_update[key] = {}
+                # tier_tsfs_update[key] = np.zeros((100, 100)).astype(np.int32)
+                for area_key in self.area_dimensions:
+                    tier_tsfs_update[key][area_key] = np.zeros((100, 100)).astype(np.int32)
             
             # rating_avg transfer matrix for each tier
             for k in tier_name:
@@ -553,7 +577,9 @@ class Summarizer():
                     for key in tier_tsfs_update:
                         if key in self.tier_tsfs and self.tier_tsfs[key]:
                             # tier_tsfs_update[key] += np.array(self.tier_tsfs[key][tid].split(';')).astype(np.int32).reshape(100, 100)
-                            tier_tsfs_update[key] += uncompress_string(self.tier_tsfs[key][tid], (100, 100))
+                            # tier_tsfs_update[key] += uncompress_string(self.tier_tsfs[key][tid], (100, 100))
+                            for area_key in self.area_dimensions:
+                                tier_tsfs_update[key][area_key] += uncompress_string(self.tier_tsfs[key][tid][area_key], (100, 100))
                         else:
                             pass # for those review dimension is not available in the initial
         
@@ -564,11 +590,13 @@ class Summarizer():
                 #     self.tier_tsf[tid] = ';'.join(np.char.mod('%d', rating_avg_transfer_update.flatten()))
                 #     self.tier_tsf_confidence[tid] = ';'.join(np.char.mod('%d', confidence_avg_transfer_update.flatten()))
                 #     self.tier_tsf_sum[tid] = int(rating_avg_transfer_update.sum())
-                if tier_tsfs_update[first_key].sum() > 0:
+                if tier_tsfs_update[first_key][0].sum() > 0:
                     for key in tier_tsfs_update:
                         # self.tier_tsfs[key][tid] = ';'.join(np.char.mod('%d', tier_tsfs_update[key].flatten()))
-                        self.tier_tsfs[key][tid] = compress_array(tier_tsfs_update[key])
-                    self.tier_sums['tsf'][tid] = int(tier_tsfs_update[first_key].sum())
+                        # self.tier_tsfs[key][tid] = compress_array(tier_tsfs_update[key])
+                        for area_key in self.area_dimensions:
+                            self.tier_tsfs[key][tid][area_key] = compress_array(tier_tsfs_update[key][area_key])
+                            self.tier_sums['tsf'][tid][area_key] = int(tier_tsfs_update[key][area_key].sum())
         
         # except Exception as e:
             # print('initial file not available, skip then')

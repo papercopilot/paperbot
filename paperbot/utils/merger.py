@@ -1203,7 +1203,8 @@ class Merger:
                             # s['tsf_active'] = summary['tsf'][0][tid]
                             # if 1 in summary['tsf']: s['tsf_conf_active'] = summary['tsf'][1][tid]
                             for key in summary['name']['review']:
-                                s[f'tsf_r{key}_active'] = summary['tsf'][key][tid]
+                                # s[f'tsf_r{key}_active'] = summary['tsf'][key][tid]
+                                s[f'tsf_r{key}_active'] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][tid].values())])
                         if 'Withdraw' in tier_id: 
                             tid = tier_id['Withdraw']
                             # s['tsf_withdraw'] = summary['ttsf'][tid]
@@ -1211,7 +1212,8 @@ class Merger:
                             # s['tsf_withdraw'] = summary['tsf'][0][tid]
                             # if 1 in summary['tsf']: s['tsf_conf_withdraw'] = summary['tsf'][1][tid]
                             for key in summary['name']['review']:
-                                s[f'tsf_r{key}_withdraw'] = summary['tsf'][key].get(tid, '')
+                                # s[f'tsf_r{key}_withdraw'] = summary['tsf'][key].get(tid, '')
+                                s[f'tsf_r{key}_withdraw'] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][tid].values())])
                         if 'Total' in tier_id: 
                             tid = tier_id['Total']
                             # s['tsf_total'] = summary['ttsf'][tid]
@@ -1219,7 +1221,8 @@ class Merger:
                             # s['tsf_total'] = summary['tsf'][0][tid]
                             # if 1 in summary['tsf']: s['tsf_conf_total'] = summary['tsf'][1][tid]
                             for key in summary['name']['review']:
-                                s[f'tsf_r{key}_total'] = summary['tsf'][key].get(tid, '')
+                                # s[f'tsf_r{key}_total'] = summary['tsf'][key].get(tid, '')
+                                s[f'tsf_r{key}_total'] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][tid].values())])
                     
                     # load tiers and sort by num
                     tier_num = {}
@@ -1256,7 +1259,8 @@ class Merger:
                                 # tier_hists[key][tname] = summary['hist'][key][k][0]
                                 tier_hists[key][tname] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][k].values())])
                             if 'tsf' in summary and k in summary['tsf'][key]:
-                                tier_tsfs[key][tname] = summary['tsf'][key][k]
+                                # tier_tsfs[key][tname] = summary['tsf'][key][k]
+                                tier_tsfs[key][tname] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][k].values())])
                             
                     tier_num = self.normalize_tier_num(tier_num)
                     self.update_total(s, year, track, tier_num)
