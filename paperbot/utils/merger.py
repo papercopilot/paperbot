@@ -459,8 +459,8 @@ class Merger:
         self._paperlist_merged = sorted(self._paperlist_merged, key=lambda x: x['title'])
                 
                 
-    def normalize_openreview_tier_name(self, s, year, track, tn, th, tt, thc, ttc):
-        return s
+    # def normalize_openreview_tier_name(self, s, year, track, tn, th, tt, thc, ttc):
+    #     return s
     
     def normalize_openreview_tier_names(self, s, year, track, tn, rn, ths, tts):
         return s
@@ -1289,9 +1289,8 @@ class Merger:
                                 tier_tsfs[key][tname] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][k].values())])
                             
                     tier_num = self.normalize_tier_num(tier_num)
-                    self.update_total(s, year, track, tier_num)
-                    # self.normalize_openreview_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
                     self.normalize_openreview_tier_names(s, year, track, tier_num, summary['name']['review'], tier_hists, tier_tsfs) # this function is the wrap of the previous one, need to beimplemented for nips and iclr
+                    self.update_total(s, year, track, tier_num) # update total count after normalization
                                 
                     # split name and num
                     for i, k in enumerate(tier_num):
@@ -1534,9 +1533,9 @@ class Merger:
                                 tier_tsfs[key][tname] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][k].values())])
                         
                     tier_num = self.normalize_tier_num(tier_num)
-                    self.update_total(s, year, track, tier_num)
                     # self.normalize_openreview_tier_name(s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf)
                     self.normalize_openreview_tier_names(s, year, track, tier_num, summary['name']['review'], tier_hists, tier_tsfs) # this function is the wrap of the previous one, need to beimplemented
+                    self.update_total(s, year, track, tier_num)
                     
                     # split name and num
                     for i, k in enumerate(tier_num):
@@ -1673,32 +1672,32 @@ class MergerICLR(Merger):
             paper = self._paperlist_openreview[paperdict_openreview[title]]
             self._paperlist_merged.append(paper)
     
-    def normalize_openreview_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
+    # def normalize_openreview_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
         
-        if year == 2024:
-            pass
-            # tier_num['Reject'] = tier_num.pop('Pending')
-            # tier_hist['Reject'] = tier_hist.pop('Pending')
-            # tier_tsf['Reject'] = tier_tsf.pop('Pending')
-            # tier_hist_conf['Reject'] = tier_hist_conf.pop('Pending')
-            # tier_tsf_conf['Reject'] = tier_tsf_conf.pop('Pending')
-        if year == 2023:
-            tier_num['Spotlight'] = tier_num.pop('Top-25%')
-            tier_hist['Spotlight'] = tier_hist.pop('Top-25%')
-            tier_tsf['Spotlight'] = tier_tsf.pop('Top-25%')
-            tier_hist_conf['Spotlight'] = tier_hist_conf.pop('Top-25%')
-            tier_tsf_conf['Spotlight'] = tier_tsf_conf.pop('Top-25%')
-            tier_num['Oral'] = tier_num.pop('Top-5%')
-            tier_hist['Oral'] = tier_hist.pop('Top-5%')
-            tier_tsf['Oral'] = tier_tsf.pop('Top-5%')
-            tier_hist_conf['Oral'] = tier_hist_conf.pop('Top-5%')
-            tier_tsf_conf['Oral'] = tier_tsf_conf.pop('Top-5%')
-        elif year == 2020:
-            tier_num['Oral'] = tier_num.pop('Talk')
-            tier_hist['Oral'] = tier_hist.pop('Talk')
-            tier_hist_conf['Oral'] = tier_hist_conf.pop('Talk')
-        elif year == 2013:
-            tier_num['Spotlight'] = tier_num.pop('Poster Workshop') + tier_num.pop('Oral Workshop')
+    #     if year == 2024:
+    #         pass
+    #         # tier_num['Reject'] = tier_num.pop('Pending')
+    #         # tier_hist['Reject'] = tier_hist.pop('Pending')
+    #         # tier_tsf['Reject'] = tier_tsf.pop('Pending')
+    #         # tier_hist_conf['Reject'] = tier_hist_conf.pop('Pending')
+    #         # tier_tsf_conf['Reject'] = tier_tsf_conf.pop('Pending')
+    #     if year == 2023:
+    #         tier_num['Spotlight'] = tier_num.pop('Top-25%')
+    #         tier_hist['Spotlight'] = tier_hist.pop('Top-25%')
+    #         tier_tsf['Spotlight'] = tier_tsf.pop('Top-25%')
+    #         tier_hist_conf['Spotlight'] = tier_hist_conf.pop('Top-25%')
+    #         tier_tsf_conf['Spotlight'] = tier_tsf_conf.pop('Top-25%')
+    #         tier_num['Oral'] = tier_num.pop('Top-5%')
+    #         tier_hist['Oral'] = tier_hist.pop('Top-5%')
+    #         tier_tsf['Oral'] = tier_tsf.pop('Top-5%')
+    #         tier_hist_conf['Oral'] = tier_hist_conf.pop('Top-5%')
+    #         tier_tsf_conf['Oral'] = tier_tsf_conf.pop('Top-5%')
+    #     elif year == 2020:
+    #         tier_num['Oral'] = tier_num.pop('Talk')
+    #         tier_hist['Oral'] = tier_hist.pop('Talk')
+    #         tier_hist_conf['Oral'] = tier_hist_conf.pop('Talk')
+    #     elif year == 2013:
+    #         tier_num['Spotlight'] = tier_num.pop('Poster Workshop') + tier_num.pop('Oral Workshop')
             
     def normalize_openreview_tier_names(self, s, year, track, tier_num, review_dimension, tier_hists, tier_tsfs):
         
@@ -1759,20 +1758,20 @@ class MergerNIPS(Merger):
             cprint('io', f"Read paperlist from {path}")
             return paperlist
     
-    def normalize_openreview_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
+    # def normalize_openreview_tier_name(self, s, year, track, tier_num, tier_hist, tier_tsf, tier_hist_conf, tier_tsf_conf):
         
-        if year == 2022:
-            s['accept'] = tier_num.pop('Accept')
-            paperlist = self.read_paperlist(os.path.join(self._paths['paperlists'], 'nips/nips2022.json')) # reload the merged paperlist
-            tier_name = {
-                'Poster': 'Poster',
-                'Highlighted': 'Oral'
-            }
-            for k in tier_name:
-                hist_sum, hist_rating_str, hist_rating, hist_confidence_str, hist_confidence = Summarizer().get_hist(paperlist, k, track=track)
-                tier_num[tier_name[k]] = hist_sum
-                tier_hist[tier_name[k]] = hist_rating_str
-                tier_hist_conf[tier_name[k]] = hist_confidence_str
+    #     if year == 2022:
+    #         s['accept'] = tier_num.pop('Accept')
+    #         paperlist = self.read_paperlist(os.path.join(self._paths['paperlists'], 'nips/nips2022.json')) # reload the merged paperlist
+    #         tier_name = {
+    #             'Poster': 'Poster',
+    #             'Highlighted': 'Oral'
+    #         }
+    #         for k in tier_name:
+    #             hist_sum, hist_rating_str, hist_rating, hist_confidence_str, hist_confidence = Summarizer().get_hist(paperlist, k, track=track)
+    #             tier_num[tier_name[k]] = hist_sum
+    #             tier_hist[tier_name[k]] = hist_rating_str
+    #             tier_hist_conf[tier_name[k]] = hist_confidence_str
                 
     def normalize_openreview_tier_names(self, s, year, track, tier_num, review_dimension, tier_hists, tier_tsfs):
         
