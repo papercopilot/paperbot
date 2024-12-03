@@ -7,7 +7,7 @@
                     "pages": {
                         "fastforward": "2024/session/?sess=sess223",
                         "paper": "2024/presentation/?id=[ssid]&sess=[psid]",
-                        "sess": "session/?sess=[psid]"
+                        "sess": "2024/session/?sess=[psid]"
                     }
                 }
             }

@@ -175,9 +175,11 @@ class SnBotSIGGRAPH(SeleniumBot):
                         e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess'))
                         sess = e_sess.get_attribute('textContent').split(':')[-1].split('Session')[0]
                         e_aff = self.driver.find_elements(By.XPATH, self.get_xpath('aff'))
-                        affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
+                        # affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
+                        affs = [e.get_attribute('textContent').strip() for e in e_aff] # don't deduplicate here
                         e_keywords = self.driver.find_elements(By.XPATH, self.get_xpath('keyword'))
-                        keywords = list(set([e.get_attribute('textContent').strip() for e in e_keywords]))
+                        # keywords = list(set([e.get_attribute('textContent').strip() for e in e_keywords]))
+                        keywords = [e.get_attribute('textContent').strip() for e in e_keywords] # don't deduplicate here
                     elif self._year >= 2019:
                         e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess').replace('[psid]', psid))
                         sess = e_sess.get_attribute('textContent').split(':')[-1].split('.')[-1]
@@ -262,7 +264,10 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
                 
                 if self._year >= 2018:
                     url_paper = f"{self._baseurl}{self._args['track'][track]['pages']['paper']}"
-                    self.driver.get(url_paper.replace('[psid]', psid).replace('[ssid]', ssid))
+                    url_paper = url_paper.replace('[psid]', psid).replace('[ssid]', ssid)
+                    url_sess = f"{self._baseurl}{self._args['track'][track]['pages']['sess']}"
+                    url_sess = url_sess.replace('[psid]', psid).replace('[ssid]', ssid)
+                    self.driver.get(url_paper)
                     e_sess = self.driver.find_element(By.XPATH, self.get_xpath('sess'))
                     
                     if self._year == 2021:
@@ -275,10 +280,11 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
                     else:
                         sess = e_sess.get_attribute('textContent')
                     e_aff = self.driver.find_elements(By.XPATH, self.get_xpath('aff'))
-                    affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
+                    affs = [e.get_attribute('textContent').strip() for e in e_aff] # don't deduplicate here
+                    # affs = list(set([e.get_attribute('textContent').strip() for e in e_aff]))
                     
                 self._paperlist[idx]['sess'] = sess.strip()
-                self._paperlist[idx]['aff'] = '; '.join(affs)
+                self._paperlist[idx]['aff'] = ';'.join(affs)
                 self._paperlist[idx]['keywords'] = '; '.join(keywords)
                 self._paperlist[idx]['url_paper'] = url_paper
                 self._paperlist[idx]['url_sess'] = url_sess
