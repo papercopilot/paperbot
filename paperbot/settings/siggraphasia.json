@@ -1,4 +1,18 @@
 {
+    "2024": {
+        "site": {
+            "domain": "https://asia.siggraph.org/",
+            "track": {
+                "main": {
+                    "pages": {
+                        "fastforward": "2024/session/?sess=sess223",
+                        "paper": "2024/presentation/?id=[ssid]&sess=[psid]",
+                        "sess": "session/?sess=[psid]"
+                    }
+                }
+            }
+        }
+    },
     "2023": {
         "site": {
             "domain": "https://asia.siggraph.org/",

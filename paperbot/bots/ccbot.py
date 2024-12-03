@@ -266,7 +266,13 @@ class StBotNIPS(CCBot):
     def get_highest_status(self, status_new, status):
         status_priority = super().get_highest_status()
         
-        if self._year == 2023:
+        if self._year == 2024:
+            status_priority = {
+                'Poster': 0,
+                'Oral': 1,
+                'Journal': 1,
+            }
+        elif self._year == 2023:
             status_new = status_new.replace(' Poster', '')
             status = status.replace(' Poster', '')
         elif self._year == 2022:

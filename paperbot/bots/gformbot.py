@@ -291,14 +291,14 @@ class GFormBot(sitebot.SiteBot):
                     for key in self.summarizer.review_dimensions:
                         if k == 'Total0': 
                             # temporary add k to the id list for the following loop check
-                            self._summary_all_tracks[track]['tid'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                            self._summary_all_tracks[track]['name']['tier_raw'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
                         rname = self.summarizer.review_dimensions[key]
                         if kid in self.summarizer.tier_hists[rname]:
                             self._summary_all_tracks[track]['hist'][key][kid] = self.summarizer.tier_hists[rname][kid]
                             self._summary_all_tracks[track]['sum']['hist'][kid] = self.summarizer.tier_sums['hist'][kid]
                         else:
                             # there's no data for this key, usually total0, remove the key to keep consistency for the merger
-                            del self._summary_all_tracks[track]['tid'][kid]
+                            del self._summary_all_tracks[track]['name']['tier_raw'][kid]
                         
                 continue
                 

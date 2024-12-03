@@ -56,3 +56,44 @@ class PipelineConfig(Config, metaclass=AutoPropertyMeta):
         
         self._save_mode = save_mode
         self._dump_keywords = dump_keywords
+        
+class OpenreviewConfig(Config, metaclass=AutoPropertyMeta):
+    def __init__(
+        self, 
+        use: bool = False, # whether to use openreview data
+        fetch: bool = False, # whether to fetch openreview data
+        fetch_user: bool = False, # whether to fetch user data given user id
+        fetch_pdf: bool = False, # whether to fetch pdfs given paper id
+        multi_process: bool = False, # whether to use multiprocessing
+    ):
+        self._use = use
+        self._fetch = fetch
+        self._fetch_user = fetch_user
+        self._fetch_pdf = fetch_pdf
+        self._multi_process = multi_process
+        
+class SiteConfig(Config, metaclass=AutoPropertyMeta):
+    def __init__(
+        self, 
+        use: bool = False, # whether to use site data
+        fetch: bool = False, # whether to fetch site data
+        fetch_url: bool = False, # whether to fetch extra information
+        multi_process: bool = False, # whether to use multiprocessing
+    ):
+        self._use = use
+        self._fetch = fetch
+        self._fetch_url = fetch_url
+        self._multi_process = multi_process
+        
+class OpenaccessConfig(Config, metaclass=AutoPropertyMeta):
+    def __init__(
+        self, 
+        use: bool = False, # whether to use openaccess data
+        fetch: bool = False, # whether to fetch openaccess data
+        fetch_pdf: bool = False, # whether to fetch pdfs given paper id
+        multi_process: bool = False, # whether to use multiprocessing
+    ):
+        self._use = use
+        self._fetch = fetch
+        self._fetch_pdf = fetch_pdf
+        self._multi_process = multi_process

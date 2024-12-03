@@ -697,6 +697,10 @@ class Merger:
 
         # Join the list into a semicolon-separated string
         aff_string_by_status = ';'.join(aff_strings)
+        
+        # If no affiliations are found for the specified statuses, try without status classification
+        if statuses is not None and aff_string_by_status == '':
+            aff_string_by_status = self.count_affiliations(statuses=None, track=track, n_top=n_top, mode=mode)
 
         # Return the affiliation string
         return aff_string_by_status
@@ -853,6 +857,10 @@ class Merger:
         name_string_by_status = ';'.join(name_strings)
         id_string_by_status = '' if id_string_by_status == name_string_by_status else id_string_by_status
         
+        # If no authors are found for the specified statuses, try without status classification
+        if statuses is not None and name_string_by_status == '' and id_string_by_status == '':
+            name_string_by_status, id_string_by_status = self.count_authors(statuses=None, track=track, n_top=n_top, mode=mode)
+        
         # Return both the name string and the ID string
         return name_string_by_status, id_string_by_status
 
@@ -975,6 +983,10 @@ class Merger:
 
         # Join the list into a semicolon-separated string
         pos_string_by_status = ';'.join(pos_strings)
+        
+        # If no positions are found for the specified statuses, try without status classification
+        if statuses is not None and pos_string_by_status == '':
+            pos_string_by_status = self.count_positions(statuses=None, track=track, n_top=n_top, mode=mode)
 
         # Return the position string
         return pos_string_by_status
@@ -1091,6 +1103,10 @@ class Merger:
 
         # Join the list into a semicolon-separated string
         kw_string_by_status = ';'.join(kw_strings)
+        
+        # If no keywords are found for the specified statuses, try without status classification
+        if statuses is not None and kw_string_by_status == '':
+            kw_string_by_status = self.count_keywords(statuses=None, track=track, n_top=n_top, mode=mode)
 
         # Return the keyword string
         return kw_string_by_status
@@ -1128,15 +1144,16 @@ class Merger:
                     summary = self._summary_openreview[year][track]
                         
                     # merge openreview
-                    self._summary_merged[year][track]['openreview'] = {
-                        'tid': summary['name']['tier_raw'],
-                        'tname': summary['name']['tier'],
-                        'tnum': summary['sum']['count'],
-                        # 'thsum': summary['thsum'],
-                        'thsum': summary['sum']['hist'],
-                        'rname': summary['name']['review'],
-                        'aname': summary['name']['area'],
-                    }
+                    # self._summary_merged[year][track]['openreview'] = {
+                    #     'tid': summary['name']['tier_raw'],
+                    #     'tname': summary['name']['tier'],
+                    #     'tnum': summary['sum']['count'],
+                    #     # 'thsum': summary['thsum'],
+                    #     'thsum': summary['sum']['hist'],
+                    #     'rname': summary['name']['review'],
+                    #     'aname': summary['name']['area'],
+                    # }
+                    self._summary_merged[year][track]['openreview'] = summary
                     
                     # dump
                     review_dim = len(summary['name']['review'])
@@ -1326,6 +1343,9 @@ class Merger:
                         s['s1'] = summary['src']['site']['name']
                         s['su1'] = summary['src']['site']['url']
                         
+                        if 'sum' not in summary:
+                            cprint(f'Error: {cid} {year} {track} has not been crawled', 'red')
+                            
                         tier_num = {}
                         for k in summary['sum']['count']:
                             tname = summary['name']['tier'][k]
@@ -1594,6 +1614,9 @@ class Merger:
         for k in stats:
             track = stats[k]['track']
             tier_names = [stats[k][f'n{i}'] for i in stats[k]['t_order'].split(',')] + ['Withdraw', 'Desk Reject']
+            
+            # if tier_names are not consistent with available status, 
+            # e.g. paper status is not in tier_names, skip the classify_by_status
             
             # usually, the paper are in 'active' status, the authors are not released, but the keywords are available
             stats[k]['authors'], stats[k]['authors_id'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='authors_all')
@@ -2014,6 +2037,7 @@ class MergerSIGGRAPHASIA(Merger):
         if 'Reject' not in tier_num: tier_num['Reject'] = 0
         if 'Poster' not in tier_num: tier_num['Poster'] = 0
         if 'Conference' not in tier_num: tier_num['Conference'] = 0
+        if 'Technical Paper' not in tier_num: tier_num['Technical Paper'] = 0
         if 'TOG Paper' not in tier_num: tier_num['TOG Paper'] = 0
         tier_num = dict(sorted(tier_num.items(), key=lambda item: item[1], reverse=True))
             

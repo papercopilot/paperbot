@@ -246,6 +246,7 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
         self.status_map = {
             'papers': 'Technical Paper',
             'paperstog': 'TOG Paper',
+            'tog': 'TOG Paper', # start from sa2024
             'pos': 'Poster',
         }
         
@@ -291,7 +292,13 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
             'keyword': '',
         }
         
-        if self._year == 2023:
+        if self._year == 2024:
+            xpath["title"] =  "./td[contains(@class, 'title-speakers-td')]"
+            xpath["author"] =  ".//div[contains(@class, 'presenter-name')]"
+            xpath["sess"] =  "//span[contains(@class, 'session-title')]/a"
+            xpath["aff"] =  "//div[contains(@class, 'presenter-institution')]/a"
+            xpath['keyword'] = "//div[contains(@class, 'keyword tag-group-list')]//div"
+        elif self._year == 2023:
             xpath["title"] =  "./td[contains(@class, 'title-speakers-td')]"
             xpath["author"] =  ".//div[contains(@class, 'presenter-name')]"
             xpath["sess"] =  "//span[contains(@class, 'session-title')]/a"

@@ -116,7 +116,7 @@ class Summarizer():
                     # TODO: can be removed in the future once the data is updated
                     self.tier_hists[self.review_dimensions[int(review_key)]] = {int(tier_key): {0: tier_value}}
                     self.tier_sums['hist'][int(tier_key)] = {0: summary['sum']['hist'][tier_key]}
-                    if tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = summary['sum']['tsf'][tier_key]
+                    if 'tsf' in summary['sum'] and tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = summary['sum']['tsf'][tier_key]
                 elif type(tier_value) == dict:
                     for area_key, area_value in tier_value.items():
                         review_key_name = self.review_dimensions[int(review_key)]
@@ -125,10 +125,10 @@ class Summarizer():
                         if int(tier_key) not in self.tier_hists[review_key_name]:
                             self.tier_hists[review_key_name][int(tier_key)] = {}
                             self.tier_sums['hist'][int(tier_key)] = {}
-                            if tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = {}
+                            if 'tsf' in summary['sum'] and tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = {}
                         self.tier_hists[review_key_name][int(tier_key)][int(area_key)] = area_value
                         self.tier_sums['hist'][int(tier_key)][int(area_key)] = summary['sum']['hist'][tier_key][area_key] # not split by review dim
-                        if tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = summary['sum']['tsf'][tier_key] # not split by review dim
+                        if 'tsf' in summary['sum'] and tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = summary['sum']['tsf'][tier_key] # not split by review dim
         
         if 'tsf' in summary: self.tier_tsfs = {self.review_dimensions[int(k)]: key_str2int(summary['tsf'][k]) for k in summary['tsf']}
         
@@ -235,10 +235,10 @@ class Summarizer():
         return hist_sum, hist_str, hist
     
     @staticmethod
-    def get_primary_areas(paperlist): # TODO: remove to the paperlist class
+    def get_primary_areas(paperlist, track=''): # TODO: remove to the paperlist class
         primary_areas = set()
         for o in paperlist:
-            if 'primary_area' in o and o['primary_area']:
+            if ('primary_area' in o and o['primary_area']) and (not track or o['track'] == track):
                 primary_areas.add(o['primary_area'])
         return primary_areas
         
@@ -246,7 +246,7 @@ class Summarizer():
     def get_histogram(self, tier_name={}, track=''):
         
         if not self.area_dimensions:
-            primary_areas = self.get_primary_areas(self._paperlist)
+            primary_areas = self.get_primary_areas(self._paperlist, track=track)
             primary_areas = ['overall'] + sorted(list(primary_areas))
             self.area_dimensions = {i: area for i, area in enumerate(primary_areas)}
         
@@ -657,8 +657,14 @@ class Summarizer():
         
         summary = {
             'src': self.src,
-            'tnum': self.tier_num,
-            'tname': self.tier_names,
+            'name': {
+                'tier': self.tier_names,
+            },
+            'sum': {
+                'count': self.tier_num,
+            },
+            # 'tnum': self.tier_num,
+            # 'tname': self.tier_names,
         }
         
         return self.sorted_summary(summary)
@@ -668,7 +674,6 @@ class Summarizer():
         
         summary = {
             'src': self.src,
-            # 'tnum': self.tier_num,
             'name': {
                 'tier_raw': dict((v,k) for k,v in self.tier_ids.items()),
                 'tier': self.tier_names,
@@ -678,6 +683,7 @@ class Summarizer():
             'sum': {
                 'count': self.tier_num,
             },
+            # 'tnum': self.tier_num,
             # 'tname': self.tier_names,
             # 'rname': self.review_dimensions,
             # 'aname': self.area_dimensions,
