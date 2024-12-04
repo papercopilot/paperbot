@@ -6,6 +6,12 @@
             },
             "tname": {
                 "main": {}
+            },
+            "rname": {
+                "main": {
+                    "rating": "Initial Ratings",
+                    "confidence": "Initial Confidence"
+                }
             }
         }
     }

@@ -628,7 +628,7 @@ class Merger:
             if mode == 'affs_all':
                 affs = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
             elif mode == 'affs_unique_per_record':
-                affs = set([aff.strip() for aff in paper['aff'].split(';') if aff.strip()])
+                affs = list(dict.fromkeys([aff.strip() for aff in paper['aff'].split(';') if aff.strip()]))
             elif mode == 'affs_first_only':
                 affs_list = [aff.strip() for aff in paper['aff'].split(';') if aff.strip()]
                 affs = [affs_list[0]] if affs_list else []
@@ -697,10 +697,6 @@ class Merger:
 
         # Join the list into a semicolon-separated string
         aff_string_by_status = ';'.join(aff_strings)
-        
-        # If no affiliations are found for the specified statuses, try without status classification
-        if statuses is not None and aff_string_by_status == '':
-            aff_string_by_status = self.count_affiliations(statuses=None, track=track, n_top=n_top, mode=mode)
 
         # Return the affiliation string
         return aff_string_by_status
@@ -857,10 +853,6 @@ class Merger:
         name_string_by_status = ';'.join(name_strings)
         id_string_by_status = '' if id_string_by_status == name_string_by_status else id_string_by_status
         
-        # If no authors are found for the specified statuses, try without status classification
-        if statuses is not None and name_string_by_status == '' and id_string_by_status == '':
-            name_string_by_status, id_string_by_status = self.count_authors(statuses=None, track=track, n_top=n_top, mode=mode)
-        
         # Return both the name string and the ID string
         return name_string_by_status, id_string_by_status
 
@@ -919,7 +911,7 @@ class Merger:
             if mode == 'position_all':
                 positions = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
             elif mode == 'position_unique_per_record':
-                positions = set([pos.strip() for pos in paper['position'].split(';') if pos.strip()])
+                positions = list(dict.fromkeys([pos.strip() for pos in paper['position'].split(';') if pos.strip()]))
             elif mode == 'position_first_only':
                 pos_list = [pos.strip() for pos in paper['position'].split(';') if pos.strip()]
                 positions = [pos_list[0]] if pos_list else []
@@ -984,10 +976,6 @@ class Merger:
         # Join the list into a semicolon-separated string
         pos_string_by_status = ';'.join(pos_strings)
         
-        # If no positions are found for the specified statuses, try without status classification
-        if statuses is not None and pos_string_by_status == '':
-            pos_string_by_status = self.count_positions(statuses=None, track=track, n_top=n_top, mode=mode)
-
         # Return the position string
         return pos_string_by_status
 
@@ -1104,10 +1092,6 @@ class Merger:
         # Join the list into a semicolon-separated string
         kw_string_by_status = ';'.join(kw_strings)
         
-        # If no keywords are found for the specified statuses, try without status classification
-        if statuses is not None and kw_string_by_status == '':
-            kw_string_by_status = self.count_keywords(statuses=None, track=track, n_top=n_top, mode=mode)
-
         # Return the keyword string
         return kw_string_by_status
 
@@ -1614,23 +1598,35 @@ class Merger:
             track = stats[k]['track']
             tier_names = [stats[k][f'n{i}'] for i in stats[k]['t_order'].split(',')] + ['Withdraw', 'Desk Reject']
             
-            # if tier_names are not consistent with available status, 
+            # TODO: this needs a better design to align all possible status with t_order
+            # iterate over all papers to check if all statuses are in the statuses list, if not, set statuses as None
+            # data is not satisified with the classification by status, return the result without classification
             # e.g. paper status is not in tier_names, skip the classify_by_status
+            # this design has to be declined, since all possible status in the paperlist is different from t_order, which is to showcase
+            statuses = tier_names
+            # for paper in self._paperlist_merged:
+            #     if statuses is not None and len(statuses) > 0 and paper.get('status') not in tier_names:
+            #         statuses = None
+            #         break
+            
+            # hack for siggraph/siggraphasia to disable classification by status since the status processing is not well polished
+            if self._conf in ['siggraph', 'siggraphasia']:
+                statuses = None
             
             # usually, the paper are in 'active' status, the authors are not released, but the keywords are available
-            stats[k]['authors'], stats[k]['authors_id'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='authors_all')
-            stats[k]['authors_first'], stats[k]['authors_id_first'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='author_first_only')
-            stats[k]['authors_last'], stats[k]['authors_id_last'] = self.count_authors(statuses=tier_names, track=track, n_top=n_top, mode='authors_last_only')
-            stats[k]['affs'] = self.count_affiliations(statuses=tier_names, track=track, n_top=n_top, mode='affs_all')
-            stats[k]['affs_unique'] = self.count_affiliations(statuses=tier_names, track=track, n_top=n_top, mode='affs_unique_per_record')
-            stats[k]['affs_first'] = self.count_affiliations(statuses=tier_names, track=track, n_top=n_top, mode='affs_first_only')
-            stats[k]['affs_last'] = self.count_affiliations(statuses=tier_names, track=track, n_top=n_top, mode='affs_last_only')
-            stats[k]['pos'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_all')
-            stats[k]['pos_unique'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_unique_per_record')
-            stats[k]['pos_first'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_first_only')
-            stats[k]['pos_last'] = self.count_positions(statuses=tier_names, track=track, n_top=n_top, mode='position_last_only')
-            stats[k]['keywords'] = self.count_keywords(statuses=tier_names, track=track, n_top=n_top, mode='keywords_all')
-            stats[k]['keywords_first'] = self.count_keywords(statuses=tier_names, track=track, n_top=n_top, mode='keywords_first')
+            stats[k]['authors'], stats[k]['authors_id'] = self.count_authors(statuses=statuses, track=track, n_top=n_top, mode='authors_all')
+            stats[k]['authors_first'], stats[k]['authors_id_first'] = self.count_authors(statuses=statuses, track=track, n_top=n_top, mode='author_first_only')
+            stats[k]['authors_last'], stats[k]['authors_id_last'] = self.count_authors(statuses=statuses, track=track, n_top=n_top, mode='authors_last_only')
+            stats[k]['affs'] = self.count_affiliations(statuses=statuses, track=track, n_top=n_top, mode='affs_all')
+            stats[k]['affs_unique'] = self.count_affiliations(statuses=statuses, track=track, n_top=n_top, mode='affs_unique_per_record')
+            stats[k]['affs_first'] = self.count_affiliations(statuses=statuses, track=track, n_top=n_top, mode='affs_first_only')
+            stats[k]['affs_last'] = self.count_affiliations(statuses=statuses, track=track, n_top=n_top, mode='affs_last_only')
+            stats[k]['pos'] = self.count_positions(statuses=statuses, track=track, n_top=n_top, mode='position_all')
+            stats[k]['pos_unique'] = self.count_positions(statuses=statuses, track=track, n_top=n_top, mode='position_unique_per_record')
+            stats[k]['pos_first'] = self.count_positions(statuses=statuses, track=track, n_top=n_top, mode='position_first_only')
+            stats[k]['pos_last'] = self.count_positions(statuses=statuses, track=track, n_top=n_top, mode='position_last_only')
+            stats[k]['keywords'] = self.count_keywords(statuses=statuses, track=track, n_top=n_top, mode='keywords_all')
+            stats[k]['keywords_first'] = self.count_keywords(statuses=statuses, track=track, n_top=n_top, mode='keywords_first')
             # stats[k]['keywords'] = self.count_keywords(statuses=tier_names + ['Active'], track=track, n_top=n_top, mode='keywords_all')
             # stats[k]['keywords_first'] = self.count_keywords(statuses=tier_names + ['Active'], track=track, n_top=n_top, mode='keywords_first')
             

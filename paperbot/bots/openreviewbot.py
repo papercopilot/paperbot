@@ -492,6 +492,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 self.summarizer.tier_hists[key] = {}
                 self.summarizer.tier_tsfs[key] = {}
                 self.summarizer.review_dimensions[i] = key
+            self.summarizer.area_dimensions = {}
             self.summarizer.tier_sums = {'hist': {},'tsf': {},}
             
             # fetch paperlist

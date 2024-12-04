@@ -6,6 +6,13 @@
             },
             "tname": {
                 "main": {}
+            },
+            "rname": {
+                "main": {
+                    "overall_assessment": "Initial Overall Assessment",
+                    "confidence": "Initial Confidence",
+                    "soundness": "Initial Soundness"
+                }
             }
         }
     }
