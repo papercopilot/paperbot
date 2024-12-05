@@ -1,5 +1,7 @@
 import paperbot
 import argparse
+import cProfile
+import pstats
 
 def set_arguments():
     parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'colm', 'cvpr', 'iccv', 'eccv', 'wacv', 'acl', 'kdd', 'uai', 'acmmm', 'siggraph', 'siggraphasia'])
@@ -30,7 +32,7 @@ def set_arguments():
     parser.add_argument('--fetch_gform', action='store_true', help='fetch from google form, disabled automatically when not using google form data', default=True)
     
     parser.add_argument('--fetch_openreview_extra', action='store_true', help='fetch extra information on openreview', default=False)
-    parser.add_argument('--fetch_site_extra', action='store_true', help='fetch extra information on site', default=True)
+    parser.add_argument('--fetch_site_extra', action='store_true', help='fetch extra information on site', default=False)
     parser.add_argument('--fetch_openaccess_extra', action='store_true', help='fetch extra information on openaccess', default=False)
     
     parser.add_argument('--fetch_openreview_extra_mp', action='store_true', help='fetch from openreview using multiprocessing', default=False)
@@ -53,6 +55,10 @@ def test_pipeline(args):
     p.launch(is_save=args.save, is_mp=args.mp)
 
 if __name__ == "__main__":
+    
+    profile = cProfile.Profile()
+    profile.enable()
+    
     parser = argparse.ArgumentParser()
     set_arguments()
     args = parser.parse_args()
@@ -70,3 +76,10 @@ if __name__ == "__main__":
     # check cvpr 2022 site
     
     test_pipeline(args)
+    
+    profile.disable()
+    profile.dump_stats('profile.log')
+    with open('profile.log', 'w') as f:
+        stats = pstats.Stats(profile, stream=f)
+        stats.sort_stats('cumulative')
+        stats.print_stats()
