@@ -4,7 +4,7 @@ import cProfile
 import pstats
 
 def set_arguments():
-    parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'colm', 'cvpr', 'iccv', 'eccv', 'wacv', 'acl', 'kdd', 'uai', 'acmmm', 'siggraph', 'siggraphasia'])
+    parser.add_argument('--confs', nargs='+', help='conference names', default=['iclr', 'nips', 'icml', 'corl', 'emnlp', 'colm', 'cvpr', 'iccv', 'eccv', 'wacv', 'acl', 'kdd', 'uai', 'acmmm', 'siggraph', 'siggraphasia', 'googlescholar'])
     parser.add_argument('--years', nargs='+', help='years', default=range(2025, 2012, -1)) # use
     
     # 
@@ -63,9 +63,10 @@ if __name__ == "__main__":
     set_arguments()
     args = parser.parse_args()
     # args.confs = ['iclr', 'nips', 'icml', 'corl', 'emnlp', 'colm'] # openreview + site
-    # args.confs = ['cvpr', 'iccv'] # openaccess + site
+    # args.confs = ['cvpr', 'iccv', 'eccv', 'wacv'] # openaccess + site
     # args.confs = ['aaai', 'icml', 'acl', 'kdd', 'uai', 'acmmm'] # gform
     # args.confs = ['nips', 'icml', 'corl', 'emnlp', 'colm']
+    # args.confs = ['googlescholar']
     args.confs = ['iclr']
     
     # args.years = [2025, 2024, 2023, 2022, 2021]

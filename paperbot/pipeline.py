@@ -150,7 +150,11 @@ class Pipeline:
         summary_gform = {}
         keywords_openreview = {}
 
-        assigner_name = f"Assigner{conf.upper()}"
+        # get the assigner name
+        if conf == 'googlescholar':
+            assigner_name = f"AssignerGoogleScholar"
+        else:
+            assigner_name = f"Assigner{conf.upper()}"
         
         def log_start(bot_name, abbr=True):
             stat = util.bot_abbr(bot_name) if abbr else 'Running'
@@ -353,6 +357,7 @@ class Pipeline:
                 table.add_row(conf, *cells)
         else:
             # append rows of processing status
+            # TODO: https://github.com/Textualize/rich/discussions/482
             for index, value in data.items():
                 table.add_row(str(index), str(value['openreview']), str(value['site']), str(value['openaccess']), str(value['gform']), str(value['merge']))
 
@@ -415,7 +420,7 @@ class Pipeline:
                     status[f"{conf} {year}"][bot] = ""
                     
         is_render_table = True
-        with Live(self.render_table(self.config, status, is_render_table), refresh_per_second=30, console=console) as live:
+        with Live(self.render_table(self.config, status, is_render_table), refresh_per_second=10, console=console) as live:
             
             # prepare tasks
             tasks = []

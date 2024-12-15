@@ -162,3 +162,7 @@ class StBotAAAI(SiteBot):
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
         
+class StBotGoogleScholar(SiteBot):
+    
+    def __init__(self, conf='', year=None, root_dir=''):
+        super().__init__(conf, year, root_dir)

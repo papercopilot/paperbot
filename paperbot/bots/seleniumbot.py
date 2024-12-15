@@ -5,16 +5,33 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from urllib.parse import urlparse, urljoin
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.rich import tqdm
+from rich.progress import Progress
 import os
+import time
+import random
+import pandas as pd
 
 from . import sitebot
+from ..utils import util
 from ..utils.util import color_print as cprint
 
 class SeleniumBot(sitebot.SiteBot):
     
     def __init__(self, conf='', year=None, root_dir=''):
         super().__init__(conf, year, root_dir)
+        
+        # check selenium
+        service = Service(executable_path='/usr/bin/chromedriver')
+        options = webdriver.ChromeOptions()
+        visualize = False
+        if not visualize:
+            # use headless mode
+            options.add_argument('--headless=new')
+            options.set_capability("cloud:options", {"name": "test"})
+        self.driver = webdriver.Chrome(service=service, options=options)
+        self.wait = WebDriverWait(self.driver, 30)
         
         if 'site' not in self._args:
             self._args = None
@@ -30,14 +47,6 @@ class SeleniumBot(sitebot.SiteBot):
             'summary': os.path.join(self._root_dir, 'summary'),
             'keywords': os.path.join(self._root_dir, 'keywords'),
         }
-        
-                
-        service = Service(executable_path='/usr/bin/chromedriver')
-        options = webdriver.ChromeOptions()
-        options.add_argument('--headless=new')
-        options.set_capability("cloud:options", {"name": "test"})
-        self.driver = webdriver.Chrome(service=service, options=options)
-        self.wait = WebDriverWait(self.driver, 30)
         
     def launch(self, fetch_site=False, fetch_extra=False, fetch_extra_mp=False):
         if not self._args: 
@@ -88,7 +97,7 @@ class SeleniumBot(sitebot.SiteBot):
         raise NotImplementedError
         
     def crawl(self, url, page, track):
-        self.save_request(url)
+        self.safe_request(url)
         
         ssids = {}
         e_sess = self.driver.find_elements(By.XPATH, f"//*[@ssid]")
@@ -119,7 +128,7 @@ class SeleniumBot(sitebot.SiteBot):
             ssids[ssid_type].add(ssid)
         ssids = dict(sorted(ssids.items()))
             
-    def save_request(self, url):
+    def safe_request(self, url):
         try:
             self.driver.get(url)
         except Exception:
@@ -337,3 +346,106 @@ class SnBotSIGGRAPHASIA(SeleniumBot):
             
         return xpath[key]
             
+
+class SnBotGoogleScholar(SeleniumBot):
+    
+    def __init__(self, conf='', year=None, root_dir=''):
+        super().__init__(conf, year, root_dir)
+        
+        args = util.load_settings(conf)
+        self._args = args['top_venues']['site']
+        self._domain = self._args['domain']
+        self._baseurl = self._args['domain']
+        
+        self._paths = {}
+        self._paths['top_venues'] = os.path.join(self._root_dir, '../stats/gs_top_venues.csv')
+    
+    def launch(self, fetch_site=False, fetch_extra=False, fetch_extra_mp=False):
+        if not self._args: 
+            cprint('Info', f'Google Scholar Configuration Not available.')
+            return
+        
+        if fetch_site:
+            # loop over tracks
+            cprint('info', f'Fetching Google Scholar...')
+            url_page = self._baseurl
+            self.crawl(url_page, '', '')
+            
+    def crawl(self, url, page, track):
+        self.safe_request(url)
+        
+        # Wait until the categories dropdown button is visible and click it
+        categories_button_idx = "#gsc_mtv_ac-b"
+        self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, categories_button_idx)))
+        categories_button = self.driver.find_element(By.CSS_SELECTOR, categories_button_idx)
+        categories_button.click()
+
+        # Wait for the categories to load
+        categories_menu_idx = "#gsc_mtv_ac-d"
+        self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, categories_menu_idx)))
+
+        # Get all categories and their urls
+        categories_item_class = ".gs_md_li"
+        categories_menu = self.driver.find_elements(By.CSS_SELECTOR, categories_menu_idx)
+        categories = categories_menu[0].find_elements(By.CSS_SELECTOR, categories_item_class)
+        categories = {category.text: {'url': category.get_attribute("href"), 'subcategory': {}} for category in categories}
+        
+        # loop through all categories
+        results = []
+        with Progress(refresh_per_second=120) as progress:
+            for category, category_object in progress.track(categories.items()):
+                
+                # Get the category page
+                self.safe_request(category_object['url'])
+                
+                # Wait until the subcategories dropdown button is visible and click it
+                sbucategories_button_idx = "#gsc_mcn_sb-b"
+                self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, sbucategories_button_idx)))
+                subcategories_button = self.driver.find_element(By.CSS_SELECTOR, sbucategories_button_idx)
+                subcategories_button.click()
+                
+                # Wait for the subcategories to load
+                subcategories_menu_idx = "#gsc_mcn_sb-d"
+                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, subcategories_menu_idx)))
+                
+                # Get all subcategories and their urls
+                subcategories_menu = self.driver.find_elements(By.CSS_SELECTOR, subcategories_menu_idx)
+                subcategories = subcategories_menu[0].find_elements(By.CSS_SELECTOR, categories_item_class)
+                subcategories = {subcategory.text: {'url': subcategory.get_attribute("href"), 'conf': {}} for subcategory in subcategories}
+                categories[category]['subcategory'] = subcategories
+                
+                # loop through all subcategories
+                for subcategory, subcategory_object in subcategories.items():
+                    
+                    # skip the first subcategory
+                    if subcategory == 'Subcategories':
+                        continue
+                    
+                    # add random sleep to avoid robot check
+                    # time.sleep(random.randint(1, 3)) # works 
+                    time.sleep(random.randint(1, 3)/2.)
+                    
+                    # Get the subcategory page
+                    self.safe_request(subcategory_object['url'])
+                    
+                    # wait untile the conferences table is visible
+                    conferences_table_idx = "#gsc_mvt_table"
+                    self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, conferences_table_idx)))
+                    conferences_table = self.driver.find_element(By.CSS_SELECTOR, conferences_table_idx)
+                    
+                    # get all publication and their rank and h5-index
+                    conferences = conferences_table.find_elements(By.TAG_NAME, "tr")
+                    if conferences[0].find_elements(By.TAG_NAME, "th"):
+                        # remove the header row
+                        conferences = conferences[1:]
+                    conferences = {conference.find_elements(By.TAG_NAME, "td")[1].text: {'subcategory-rank': conference.find_elements(By.TAG_NAME, "td")[0].text, 'h5-index': conference.find_elements(By.TAG_NAME, "td")[2].text, 'h5-median': conference.find_elements(By.TAG_NAME, "td")[3].text} for conference in conferences}
+                    conferences_sort_by_rank = dict(sorted(conferences.items(), key=lambda x: float(x[1]['subcategory-rank'])))
+                    subcategories[subcategory]['conf'] = conferences
+                    
+                    # append to results, where each row is in the form of [category, subcategory, conference, rank, h5-index, h5-median]
+                    for conf, conf_object in conferences_sort_by_rank.items():
+                        results.append([category, subcategory, conf, conf_object['subcategory-rank'], conf_object['h5-index'], conf_object['h5-median']])
+                    
+        # load results as dataframe and save as csv
+        df = pd.DataFrame(results, columns=['Category', 'Subcategory', 'Conference', 'Rank', 'H5-Index', 'H5-Median'])
+        df.to_csv(os.path.join(self._paths['top_venues']), index=False)

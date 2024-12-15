@@ -60,7 +60,7 @@ def color_print(type, msg):
     else:
         print(msg)
         
-def gspread2pd(key, sheet='', parse_header=False):
+def gspread2pd(key, sheet='', parse_header=False, content_start_row=1):
     # fetch data
     gc = gspread.oauth()
     sh = gc.open_by_key(key)
@@ -76,7 +76,7 @@ def gspread2pd(key, sheet='', parse_header=False):
     # process header if needed
     if parse_header:
         df.columns = df.iloc[0].tolist()
-        df = df[1:]
+        df = df[content_start_row:]
         
     return df
 
@@ -86,7 +86,6 @@ def download_gspread_setting(key, json_path=None):
         gc.open_by_key(key)
     except:
         authorized_user_path = os.path.join(gspread.auth.DEFAULT_CONFIG_DIR, 'authorized_user.json')
-        # authorized_user_path = '~/.config/gspread/authorized_user.json'
         authorized_user_path = os.path.expanduser(authorized_user_path)
         if os.path.isfile(authorized_user_path):
             os.remove(authorized_user_path)
@@ -103,14 +102,42 @@ def download_gspread_meta(key, csv_path=None):
         gc.open_by_key(key)
     except:
         authorized_user_path = os.path.join(gspread.auth.DEFAULT_CONFIG_DIR, 'authorized_user.json')
-        # authorized_user_path = '~/.config/gspread/authorized_user.json'
         authorized_user_path = os.path.expanduser(authorized_user_path)
         if os.path.isfile(authorized_user_path):
             os.remove(authorized_user_path)
         
     # convert the loaded df to json and write as gform.json by default
-    df = gspread2pd(key, parse_header=True)
-    df.to_csv(os.path.join(settings.__path__[0], 'meta.csv') if csv_path == None else csv_path, sep=',')
+    df_meta = gspread2pd(key, 'Meta', parse_header=True, content_start_row=2)
+    df_top_venue = gspread2pd(key, sheet='Top Venues', parse_header=True)
+    
+    # append field, subfield, full name column from df_google_scholar to df_meta by 'conference' key,
+    # where 'conference' key in df_meta is in format of '{conference code}{4 digit year}', e.g. 'iclr2021', '3dv2025',
+    # and 'conference' key in df_google_scholar is in format of '{conference code}', e.g. 'iclr', '3dv'
+    # merge on 'conference' column and save to a new variable df
+    
+    # Extract conference codes from 'conference' key in df_meta
+    df_meta['conference_code'] = df_meta['conference'].str[:-4]
+    
+    # Merge df_meta with df_google_scholar on 'conference_code' from df_meta and 'conference' from df_google_scholar
+    df = pd.merge(
+        df_meta, 
+        df_top_venue[['conference', 'Field', 'Subfield', 'Full Name']], 
+        left_on='conference_code', 
+        right_on='conference', 
+        how='left',
+        suffixes=('', '_to_drop') # suffixes for columns with same name
+    )
+    
+    # drop 'conference_code' and all columns with '_to_drop' suffix
+    df.drop(columns=['conference_code'], inplace=True)
+    df.drop(columns=df.filter(like='_to_drop').columns, inplace=True)
+    
+    # save df to csv
+    output_path = os.path.join(settings.__path__[0], 'meta.csv') if csv_path is None else csv_path
+    df.to_csv(output_path, sep=',')
+    
+    # save df_top_venue as top_venues.csv
+    df_top_venue.to_csv(os.path.join(settings.__path__[0], '../../../logs/stats/top_venues.csv'), sep=',')
         
 def load_gspread_setting():
     """Load JSON file."""

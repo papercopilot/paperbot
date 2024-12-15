@@ -33,7 +33,7 @@ class OpenaccessBot(sitebot.SiteBot):
         
         self._paths = {
             'paperlist': os.path.join(self._root_dir, 'venues'),
-            # 'paperlist': os.path.join(self._root_dir, 'glm_batch/pdftext'), # use batch glm
+            # 'paperlist': os.path.join(self._root_dir, '../llm/pdftext'), # use batch glm
             'summary': os.path.join(self._root_dir, 'summary'),
             'keywords': os.path.join(self._root_dir, 'keywords'),
         }

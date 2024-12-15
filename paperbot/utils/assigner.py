@@ -225,3 +225,12 @@ class AssignerAAAI(Assigner):
         elif botname == 'merge':
             return merger.MergerAAAI
         else: super().__new__(cls, botname)
+        
+class AssignerGoogleScholar(Assigner):
+    
+    def __new__(cls, botname, year=0):
+        if botname == 'st':
+            return seleniumbot.SnBotGoogleScholar
+        elif botname == 'merge':
+            return merger.MergerGoogleScholar
+        else: super().__new__(cls, botname)

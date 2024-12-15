@@ -165,14 +165,14 @@ class Merger:
                 json.dump(self._paperlist_merged, f, indent=4)
             cprint('io', f"Saved paperlist for {self._conf} to {path}")
     
-    def get_highest_status(self):
-        # default status_priority, can be rewrite in subclass
-        status_priority = {
-            'Poster': 0,
-            'Spotlight': 1,
-            'Oral': 2,
-        }
-        return status_priority
+    # def get_highest_status(self):
+    #     # default status_priority, can be rewrite in subclass
+    #     status_priority = {
+    #         'Poster': 0,
+    #         'Spotlight': 1,
+    #         'Oral': 2,
+    #     }
+    #     return status_priority
     
     def merge_paper(self, p1, p2):
         src1, src2 = p1.pop('type'), p2.pop('type')
@@ -497,6 +497,9 @@ class Merger:
         if v['desk_reject']: s['desk_reject'] = int(v['desk_reject'].replace(',',''))
         if v['show'] == 'TRUE': s['show'] = 1
         
+        # 't_order' is the order all all tiers, stats and visualization is based on this order
+        # 't_order_ac' is the order of accepted tiers, used for calculating acceptance rate
+        # 't_order_brief' is the order of tiers to show on loading, used for hiding some non-essential tiers
         accept = 0
         if v['t_order']:
             s['t_order'] = v['t_order'].replace(" ", "")
@@ -512,6 +515,11 @@ class Merger:
                 elif v[f'n{t}'] != 'Reject': 
                     # ac_tier is not specified, process by t_order and accept all non-reject
                     accept += s[f't{t}']
+                    
+            # append brief order to the end of t_order when it's specified
+            # this design can be improved to a separate keys in the summary when 't_order_brief' is frequently used
+            if v['t_order_brief']:
+                s['t_order'] += ';' + v['t_order_brief'].replace(" ", "")
             
             
         s['accept'] = int(v['accept'].replace(',','')) if v['accept'] else accept
@@ -1226,8 +1234,10 @@ class Merger:
                     self.normalize_openreview_tier_names(s, year, track, tier_num, summary['name']['review'], tier_hists, tier_tsfs) # this function is the wrap of the previous one, need to beimplemented for nips and iclr
                                 
                     # split name and num
-                    for t in s['t_order'].split(','):
+                    # when ';' is used, the first section before ';' represents all the tiers
+                    for t in s['t_order'].split(';')[0].split(','):
                         k = s[f'n{t}']
+                        # s['tier_dims'] += f'{t}:{k};'
                         for key in tier_hists:
                             s[f'h_r{key}_{t}'] = '' if k not in tier_hists[key] else tier_hists[key][k]
                         for key in tier_tsfs:
@@ -1398,8 +1408,10 @@ class Merger:
                     s, _ = self.update_from_meta(s, track, tier_num)
                     
                     # split name and num
-                    for t in s['t_order'].split(','):
+                    # when ';' is used, the first section before ';' represents all the tiers
+                    for t in s['t_order'].split(';')[0].split(','):
                         k = s[f'n{t}']
+                        # s['tier_dims'] += f'{t}:{k};'
                         for key in tier_hists:
                             s[f'h_r{key+len(openreview_rname)}_{t}'] = '' if k not in tier_hists[key] else tier_hists[key][k]
                         for key in tier_tsfs:
@@ -1449,7 +1461,8 @@ class Merger:
         n_top = 200
         for k in stats:
             track = stats[k]['track']
-            tier_names = [stats[k][f'n{i}'] for i in stats[k]['t_order'].split(',')] + ['Withdraw', 'Desk Reject']
+            # when ';' is used in 't_order', the first section before ';' represents all the tiers
+            tier_names = [stats[k][f'n{i}'] for i in stats[k]['t_order'].split(';')[0].split(',')] + ['Withdraw', 'Desk Reject']
             
             # TODO: this needs a better design to align all possible status with t_order
             # iterate over all papers to check if all statuses are in the statuses list, if not, set statuses as None
@@ -1536,6 +1549,7 @@ class MergerNIPS(Merger):
         if 'poster' in p1: paper['poster'] = p1['poster']
         if 'slides' in p1: paper['slides'] = p1['slides']
         if 'video' in p1: paper['video'] = p1['video']
+        if 'project' in p1: paper['project'] = p1['project']
         
         return paper
     
@@ -1764,4 +1778,7 @@ class MergerWACV(Merger):
     pass
         
 class MergerAAAI(Merger):
+    pass
+
+class MergerGoogleScholar(Merger):
     pass

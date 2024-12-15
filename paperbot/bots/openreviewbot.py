@@ -48,7 +48,7 @@ class OpenreviewBot(sitebot.SiteBot):
         
         self._paths = {
             'paperlist': os.path.join(self._root_dir, 'venues'),
-            # 'paperlist': os.path.join(self._root_dir, 'glm_batch/pdftext'),
+            # 'paperlist': os.path.join(self._root_dir, '../llm/pdftext'),
             'summary': os.path.join(self._root_dir, 'summary'),
             'keywords': os.path.join(self._root_dir, 'keywords'),
         }

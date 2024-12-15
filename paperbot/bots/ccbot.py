@@ -291,8 +291,11 @@ class StBotNIPS(CCBot):
     @staticmethod
     def process_url(url_paper, year):
         
+        # get cookies to surpass login
+        cookies = chrome_cookies(url_paper)
+        
         # open paper url to load status
-        response_paper = sitebot.SiteBot.session_request(url_paper)
+        response_paper = sitebot.SiteBot.session_request(url_paper, cookies=cookies)
         tree_paper = html.fromstring(response_paper.content)
         
         # get the div element that contains a <a> element with text 'Abstract'
@@ -300,7 +303,7 @@ class StBotNIPS(CCBot):
         if not e_container: return {}
         
         ret = {'site': url_paper,}
-        if year == 2023 or year == 2022:
+        if year == 2024 or year == 2023 or year == 2022:
             e_proceeding = tree_paper.xpath("//a[normalize-space()='Paper']")
             ret['proceeding'] = '' if not e_proceeding else e_proceeding[0].xpath("./@href")[0]
             
@@ -312,8 +315,11 @@ class StBotNIPS(CCBot):
             e_poster = tree_paper.xpath("//a[normalize-space()='Poster']")
             ret['poster'] = '' if not e_poster else e_poster[0].xpath("./@href")[0]
             
-            ret['slides'] = url_paper
-            ret['video'] = url_paper
+            e_project = tree_paper.xpath("//a[normalize-space()='Project Page']")
+            ret['project'] = '' if not e_project else e_project[0].xpath("./@href")[0]
+            
+            # ret['slides'] = url_paper
+            # ret['video'] = url_paper
             
         elif year == 2021:
             e_openreview = tree_paper.xpath("//a[normalize-space()='OpenReview']")
