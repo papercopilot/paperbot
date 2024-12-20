@@ -536,9 +536,9 @@ if __name__ == '__main__':
     # update, create, check, download
     # glm_upload(client, root_batch) # run this line and copy the console output to input_fids
     # glm_create(client, input_fids) # run this line and copy the console output to batchids
-    glm_check(client, batchids) # run this line and copy the console output to the output_fids
+    # glm_check(client, batchids) # run this line and copy the console output to the output_fids
     # glm_download(client, output_fids, root_download)
     
     # align
-    # glm_decode(output_fids, root_download, root_raw, root_output)
+    glm_decode(output_fids, root_download, root_raw, root_output)
     # align_cvpr24()

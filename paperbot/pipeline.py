@@ -7,6 +7,7 @@ import json
 import os
 import pandas as pd
 from collections import defaultdict
+import time
 
 from rich.console import Console
 from rich.table import Table
@@ -45,7 +46,7 @@ class Pipeline:
     def __call__(self):
         self.openreviewbot()
         
-    def save_summary(self, conf=None, mode='overwrite'):
+    def save_venue_summary(self, conf=None, mode='overwrite'):
         
         # sort the summary by year in descending order
         self.summary_openreview[conf] = dict(sorted(self.summary_openreview[conf].items(), reverse=True))
@@ -98,28 +99,123 @@ class Pipeline:
             cprint('info', f"No summary for {conf} in gform")
             
         # save all the
-        if self.summarys:
-            summary_path = os.path.join(self.paths['statistics'], 'stats', 'stat.json')
-            if not os.path.isfile(summary_path) or mode == 'overwrite':
-                util.save_json(summary_path, self.summarys)
-            elif mode == 'update':
-                summary = util.load_json(summary_path)
-                for s_new in self.summarys:
-                    # Attempt to find an existing summary with the same 'conference'
-                    existing = next((s for s in summary if s['conference'] == s_new['conference']), None)
+        # if self.summarys:
+        #     summary_path = os.path.join(self.paths['statistics'], 'stats', 'stat.json')
+        #     if not os.path.isfile(summary_path) or mode == 'overwrite':
+        #         util.save_json(summary_path, self.summarys)
+        #     elif mode == 'update':
+        #         summary = util.load_json(summary_path)
+        #         for s_new in self.summarys:
+        #             # Attempt to find an existing summary with the same 'conference'
+        #             existing = next((s for s in summary if s['conference'] == s_new['conference']), None)
                     
-                    # Update the existing summary if found or append the new summary if not
-                    if existing:
-                        summary[summary.index(existing)] = s_new
-                    else:
-                        summary.append(s_new)
-                util.save_json(summary_path, summary)
+        #             # Update the existing summary if found or append the new summary if not
+        #             if existing:
+        #                 summary[summary.index(existing)] = s_new
+        #             else:
+        #                 summary.append(s_new)
+        #         util.save_json(summary_path, summary)
             
-            # convert to xls
-            df = pd.DataFrame(self.summarys)
-            df.to_excel(summary_path.replace('.json', '.xlsx'), index=False)
-            df.to_csv(summary_path.replace('.json', '.csv'), index=False)
+        #     # convert to xls
+        #     df = pd.DataFrame(self.summarys)
+        #     df.to_excel(summary_path.replace('.json', '.xlsx'), index=False)
+        #     df.to_csv(summary_path.replace('.json', '.csv'), index=False)
+            
+    def save_summary_for_server(self, mode='overwrite'):
         
+        # if not self.summarys:
+        #     cprint('info', "No summary to save.")
+        #     return
+        
+        summary_path = os.path.join(self.paths['statistics'], 'stats', 'stat.json')
+        if not os.path.isfile(summary_path): 
+            mode = 'overwrite'
+        else:
+            summary_local = util.load_json(summary_path)
+        
+        if mode == 'overwrite':
+            summary = self.summarys
+        elif mode == 'update':
+            summary = summary_local
+            for s_new in self.summarys:
+                # Attempt to find an existing summary with the same 'conference'
+                existing = next((s for s in summary if s['conference'] == s_new['conference']), None)
+                
+                # Update the existing summary if found or append the new summary if not
+                if existing:
+                    summary[summary.index(existing)] = s_new
+                else:
+                    summary.append(s_new)
+                    
+        # fill the summary if record in self._meta not in the summary, TODO: need to be fixed, venues_in_summary not works for second time
+        venues_in_summary_all = set([s['conference'] for s in summary])
+        venues_in_summary_bot_mark = set([s['conference'] for s in summary if s['bot_mark'] != ''])
+        def update_from_meta(venue, row, s):
+            # similar to merger.Merger.update_from_meta
+            # TODO: to merge the two functions
+            
+            s['conference'] = venue
+            s['name'] = row['Abbr'] if not row['name'] else row['name']
+            
+            # if row['total']: s['total'] = int(row['total'].replace(',',''))
+            # if row['withdraw']: s['withdraw'] = int(row['withdraw'].replace(',',''))
+            # if row['desk_reject']: s['desk_reject'] = int(row['desk_reject'].replace(',',''))
+            s['total'] = 0 if not row['total'] else int(row['total'].replace(',',''))
+            s['withdraw'] = 0 if not row['withdraw'] else int(row['withdraw'].replace(',',''))
+            s['desk_reject'] = 0 if not row['desk_reject'] else int(row['desk_reject'].replace(',',''))
+            s['show'] = 1 if row['show'] == 'TRUE' else 0
+            accept = 0
+            if row['t_order']:
+                s['t_order'] = row['t_order'].replace(" ", "")
+                ac_tier = row['t_order_ac'].replace(" ", "")
+                for t in s['t_order'].split(','):
+                    s[f'n{t}'] = row[f'n{t}']
+                    tier_count_from_meta = 0 if not row[f't{t}'] else int(row[f't{t}']) # priority to the meta data
+                    s[f't{t}'] = tier_count_from_meta
+                    
+                    if ac_tier:
+                        # ac_tier is specified, just follow the order
+                        accept += s[f't{t}'] if t in ac_tier else 0
+                    elif row[f'n{t}'] != 'Reject': 
+                        # ac_tier is not specified, process by t_order and accept all non-reject
+                        accept += s[f't{t}']
+                        
+                # append brief order to the end of t_order when it's specified
+                # this design can be improved to a separate keys in the summary when 't_order_brief' is frequently used
+                if row['t_order_brief']:
+                    s['t_order'] += ';' + row['t_order_brief'].replace(" ", "")
+                
+            s['accept'] = int(row['accept'].replace(',','')) if row['accept'] else accept
+            s['ac_rate'] = 0 if not s['total'] else s['accept'] / s['total']
+            return s
+        
+        for (venue, row) in self._meta.items():
+            if venue not in venues_in_summary_all:
+                # venue exists in meta but not in summary
+                s = merger.Merger.get_template(tier_num=4, review_dim=0, src_num=0, authors=False)
+                summary.append(update_from_meta(venue, row, s))
+            else:
+                if venue not in venues_in_summary_bot_mark:
+                    # venue exist in meta and summary but bot_mark is empty, meaning no bot process for this venue, update from meta
+                    for i, s in enumerate(summary):
+                        if s['conference'] == venue:
+                            summary[i] = update_from_meta(venue, row, s)
+                            break
+                else:
+                    # venue exist in meta and summary and bot_mark is not empty, skip, since meta is merged
+                    pass
+                
+                    
+        # sort the summary by conference
+        summary = sorted(summary, key=lambda x: x['conference'])
+                    
+        # save the summary
+        util.save_json(summary_path, summary)
+        
+        # convert to xls
+        df = pd.DataFrame(summary)
+        df.to_excel(summary_path.replace('.json', '.xlsx'), index=False)
+        df.to_csv(summary_path.replace('.json', '.csv'), index=False)
                 
     def save_keywords(self, conf):
         if not self.config.dump_keywords:
@@ -200,6 +296,7 @@ class Pipeline:
             
         @log_status('openreview')
         def process_openreview():
+            tic = time.time()
             available_openreview, summary_openreview, keywords_openreview, paperlist_openreview = False, None, None, None
             try:
                 assigner = eval(assigner_name)('or')
@@ -215,10 +312,12 @@ class Pipeline:
                     raise e
                 elif type(e) == NameError: log_unavailable('openreview')
                 else: log_error('openreview', e)
+            cprint('info', f"Openreview Bot Completed {conf} {year} in {time.time()-tic:.2f} sec")
             return available_openreview, summary_openreview, keywords_openreview, paperlist_openreview
         
         @log_status('site')
         def process_site():
+            tik = time.time()
             available_site, summary_site, paperlist_site = False, None, None
             try:
                 assigner = eval(assigner_name)('st', year)
@@ -232,10 +331,12 @@ class Pipeline:
                     raise e
                 elif type(e) == NameError: log_unavailable('site')
                 else: log_error('site', e)
+            cprint('info', f"Site Bot Completed {conf} {year} in {time.time()-tik:.2f} sec")
             return available_site, summary_site, paperlist_site
         
         @log_status('openaccess')
         def process_openaccess():
+            tik = time.time()
             available_openaccess, summary_openaccess, paperlist_openaccess = False, None, None
             try:
                 assigner = eval(assigner_name)('oa')
@@ -249,10 +350,12 @@ class Pipeline:
                     raise e
                 elif type(e) == NameError: log_unavailable('openaccess')
                 else: log_error('openaccess', e)
+            cprint('info', f"Openaccess Bot Completed {conf} {year} in {time.time()-tik:.2f} sec")
             return available_openaccess, summary_openaccess, paperlist_openaccess
         
         @log_status('gform')
         def process_gform():
+            tik = time.time()
             available_gform, summary_gform, paperlist_gform = False, None, None
             try:
                 assigner = eval(assigner_name)('gform')
@@ -267,10 +370,12 @@ class Pipeline:
                     raise e
                 elif type(e) == NameError: log_unavailable('gform')
                 else: log_error('gform', e)
+            cprint('info', f"GForm Bot Completed {conf} {year} in {time.time()-tik:.2f} sec")
             return available_gform, summary_gform, paperlist_gform
                 
         @log_status('merge')
         def process_merge_paperlist():
+            tik = time.time()
             assigner = eval(assigner_name)('merge')
             merger = assigner(conf, year, root_dir=paths['statistics'])
             if available_openreview: 
@@ -282,6 +387,7 @@ class Pipeline:
             if available_gform: 
                 merger.paperlist_gform = paperlist_gform
             merger.merge_paperlist()
+            cprint('info', f"Merger Completed {conf} {year} in {time.time()-tik:.2f} sec")
             return merger
 
         try:
@@ -385,14 +491,21 @@ class Pipeline:
             if year in self.summary_site[conf]: merger.summary_site = { year: self.summary_site[conf][year] }
             if year in self.summary_openaccess[conf]: merger.summary_openaccess = { year: self.summary_openaccess[conf][year] }
             if year in self.summary_gform[conf]: merger.summary_gform = { year: self.summary_gform[conf][year] }
-            self.summarys += merger.merge_summary()
+            merger.load_meta_from_pipeline(self._meta)
+            # self.summarys += merger.merge_summary()
+            venue_summary = merger.merge_summary()
             merger.save_summary()
             
-            if is_save:
-                # save should be done per conference per year
-                # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
-                self.save_summary(conf, self.config.save_mode)
-                self.save_keywords(conf)
+            # if is_save:
+            #     # save should be done per conference per year
+            #     # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
+            #     self.save_venue_summary(conf, self.config.save_mode)
+            #     self.save_keywords(conf)
+                
+            return venue_summary
+                
+        def post_process():
+            pass
         
         # initialization
         self.summarys = []
@@ -406,10 +519,12 @@ class Pipeline:
         manager = mp.Manager()
         auto_dict = lambda is_mp: manager.dict() if is_mp else defaultdict(dict)
         
-        # load gform settings via gspread and output to gform.json
+        # load gform settings via gspread
         if self.config.use_gform:
-            util.download_gspread_meta('1_PCmk6e3MkJDSV_Dl0BLeWjLu1V3A-IDb6SfBhDxkFo')
-            util.download_gspread_setting('1cWrKI8gDI-R6KOnoYkZHmEFfESU_rPLpkup8-Z0Km_0')
+            tic = time.time()
+            self._meta = util.download_gspread_meta('1_PCmk6e3MkJDSV_Dl0BLeWjLu1V3A-IDb6SfBhDxkFo')
+            # util.download_gspread_setting('1cWrKI8gDI-R6KOnoYkZHmEFfESU_rPLpkup8-Z0Km_0')
+            cprint('info', f"Downloaded gspread meta in {time.time() - tic:.2f} seconds.")
         
         # initialize the shared dictionary with initial values
         status = auto_dict(is_mp)
@@ -437,14 +552,25 @@ class Pipeline:
                         
                     # Wait for all results to complete
                     for result in results:
-                        process_results(result.get())
+                        venue_summary = process_results(result.get())
+                        self.summarys += venue_summary
             else:
                 # execute tasks
                 results = [Pipeline.process_conf_year(task, live=live) for task in tasks]
                 
                 # Wait for all results to complete
                 for result in results:
-                    process_results(result)
+                    venue_summary = process_results(result)
+                    self.summarys += venue_summary
+                    
+            # 
+            if is_save:
+                for conf in self.confs:
+                    # save should be done per conference per year
+                    # TODO: however, putting it here will overwrite the summary for each year and rasing error when skipping fetching from openreview (loading from the saved file)
+                    self.save_venue_summary(conf, self.config.save_mode)
+                    self.save_keywords(conf)
+                self.save_summary_for_server(mode=self.config.save_mode)
 
             # Final update after all tasks are done
             live.update(self.render_table(self.config, status, is_render_table))

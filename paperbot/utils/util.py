@@ -4,6 +4,7 @@ import gspread
 import pandas as pd
 from .. import settings
 import multiprocessing as mp
+import time
 
 class bcolors:
     HEADER = '\033[95m'
@@ -18,18 +19,25 @@ class bcolors:
 
 def load_settings(conf):
     """Load JSON file."""
+    tic = time.time()
     setting_path = os.path.join(settings.__path__[0], conf + '.json')
     with open(setting_path, 'r') as f:
-        return json.load(f)
+        ret = json.load(f)
+    color_print('io', f'{setting_path} loaded in {time.time()-tic:.2f} sec')
+    return ret
     
 def save_json(path, data, indent=4):
     """Save JSON file."""
+    tic = time.time()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
         json.dump(data, f, indent=indent)
-    color_print('io', f'{path} saved.')
+    color_print('io', f'{path} saved in {time.time()-tic:.2f} sec')
     
 def load_json(path, convert_int_keys=False):
+    """Load JSON file."""
+    
+    tic = time.time()
     with open(path, 'r') as f:
         ret = json.load(f)
     
@@ -42,6 +50,7 @@ def load_json(path, convert_int_keys=False):
                 return [convert_keys(v) for v in obj]
             return obj
         ret = convert_keys(ret)
+    color_print('io', f'{path} loaded in {time.time()-tic:.2f} sec')
         
     return ret
     
@@ -57,6 +66,8 @@ def color_print(type, msg):
         print(f'{bcolors.WARNING}[Warning] {msg}{bcolors.ENDC}')
     elif type == 'io':
         print(f'{bcolors.OKBLUE}[IO] {msg}{bcolors.ENDC}')
+    elif type == 'network':
+        print(f'{bcolors.OKCYAN}[Network] {msg}{bcolors.ENDC}')
     else:
         print(msg)
         
@@ -97,6 +108,8 @@ def download_gspread_setting(key, json_path=None):
     save_json(os.path.join(settings.__path__[0], 'gform.json') if json_path == None else json_path, json_data)
         
 def download_gspread_meta(key, csv_path=None):
+    
+    tic = time.time()
     try:
         gc = gspread.oauth()
         gc.open_by_key(key)
@@ -107,8 +120,11 @@ def download_gspread_meta(key, csv_path=None):
             os.remove(authorized_user_path)
         
     # convert the loaded df to json and write as gform.json by default
-    df_meta = gspread2pd(key, 'Meta', parse_header=True, content_start_row=2)
+    df_meta = gspread2pd(key, 'Meta', parse_header=True, content_start_row=3)
     df_top_venue = gspread2pd(key, sheet='Top Venues', parse_header=True)
+    df_affiliation = gspread2pd(key, sheet='Affiliation', parse_header=True, content_start_row=2)
+    color_print('network', f'downloaded gspread setting in {time.time()-tic:.2f} sec')
+    tic = time.time()
     
     # append field, subfield, full name column from df_google_scholar to df_meta by 'conference' key,
     # where 'conference' key in df_meta is in format of '{conference code}{4 digit year}', e.g. 'iclr2021', '3dv2025',
@@ -121,7 +137,7 @@ def download_gspread_meta(key, csv_path=None):
     # Merge df_meta with df_google_scholar on 'conference_code' from df_meta and 'conference' from df_google_scholar
     df = pd.merge(
         df_meta, 
-        df_top_venue[['conference', 'Field', 'Subfield', 'Full Name']], 
+        df_top_venue[['conference', 'Abbr', 'Field', 'Subfield', 'Full Name']], 
         left_on='conference_code', 
         right_on='conference', 
         how='left',
@@ -138,6 +154,13 @@ def download_gspread_meta(key, csv_path=None):
     
     # save df_top_venue as top_venues.csv
     df_top_venue.to_csv(os.path.join(settings.__path__[0], '../../../logs/stats/top_venues.csv'), sep=',')
+    df_affiliation.to_csv(os.path.join(settings.__path__[0], '../../../logs/stats/affiliation.csv'), sep=',')
+    color_print('io', f'saved gspread meta in {time.time()-tic:.2f} sec')
+    
+    # convert df_meta to dict format
+    df.set_index('conference', inplace=True)
+    df = df.to_dict(orient='index')
+    return df
         
 def load_gspread_setting():
     """Load JSON file."""

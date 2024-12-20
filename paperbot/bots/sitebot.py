@@ -3,6 +3,7 @@ import json
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import time
 
 
 from ..utils import util, summarizer
@@ -61,20 +62,22 @@ class SiteBot:
         return self._keyword_all_tracks
     
     def read_paperlist(self, path, key='id'):
+        tic = time.time()
         if not os.path.exists(path): return
         with open(path) as f:
             paperlist = json.load(f)
             paperlist = sorted(paperlist, key=lambda x: x[key])
-            cprint('io', f"Read paperlist from {path}")
+            cprint('io', f"Read paperlist from {path} in {time.time()-tic:.2f} sec")
             return paperlist
     
     def save_paperlist(self, path=None):
+        tic = time.time()
         if self._paperlist:
             path = path if path else os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json')
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w') as f:
                 json.dump(self._paperlist, f, indent=4)
-            cprint('io', f"Saved paperlist for {self._conf} to {path}")
+            cprint('io', f"Saved paperlist for {self._conf} to {path} in {time.time()-tic:.2f} sec")
     
     def __call__(self):
         pass

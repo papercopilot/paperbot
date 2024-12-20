@@ -5,6 +5,8 @@ from tqdm import tqdm
 import hashlib
 from collections import Counter
 import pandas as pd
+import time
+from rich.progress import Progress
 
 from .summarizer import Summarizer
 from .util import color_print as cprint
@@ -19,7 +21,7 @@ class Merger:
         self._year = year
         self._root_dir = root_dir
         
-        
+        self._meta = {} # will be assigned by pipeline
         self._paperlist_openreview = []
         self._paperlist_site = []
         self._paperlist_openaccess = []
@@ -153,17 +155,35 @@ class Merger:
     def keywords_site(self):
         return self._keywords_site
     
-    def load_json(self, filename):
-        with open(filename, 'r') as f:
-            return json.load(f)
+    # def load_json(self, filename):
+    #     with open(filename, 'r') as f:
+    #         return json.load(f)
+        
+    def load_meta(self, path=None):
+        if path:
+            cprint('info', f"Loading meta from {path}, not implemented yet.")
+        else:
+            df = pd.read_csv(os.path.join(settings.__path__[0], 'meta.csv'), sep=',', keep_default_na=False)
+            df.set_index('conference', inplace=True)
+            df = df.to_dict('index')
+        self._meta = df
+        
+    def load_meta_from_pipeline(self, meta):
+        if type(meta) == dict:
+            pass
+        else:
+            meta.set_index('conference', inplace=True)
+            meta = meta.to_dict('index')
+        self._meta = meta
     
     def save_paperlist(self, path=None):
+        tik = time.time()
         if self._paperlist_merged:
             path = path if path else os.path.join(self._paths['paperlists'], f'{self._conf}/{self._conf}{self._year}.json')
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w') as f:
                 json.dump(self._paperlist_merged, f, indent=4)
-            cprint('io', f"Saved paperlist for {self._conf} to {path}")
+            cprint('io', f"Saved paperlist for {self._conf} to {path} in {time.time()-tik:.2f} sec")
     
     # def get_highest_status(self):
     #     # default status_priority, can be rewrite in subclass
@@ -286,15 +306,17 @@ class Merger:
             if cutoff not in total_matched: total_matched[cutoff] = 0
             
             # check if id in openreview is in site
-            for id in tqdm(paperdict_openreview.keys(), desc='Merging papers by openreview url'):
-                if id in paperdict_site:
-                    # locate paper object
-                    paper_openreview = self._paperlist_openreview[paperdict_openreview[id]]
-                    paper_site = self._paperlist_site[paperdict_site[id]]
-                    paper_openreview['type'] = 'openreview'
-                    paper_site['type'] = 'site'
-                    # merge and append
-                    self._paperlist_merged.append(self.merge_paper(paper_site, paper_openreview))
+            with Progress(refresh_per_second=120) as progress:
+                # for id in tqdm(paperdict_openreview.keys(), desc='Merging papers by openreview url'):
+                for id in progress.track(paperdict_openreview.keys(), description='Merging papers by openreview url'):
+                    if id in paperdict_site:
+                        # locate paper object
+                        paper_openreview = self._paperlist_openreview[paperdict_openreview[id]]
+                        paper_site = self._paperlist_site[paperdict_site[id]]
+                        paper_openreview['type'] = 'openreview'
+                        paper_site['type'] = 'site'
+                        # merge and append
+                        self._paperlist_merged.append(self.merge_paper(paper_site, paper_openreview))
                     
             # pop the matched papers
             for paper in self._paperlist_merged:
@@ -311,30 +333,32 @@ class Merger:
                 paperdict_site[paper['title']] = i
         
         # check if title in openreview is in site
-        for c in tqdm(range(100, 70, -1), desc='Iterative Merging papers by title'):
-            curr_matched = []
-            cutoff = c/100
-            if cutoff not in total_matched: total_matched[cutoff] = 0
-            
-            for title in paperdict_openreview.keys():
-                paper_openreview = self._paperlist_openreview[paperdict_openreview[title]]
+        with Progress(refresh_per_second=120) as progress:
+            # for c in tqdm(range(100, 70, -1), desc='Iterative Merging papers by title'):
+            for c in progress.track(range(100, 70, -1), description='Iterative Merging papers by title'):
+                curr_matched = []
+                cutoff = c/100
+                if cutoff not in total_matched: total_matched[cutoff] = 0
                 
-                matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=cutoff)
-                if matches:
-                    total_matched[cutoff] += 1
-                    paper_site = self._paperlist_site[paperdict_site[matches[0]]]
-                    curr_matched.append({'or': paper_openreview['title'], 'site': paper_site['title']})
+                for title in paperdict_openreview.keys():
+                    paper_openreview = self._paperlist_openreview[paperdict_openreview[title]]
                     
-                    paper_site['type'] = 'site'
-                    paper_openreview['type'] = 'openreview'
-                    self._paperlist_merged.append(self.merge_paper(paper_site, paper_openreview))
+                    matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=cutoff)
+                    if matches:
+                        total_matched[cutoff] += 1
+                        paper_site = self._paperlist_site[paperdict_site[matches[0]]]
+                        curr_matched.append({'or': paper_openreview['title'], 'site': paper_site['title']})
+                        
+                        paper_site['type'] = 'site'
+                        paper_openreview['type'] = 'openreview'
+                        self._paperlist_merged.append(self.merge_paper(paper_site, paper_openreview))
+                        
+                        # TODO: if two papers have the same title, but different content, we should recognize them as different papers
                     
-                    # TODO: if two papers have the same title, but different content, we should recognize them as different papers
-                
-            # pop the matched papers
-            for p in curr_matched:
-                paperdict_site.pop(p['site'])
-                paperdict_openreview.pop(p['or'])
+                # pop the matched papers
+                for p in curr_matched:
+                    paperdict_site.pop(p['site'])
+                    paperdict_openreview.pop(p['or'])
         
         # check minimum cutoff
         total_matched_nonzero = {k: v for k, v in total_matched.items() if v != 0}
@@ -376,16 +400,18 @@ class Merger:
             cutoff = 100/100
             if cutoff not in total_matched: total_matched[cutoff] = 0
             
-            for site in tqdm(paperdict_site.keys(), desc='Merging papers by openaccess url'):
-                if site in paperdict_openaccess:
-                    paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[site]]
-                    paper_site = self._paperlist_site[paperdict_site[site]]
-                    paper_site['type'] = 'site'
-                    paper_openaccess['type'] = 'openaccess'
-                    paper = self.merge_paper(paper_site, paper_openaccess)
-                    
-                    self._paperlist_merged.append(paper)
-                    total_matched[cutoff] += 1
+            with Progress(refresh_per_second=120) as progress:
+                # for site in tqdm(paperdict_site.keys(), desc='Merging papers by openaccess url'):
+                for site in progress.track(paperdict_site.keys(), description='Merging papers by openaccess url'):
+                    if site in paperdict_openaccess:
+                        paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[site]]
+                        paper_site = self._paperlist_site[paperdict_site[site]]
+                        paper_site['type'] = 'site'
+                        paper_openaccess['type'] = 'openaccess'
+                        paper = self.merge_paper(paper_site, paper_openaccess)
+                        
+                        self._paperlist_merged.append(paper)
+                        total_matched[cutoff] += 1
                     
             # pop the matched papers
             for paper in self._paperlist_merged:
@@ -397,28 +423,30 @@ class Merger:
             paperdict_openaccess = {self._paperlist_openaccess[paperdict_openaccess[key]]['title']: paperdict_openaccess[key] for key in paperdict_openaccess}
             paperdict_site = {self._paperlist_site[paperdict_site[key]]['title']: paperdict_site[key] for key in paperdict_site}
         
-        for c in tqdm(range(100, 70, -1), desc='Iterative Merging papers by title'):
-            curr_matched = []
-            cutoff = c/100
-            if cutoff not in total_matched: total_matched[cutoff] = 0
-            
-            for title in paperdict_openaccess.keys():
-                paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[title]]
+        with Progress(refresh_per_second=120) as progress:
+            # for c in tqdm(range(100, 70, -1), desc='Iterative Merging papers by title'):
+            for c in progress.track(range(100, 70, -1), description='Iterative Merging papers by title'):
+                curr_matched = []
+                cutoff = c/100
+                if cutoff not in total_matched: total_matched[cutoff] = 0
                 
-                matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=cutoff)
-                if matches:
-                    total_matched[cutoff] += 1
-                    paper_site = self._paperlist_site[paperdict_site[matches[0]]]
-                    curr_matched.append({'oa': paper_openaccess['title'], 'site': paper_site['title']})
+                for title in paperdict_openaccess.keys():
+                    paper_openaccess = self._paperlist_openaccess[paperdict_openaccess[title]]
                     
-                    paper_site['type'] = 'site'
-                    paper_openaccess['type'] = 'openaccess'
-                    self._paperlist_merged.append(self.merge_paper(paper_site, paper_openaccess))
-                
-            # pop the matched papers based on to_pop
-            for p in curr_matched:
-                paperdict_site.pop(p['site'])
-                paperdict_openaccess.pop(p['oa'])
+                    matches = difflib.get_close_matches(title, paperdict_site.keys(), n=1, cutoff=cutoff)
+                    if matches:
+                        total_matched[cutoff] += 1
+                        paper_site = self._paperlist_site[paperdict_site[matches[0]]]
+                        curr_matched.append({'oa': paper_openaccess['title'], 'site': paper_site['title']})
+                        
+                        paper_site['type'] = 'site'
+                        paper_openaccess['type'] = 'openaccess'
+                        self._paperlist_merged.append(self.merge_paper(paper_site, paper_openaccess))
+                    
+                # pop the matched papers based on to_pop
+                for p in curr_matched:
+                    paperdict_site.pop(p['site'])
+                    paperdict_openaccess.pop(p['oa'])
         
         # check minimum cutoff
         total_matched_nonzero = {k: v for k, v in total_matched.items() if v != 0}
@@ -484,9 +512,8 @@ class Merger:
         return tier_num
     
     def update_from_meta(self, s, track, tier_num):
-        df = pd.read_csv(os.path.join(settings.__path__[0], 'meta.csv'), sep=',', keep_default_na=False)
-        df.set_index('conference', inplace=True)
-        v = df.to_dict('index')[self.get_cid(track)] # missing key will result an error but this is necessary. Otherwise, the server-side rendering will failed.
+        
+        v = self._meta[self.get_cid(track)] # missing key will result an error but this is necessary. Otherwise, the server-side rendering will failed.
         
         # 
         # if v['Field'] and v['Subfield']: s['field'] = f"{v['Field']}/{v['Subfield']}"
@@ -496,6 +523,11 @@ class Merger:
         if v['withdraw']: s['withdraw'] = int(v['withdraw'].replace(',',''))
         if v['desk_reject']: s['desk_reject'] = int(v['desk_reject'].replace(',',''))
         if v['show'] == 'TRUE': s['show'] = 1
+        if v['gform_response']: s['gform_response'] = int(v['gform_response'].replace(',',''))
+        # s['total'] = 0 if not v['total'] else int(v['total'].replace(',',''))
+        # s['withdraw'] = 0 if not v['withdraw'] else int(v['withdraw'].replace(',',''))
+        # s['desk_reject'] = 0 if not v['desk_reject'] else int(v['desk_reject'].replace(',',''))
+        # s['show'] = 1 if v['show'] == 'TRUE' else 0
         
         # 't_order' is the order all all tiers, stats and visualization is based on this order
         # 't_order_ac' is the order of accepted tiers, used for calculating acceptance rate
@@ -527,13 +559,12 @@ class Merger:
         
         return s, v
     
-    def get_template(self, tier_num=6, review_dim=10, src_num=4):
+    @staticmethod
+    def get_template(tier_num=6, review_dim=10, src_num=4, authors=True):
         
         header = {
             'conference': '',
             'name': '',
-            # 'full_name': '',
-            # 'field': '',
             'track': '',
             'show': 0,
             'total': 0,
@@ -548,6 +579,9 @@ class Merger:
             'review_dims': '',
             'area_dims': '',
             't_order': '',
+            'gform_response': 0,
+            'gform_id': '',
+            'bot_mark': '',
             # 'n0': '', 'n1': '', 'n2': '', 'n3': '', 'n4': '', 'n5': '',
             # 't0': '', 't1': '', 't2': '', 't3': '', 't4': '', 't5': '',
             # 'h_total0': '', 'h_total': '', 'h_active': '', 'h_withdraw': '',
@@ -589,12 +623,16 @@ class Merger:
             
         header.update({
             'city': '', 'country': '',
-            'authors': '', 'authors_first': '', 'authors_last': '',
-            'authors_id': '', 'authors_id_first': '', 'authors_id_last': '',
-            'affs': '', 'affs_unique': '',  'affs_first': '', 'affs_last': '',
-            'pos': '', 'pos_unique': '', 'pos_first': '', 'pos_last': '',
-            'keywords': '', 'keywords_first': '',
         })
+            
+        if authors:
+            header.update({
+                'authors': '', 'authors_first': '', 'authors_last': '',
+                'authors_id': '', 'authors_id_first': '', 'authors_id_last': '',
+                'affs': '', 'affs_unique': '',  'affs_first': '', 'affs_last': '',
+                'pos': '', 'pos_unique': '', 'pos_first': '', 'pos_last': '',
+                'keywords': '', 'keywords_first': '',
+            })
         
         # table in db
         return header
@@ -768,72 +806,73 @@ class Merger:
         classify_by_status = statuses is not None and len(statuses) > 0
         
         # Iterate over each paper in the merged paper list
-        for paper in self._paperlist_merged:
-            # Continue to next paper if 'author' field is missing
-            if 'author' not in paper:
-                continue
-            # Check if the paper matches the specified track filter
-            if track and paper.get('track') != track:
-                continue
-            
-            # If classifying by status, get the paper's status
-            paper_status = paper.get('status') if classify_by_status else None
-            
-            # If classifying by status, continue if the paper's status is not in the statuses list
-            if classify_by_status and paper_status not in statuses:
-                continue
-            
-            # Split the 'author' field into a list of author names
-            authors = [author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()]
-            
-            # Split the 'authorids' field into a list of author IDs if available
-            if 'authorids' in paper:
-                authorids = [authorid.strip() for authorid in paper['authorids'].replace(',', ';').split(';') if authorid.strip()]
-                # Check if the lengths of authors and authorids are the same
-                if len(authors) != len(authorids):
-                    # Handle the mismatch, issue a warning and skip this paper
-                    print(f"Warning: Mismatch in number of authors and author IDs in paper: {paper.get('title', 'Unknown Title')}")
+        with Progress(refresh_per_second=120) as progress:
+            for paper in progress.track(self._paperlist_merged, description=f'Counting authors for {self._year} {self._conf} {track}'):
+                # Continue to next paper if 'author' field is missing
+                if 'author' not in paper:
                     continue
-            else:
-                # If 'authorids' is not available, use None for each author
-                authorids = [None] * len(authors)
-        
-            # Determine which authors to consider based on the specified mode
-            if mode == 'authors_all':
-                # Use all authors in the list
-                indices = range(len(authors))
-            elif mode == 'author_first_only':
-                # Use only the first author
-                indices = [0] if authors else []
-            elif mode == 'authors_last_only':
-                # Use only the last author
-                indices = [len(authors) - 1] if authors else []
-            else:
-                # Raise an error if an invalid mode is specified
-                raise ValueError(f"Invalid mode: {mode}")
-        
-            # Iterate over the selected authors based on the mode
-            for idx in indices:
-                author = authors[idx]
-                # Get the corresponding author ID if available
-                authorid = authorids[idx] if idx < len(authorids) else None
-                key = authorid if authorid else author  # Use authorid if available, else use author name
+                # Check if the paper matches the specified track filter
+                if track and paper.get('track') != track:
+                    continue
                 
-                # Initialize counts for the author if not already done
-                if key not in counts:
-                    if classify_by_status:
-                        # Initialize a dictionary to count papers per status
-                        counts[key] = {status: 0 for status in statuses}
-                    else:
-                        # Initialize total count only if not classifying by status
-                        counts[key] = 0
-                    authorid_to_name[key] = author
+                # If classifying by status, get the paper's status
+                paper_status = paper.get('status') if classify_by_status else None
                 
-                # Increment the count
-                if classify_by_status:
-                    counts[key][paper_status] += 1
+                # If classifying by status, continue if the paper's status is not in the statuses list
+                if classify_by_status and paper_status not in statuses:
+                    continue
+                
+                # Split the 'author' field into a list of author names
+                authors = [author.strip() for author in paper['author'].replace(',', ';').split(';') if author.strip()]
+                
+                # Split the 'authorids' field into a list of author IDs if available
+                if 'authorids' in paper:
+                    authorids = [authorid.strip() for authorid in paper['authorids'].replace(',', ';').split(';') if authorid.strip()]
+                    # Check if the lengths of authors and authorids are the same
+                    if len(authors) != len(authorids):
+                        # Handle the mismatch, issue a warning and skip this paper
+                        print(f"Warning: Mismatch in number of authors and author IDs in paper: {paper.get('title', 'Unknown Title')}")
+                        continue
                 else:
-                    counts[key] += 1
+                    # If 'authorids' is not available, use None for each author
+                    authorids = [None] * len(authors)
+            
+                # Determine which authors to consider based on the specified mode
+                if mode == 'authors_all':
+                    # Use all authors in the list
+                    indices = range(len(authors))
+                elif mode == 'author_first_only':
+                    # Use only the first author
+                    indices = [0] if authors else []
+                elif mode == 'authors_last_only':
+                    # Use only the last author
+                    indices = [len(authors) - 1] if authors else []
+                else:
+                    # Raise an error if an invalid mode is specified
+                    raise ValueError(f"Invalid mode: {mode}")
+            
+                # Iterate over the selected authors based on the mode
+                for idx in indices:
+                    author = authors[idx]
+                    # Get the corresponding author ID if available
+                    authorid = authorids[idx] if idx < len(authorids) else None
+                    key = authorid if authorid else author  # Use authorid if available, else use author name
+                    
+                    # Initialize counts for the author if not already done
+                    if key not in counts:
+                        if classify_by_status:
+                            # Initialize a dictionary to count papers per status
+                            counts[key] = {status: 0 for status in statuses}
+                        else:
+                            # Initialize total count only if not classifying by status
+                            counts[key] = 0
+                        authorid_to_name[key] = author
+                    
+                    # Increment the count
+                    if classify_by_status:
+                        counts[key][paper_status] += 1
+                    else:
+                        counts[key] += 1
         
         # Prepare the output strings
         # Create a list of (author ID, total count) tuples
@@ -1135,6 +1174,9 @@ class Merger:
         self._summary_merged = {} # merged summary used to double check the differences between different src
         stats = {}
         
+        if type(self._meta) == dict and not self._meta: # meta is not initiliazed by the pipeline 
+            self.load_meta()
+        
         separator = {
             'src': ';',
             'dst': {
@@ -1171,6 +1213,7 @@ class Merger:
                     s['total'] = summary['src']['openreview']['total']
                     s['review_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['review'].items()])
                     s['area_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['area'].items()])
+                    s['bot_mark'] += 'OR;'
                     
                     tier_id = dict((v,k) for k,v in summary['name']['tier_raw'].items())
                     if 'Active' in tier_id:
@@ -1272,6 +1315,7 @@ class Merger:
                     if cid in stats:
                         stats[cid]['s1'] = summary['src']['site']['name']
                         stats[cid]['su1'] = summary['src']['site']['url']
+                        stats[cid]['bot_mark'] += 'ST;'
                         s, _ = self.update_from_meta(s, track, tier_num)
                     else:
                         s['conference'] = cid
@@ -1289,6 +1333,7 @@ class Merger:
                             tier_num[tname] = summary['sum']['count'][k]
                             
                         s, _ = self.update_from_meta(s, track, tier_num)
+                        s['bot_mark'] += 'ST;'
                         self.normalize_site_tier_name(s, year, track, tier_num)
                         
                         stats[s['conference']] = s
@@ -1314,9 +1359,11 @@ class Merger:
                     if cid in stats:
                         stats[cid]['s2'] = summary['src']['openaccess']['name']
                         stats[cid]['su2'] = summary['src']['openaccess']['url']
+                        stats[cid]['bot_mark'] += 'OA;'
                     else:
                         s['s2'] = summary['src']['openaccess']['name']
                         s['su2'] = summary['src']['openaccess']['url']
+                        s['bot_mark'] += 'OA;'
                         
                         stats[s['conference']] = s
                         
@@ -1357,6 +1404,7 @@ class Merger:
                         s['name'] = self._conf.upper()
                         s['track'] = track
                     s['s3'] = 'Community'
+                    s['bot_mark'] += 'GF;'
                     
                     tier_id = dict((v,k) for k,v in summary['name']['tier_raw'].items())
                     if 'Active' in tier_id:
@@ -1405,7 +1453,8 @@ class Merger:
                                 tier_tsfs[key][tname] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][k].values())])
                         
                     
-                    s, _ = self.update_from_meta(s, track, tier_num)
+                    s, v = self.update_from_meta(s, track, tier_num)
+                    s['gform_id'] = v['gform_embed']
                     
                     # split name and num
                     # when ';' is used, the first section before ';' represents all the tiers

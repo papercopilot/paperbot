@@ -358,7 +358,10 @@ class SnBotGoogleScholar(SeleniumBot):
         self._baseurl = self._args['domain']
         
         self._paths = {}
-        self._paths['top_venues'] = os.path.join(self._root_dir, '../stats/gs_top_venues.csv')
+        self._paths = {
+            'top_venues': os.path.join(self._root_dir, 'venues/gs_top_venues'),
+            'summary': os.path.join(self._root_dir, 'summary'),
+        }
     
     def launch(self, fetch_site=False, fetch_extra=False, fetch_extra_mp=False):
         if not self._args: 
@@ -393,7 +396,7 @@ class SnBotGoogleScholar(SeleniumBot):
         # loop through all categories
         results = []
         with Progress(refresh_per_second=120) as progress:
-            for category, category_object in progress.track(categories.items()):
+            for category, category_object in progress.track(categories.items(), description='Categories'):
                 
                 # Get the category page
                 self.safe_request(category_object['url'])
@@ -448,4 +451,6 @@ class SnBotGoogleScholar(SeleniumBot):
                     
         # load results as dataframe and save as csv
         df = pd.DataFrame(results, columns=['Category', 'Subcategory', 'Conference', 'Rank', 'H5-Index', 'H5-Median'])
-        df.to_csv(os.path.join(self._paths['top_venues']), index=False)
+        thisyear = time.strftime("%Y")
+        os.makedirs(self._paths['top_venues'], exist_ok=True)
+        df.to_csv(os.path.join(self._paths['top_venues'], f'{thisyear}.csv'), index=False)

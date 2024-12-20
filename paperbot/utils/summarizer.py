@@ -34,7 +34,7 @@ class Summarizer():
         self.tier_sums = {}
         
         # sm/md/lg
-        self.nlp = spacy.load('en_core_web_lg')
+        # self.nlp = spacy.load('en_core_web_lg') // this takes too long to load, especially when multiple instances are created
         
     @property
     def paperlist(self):
@@ -611,6 +611,7 @@ class Summarizer():
                 for k, v in sorted(summary.items())}
     
     def parse_keywords(self, track):
+        self.nlp = spacy.load('en_core_web_sm')
         
         raw_keywords = []
         for paper in tqdm(self._paperlist, desc='Loading keywords'):
