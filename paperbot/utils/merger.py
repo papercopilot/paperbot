@@ -580,6 +580,7 @@ class Merger:
             'area_dims': '',
             't_order': '',
             'gform_response': 0,
+            'gform_rebuttal': 0,
             'gform_id': '',
             'bot_mark': '',
             # 'n0': '', 'n1': '', 'n2': '', 'n3': '', 'n4': '', 'n5': '',
@@ -1409,7 +1410,8 @@ class Merger:
                     tier_id = dict((v,k) for k,v in summary['name']['tier_raw'].items())
                     if 'Active' in tier_id:
                         tid = tier_id['Active']
-                        s['form'] = summary['sum']['count'].get(tid, summary['sum']['hist'][tid][0])
+                        s['form'] = summary['sum']['hist'][tid][0] # 0 default r dim, 'overall'
+                        s['gform_rebuttal'] = summary['sum']['tsf'][tid][0]
                         for key in summary['name']['review']:
                             s[f'h_r{key+len(openreview_rname)}_active'] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][tid].values())])
                             s[f'tsf_r{key+len(openreview_rname)}_active'] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][tid].values())])
