@@ -190,6 +190,7 @@ class Pipeline:
             return s
         
         for (venue, row) in self._meta.items():
+            if row['show'] == 'OTHERS': continue # skip unusable rows, e.g. for debugging
             if venue not in venues_in_summary_all:
                 # venue exists in meta but not in summary
                 s = merger.Merger.get_template(tier_num=4, review_dim=0, src_num=0, authors=False)
