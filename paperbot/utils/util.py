@@ -120,7 +120,7 @@ def download_gspread_meta(key, csv_path=None):
             os.remove(authorized_user_path)
         
     # convert the loaded df to json and write as gform.json by default
-    df_meta = gspread2pd(key, 'Meta', parse_header=True, content_start_row=3)
+    df_meta = gspread2pd(key, 'Meta', parse_header=True, content_start_row=4)
     df_top_venue = gspread2pd(key, sheet='Top Venues', parse_header=True)
     df_affiliation = gspread2pd(key, sheet='Affiliation', parse_header=True, content_start_row=2)
     color_print('network', f'downloaded gspread setting in {time.time()-tic:.2f} sec')

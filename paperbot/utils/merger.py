@@ -1411,7 +1411,6 @@ class Merger:
                     if 'Active' in tier_id:
                         tid = tier_id['Active']
                         s['form'] = summary['sum']['hist'][tid][0] # 0 default r dim, 'overall'
-                        s['gform_rebuttal'] = summary['sum']['tsf'][tid][0]
                         for key in summary['name']['review']:
                             s[f'h_r{key+len(openreview_rname)}_active'] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][tid].values())])
                             s[f'tsf_r{key+len(openreview_rname)}_active'] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][tid].values())])
@@ -1423,6 +1422,7 @@ class Merger:
                             s[f'tsf_r{key+len(openreview_rname)}_withdraw'] = ';'.join([tsf.replace(';', ',') for tsf in list(summary['tsf'][key][tid].values())])
                     if 'Total' in tier_id:
                         tid = tier_id['Total']
+                        s['gform_rebuttal'] = summary['sum']['tsf'][tid][0]
                         for key in summary['name']['review']:
                             s[f'h_r{key+len(openreview_rname)}_total'] = ';'.join([hist.replace(';', ',') for hist in list(summary['hist'][key][tid].values())])
                     if 'Total0' in tier_id:
