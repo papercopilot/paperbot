@@ -1395,8 +1395,8 @@ class Merger:
                     
                     cid = self.get_cid(track)
                     
-                    if cid in stats and stats[cid]['s0'] == 'openreview':
-                        # if openreview data is available, copy everything from openreview summary
+                    if cid in stats:
+                        # copy everything from openreview summary
                         for key in stats[cid]:
                             s[key] = stats[cid][key]
                     else:

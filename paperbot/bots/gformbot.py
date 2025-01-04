@@ -22,7 +22,8 @@ class GFormBot(sitebot.SiteBot):
         self._tracks = self._args['track']
         
         # init visit gform here to avoid futher error, e.g. token has been expired
-        self._gform = util.load_gspread_setting()[str(self._year)]
+        # self._gform = util.load_gspread_setting()[str(self._year)]
+        self._gform = util.load_gspread_setting()
         
         self._paths = {
             'paperlist': os.path.join(self._root_dir, 'venues'),
@@ -32,7 +33,9 @@ class GFormBot(sitebot.SiteBot):
     def crawl(self, track):
         
         if self._tracks[track]:
-            df = util.gspread2pd(self._gform[self._tracks[track]], parse_header=True)
+            # TODO: self._tracks[track] here could be confusing and redundant in the settings, 
+            # df = util.gspread2pd(self._gform[self._tracks[track]], parse_header=True)
+            df = util.gspread2pd(self._gform[self._tracks[track] + str(self._year)], parse_header=True)
         else:
             cprint('warning', f'{self._conf} {self._year} {track}: Google Form Not indicated.')
             df = pd.DataFrame()
@@ -288,6 +291,53 @@ class GFormBot(sitebot.SiteBot):
                         # self._summary_all_tracks[track]['thsum'][kid] = self.summarizer.tier_hist_sum[kid]
                     # else:
                         # del self._summary_all_tracks[track]['tid'][kid]
+                    for key in self.summarizer.review_dimensions:
+                        if k == 'Total0': 
+                            # temporary add k to the id list for the following loop check
+                            self._summary_all_tracks[track]['name']['tier_raw'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                        rname = self.summarizer.review_dimensions[key]
+                        if kid in self.summarizer.tier_hists[rname]:
+                            self._summary_all_tracks[track]['hist'][key][kid] = self.summarizer.tier_hists[rname][kid]
+                            self._summary_all_tracks[track]['sum']['hist'][kid] = self.summarizer.tier_sums['hist'][kid]
+                        else:
+                            # there's no data for this key, usually total0, remove the key to keep consistency for the merger
+                            del self._summary_all_tracks[track]['name']['tier_raw'][kid]
+                        
+                continue
+            
+            elif self._conf == 'cvpr' and self._year >= 2024:
+                
+                # update paper ids from announced paper ids
+                def update_paperlist_status(paperlist):
+                    for i, p in enumerate(paperlist):
+                        if p['status'] == '':
+                            paperlist[i]['status'] = 'Unknown'
+                                
+                update_paperlist_status(self.summarizer.paperlist)
+                    
+                # update tids and get initial histogram
+                for k in self._args['tname'][track]:
+                    self.summarizer.update_summary(k, 0)
+                self.summarizer.update_summary('Withdraw', 0)
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
+        
+                # update paperlist and get rebuttal histogram
+                self.summarizer.paperlist = self.get_paperlist(track=track, mode='Rebuttal')
+                self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
+                update_paperlist_status(self.summarizer.paperlist)
+                update_paperlist_status(self.summarizer.paperlist_init)
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
+                self._summary_all_tracks[track]['tsf'] = {}
+                for key in self.summarizer.review_dimensions:
+                    self._summary_all_tracks[track]['tsf'][key] = self.summarizer.tier_tsfs[self.summarizer.review_dimensions[key]]
+                self._summary_all_tracks[track]['sum']['tsf'] = self.summarizer.tier_sums['tsf']
+                
+                
+                # update total and total0 since usually rebuttal data is less than initial data
+                for k in ['Total', 'Total0']:
+                    kid = self.summarizer.get_tid(k)
                     for key in self.summarizer.review_dimensions:
                         if k == 'Total0': 
                             # temporary add k to the id list for the following loop check
@@ -724,7 +774,7 @@ class GFormBotECCV(GFormBot):
     
         extra = None
         if self._year == 2024:
-            extra = util.gspread2pd(self._gform[self._tracks[track]], sheet='accept', parse_header=True)
+            extra = util.gspread2pd(self._gform[self._tracks[track]+str(self._year)], sheet='accept', parse_header=True)
         else:
             pass
         return extra
@@ -1223,6 +1273,69 @@ class GFormBotAAAI(GFormBot):
         #     if np2avg(review_scores[list(review_scores.keys())[0]]) > 4: raise ValueError(f"Rating > 6: {np2avg(review_scores[list(review_scores.keys())[0]])}")
         # elif self._year == 2024:
         #     if np2avg(review_scores[list(review_scores.keys())[0]]) > 6: raise ValueError(f"Rating > 6: {np2avg(review_scores[list(review_scores.keys())[0]])}")
+        
+        ret = {
+            'id': paper_id,
+            'track': track,
+            'status': status,
+        }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
+            
+        return ret
+    
+class GFormBotCVPR(GFormBot):
+    
+    def process_row(self, index, row, track, mode=None, as_init=False):
+        
+        ret = {}
+        
+        # remove invalide response
+        # https://stackoverflow.com/questions/9576384/use-regular-expression-to-match-any-chinese-character-in-utf-8-encoding
+        match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Overall Recommendation']) # \u4E00-\u9FFF chinese
+        if match: return ret
+    
+        review_scores = {}
+        for key in self.review_name:
+            review_scores[key] = []
+        
+        if mode == 'Rebuttal':
+        
+            # remove nan data
+            if pd.isna(row['[Optional] Overall Recommendation after Rebuttal']) or not row['[Optional] Overall Recommendation after Rebuttal']: return ret
+            paper_id = row['Paper ID (hash it if you prefer more anonymity)']
+            
+            if as_init:
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
+            else:
+                for key in self.review_name:
+                    rebuttal_key = self.review_name[key].replace('Initial ', '').replace('Initial ', '') + ' after Rebuttal'
+                    rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                    review_scores[key] = self.auto_split(row[rebuttal_key])
+            status = row['[Optional] Final Decision']
+        else:
+            # remove redundant data
+            paper_id = row['Paper ID (hash it if you prefer more anonymity)']
+            status = row['[Optional] Final Decision']
+            for key in self.review_name:
+                review_scores[key] = self.auto_split(row[self.review_name[key]])
+
+        # list to numpy
+        list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
+
+        np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+        np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+        np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+        
+        if np2avg(review_scores[list(review_scores.keys())[0]]) > 5:
+            cprint('warning', f"Rating > 5: {np2avg(review_scores[list(review_scores.keys())[0]])}, skipping")
+            return ret
         
         ret = {
             'id': paper_id,

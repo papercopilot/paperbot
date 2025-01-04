@@ -113,6 +113,8 @@ class AssignerCVPR(Assigner):
                 return cvfbot.StBotCVPR
         elif botname == 'oa':
             return openaccessbot.OABotCVPR
+        elif botname == 'gform':
+            return gformbot.GFormBotCVPR
         elif botname == 'merge':
             return merger.MergerCVPR
         else: super().__new__(cls, botname)

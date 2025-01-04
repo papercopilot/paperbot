@@ -91,21 +91,21 @@ def gspread2pd(key, sheet='', parse_header=False, content_start_row=1):
         
     return df
 
-def download_gspread_setting(key, json_path=None):
-    try:
-        gc = gspread.oauth()
-        gc.open_by_key(key)
-    except:
-        authorized_user_path = os.path.join(gspread.auth.DEFAULT_CONFIG_DIR, 'authorized_user.json')
-        authorized_user_path = os.path.expanduser(authorized_user_path)
-        if os.path.isfile(authorized_user_path):
-            os.remove(authorized_user_path)
+# def download_gspread_setting(key, json_path=None):
+#     try:
+#         gc = gspread.oauth()
+#         gc.open_by_key(key)
+#     except:
+#         authorized_user_path = os.path.join(gspread.auth.DEFAULT_CONFIG_DIR, 'authorized_user.json')
+#         authorized_user_path = os.path.expanduser(authorized_user_path)
+#         if os.path.isfile(authorized_user_path):
+#             os.remove(authorized_user_path)
         
-    # convert the loaded df to json and write as gform.json by default
-    df = gspread2pd(key, parse_header=True)
-    # json_data = {df.columns[1]: df.set_index("conf").to_dict()[df.columns[1]]}
-    json_data = df.set_index("conf").to_dict()
-    save_json(os.path.join(settings.__path__[0], 'gform.json') if json_path == None else json_path, json_data)
+#     # convert the loaded df to json and write as gform.json by default
+#     df = gspread2pd(key, parse_header=True)
+#     # json_data = {df.columns[1]: df.set_index("conf").to_dict()[df.columns[1]]}
+#     json_data = df.set_index("conf").to_dict()
+#     save_json(os.path.join(settings.__path__[0], 'gform.json') if json_path == None else json_path, json_data)
         
 def download_gspread_meta(key, csv_path=None):
     
@@ -156,6 +156,13 @@ def download_gspread_meta(key, csv_path=None):
     df_top_venue.to_csv(os.path.join(settings.__path__[0], '../../../logs/stats/top_venues.csv'), sep=',')
     df_affiliation.to_csv(os.path.join(settings.__path__[0], '../../../logs/stats/affiliation.csv'), sep=',')
     color_print('io', f'saved gspread meta in {time.time()-tic:.2f} sec')
+    
+    # save rows with gform_id to gform.json, serverd as a gform_id for gform bots
+    # TODO: load in the cache, no need to save as a file
+    df_gform_id = df[['conference', 'gform_sheet']]
+    df_gform_id = df_gform_id.set_index('conference').to_dict()['gform_sheet']
+    df_gform_id = {k: v for k, v in df_gform_id.items() if v != ''} # remove empty values
+    save_json(os.path.join(settings.__path__[0], 'gform.json'), df_gform_id)
     
     # convert df_meta to dict format
     df.set_index('conference', inplace=True)

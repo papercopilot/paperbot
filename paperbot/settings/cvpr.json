@@ -1,5 +1,47 @@
 {
-    "2024":{
+    "2025": {
+        "gform": {
+            "track": {
+                "main": "cvpr"
+            },
+            "tname": {
+                "main": {
+                    "Poster": "Poster",
+                    "Highlight": "Highlight",
+                    "Oral": "Oral",
+                    "Reject": "Reject",
+                    "Unknown": "Unknown"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "Initial Overall Recommendation",
+                    "confidence": "Initial Confidence"
+                }
+            }
+        }
+    },
+    "2024": {
+        "gform": {
+            "track": {
+                "main": "cvpr"
+            },
+            "tname": {
+                "main": {
+                    "Poster": "Poster",
+                    "Highlight": "Highlight",
+                    "Oral": "Oral",
+                    "Reject": "Reject",
+                    "Unknown": "Unknown"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "Initial Overall Recommendation",
+                    "confidence": "Initial Confidence"
+                }
+            }
+        },
         "site": {
             "domain": "https://cvpr.thecvf.com",
             "track": {
