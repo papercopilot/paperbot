@@ -676,4 +676,6 @@ class ORBotWWW(OpenreviewBot):
     
         status = note['content']['venue']['value']
         status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+        
+        if status: self.summarizer.update_summary(status)
         return status
