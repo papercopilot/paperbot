@@ -669,3 +669,11 @@ class ORBotEMNLP(OpenreviewBot):
 
 class ORBotACL(OpenreviewBot):
     pass
+
+class ORBotWWW(OpenreviewBot):
+    
+    def get_status(self, note, tier_name, decision_invitation):
+    
+        status = note['content']['venue']['value']
+        status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+        return status

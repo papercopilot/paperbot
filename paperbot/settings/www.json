@@ -1,0 +1,52 @@
+{
+    "2025": {
+        "gform": {
+            "track": {
+                "main": "www"
+            },
+            "tname": {
+                "main": {
+                    "Accepted": "Accepted",
+                    "Rejected": "Rejected",
+                    "Withdrawn": "Withdrawn"
+                }
+            },
+            "rname": {
+                "main": {
+                    "novelty": "Novelty",
+                    "technical_quality": "Technical Quality",
+                    "confidence": "Confidence"
+                }
+            }
+        }
+    },
+    "2024": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "ACM.org/TheWebConf",
+                "review": "Official_Review",
+                "decision": "in_venue"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "TheWebConf24": "Accept",
+                    "TheWebConf24 Oral": "Oral"
+                }
+            },
+            "rname": {
+                "main": {
+                    "Novelty": "novelty",
+                    "Technical Quality": "technical_quality",
+                    "Scope": "scope",
+                    "Confidence": "reviewer_confidence"
+                }
+            }
+        }
+    }
+}

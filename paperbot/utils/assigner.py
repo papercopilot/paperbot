@@ -228,6 +228,17 @@ class AssignerAAAI(Assigner):
             return merger.MergerAAAI
         else: super().__new__(cls, botname)
         
+class AssignerWWW(Assigner):
+    
+    def __new__(cls, botname, year=0):
+        if botname == 'or':
+            return openreviewbot.ORBotWWW
+        elif botname == 'gform':
+            return gformbot.GFormBotWWW
+        elif botname == 'merge':
+            return merger.MergerWWW
+        else: super().__new__(cls, botname)
+        
 class AssignerGoogleScholar(Assigner):
     
     def __new__(cls, botname, year=0):

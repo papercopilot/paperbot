@@ -1349,3 +1349,67 @@ class GFormBotCVPR(GFormBot):
             }
             
         return ret
+
+    
+class GFormBotWWW(GFormBot):
+    
+    def process_row(self, index, row, track, mode=None, as_init=False):
+        
+        ret = {}
+        
+        # remove invalide response
+        # https://stackoverflow.com/questions/9576384/use-regular-expression-to-match-any-chinese-character-in-utf-8-encoding
+        match = re.search('[a-zA-Z\u4E00-\u9FFF]', row['Initial Novelty']) # \u4E00-\u9FFF chinese
+        if match: return ret
+    
+        review_scores = {}
+        for key in self.review_name:
+            review_scores[key] = []
+        
+        if mode == 'Rebuttal':
+        
+            # remove nan data
+            if pd.isna(row['[Optional] Novelty after Rebuttal']) or not row['[Optional] Novelty after Rebuttal']: return ret
+            paper_id = row['Paper/Submission ID']
+            
+            if as_init:
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
+            else:
+                for key in self.review_name:
+                    rebuttal_key = self.review_name[key].replace('Initial ', '').replace('Initial ', '') + ' after Rebuttal'
+                    rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                    review_scores[key] = self.auto_split(row[rebuttal_key])
+            status = row['[Optional] Final Decision']
+        else:
+            # remove redundant data
+            paper_id = row['Paper/Submission ID']
+            status = row['[Optional] Final Decision']
+            for key in self.review_name:
+                review_scores[key] = self.auto_split(row[self.review_name[key]])
+
+        # list to numpy
+        list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
+
+        np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+        np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+        np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+        
+        if np2avg(review_scores[list(review_scores.keys())[0]]) > 5:
+            cprint('warning', f"Rating > 5: {np2avg(review_scores[list(review_scores.keys())[0]])}, skipping")
+            return ret
+        
+        ret = {
+            'id': paper_id,
+            'track': track,
+            'status': status,
+        }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
+            
+        return ret

@@ -1833,3 +1833,6 @@ class MergerAAAI(Merger):
 
 class MergerGoogleScholar(Merger):
     pass
+
+class MergerWWW(Merger):
+    pass
