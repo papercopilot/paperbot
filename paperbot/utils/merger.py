@@ -1405,6 +1405,8 @@ class Merger:
                         s['name'] = self._conf.upper()
                         s['track'] = track
                     s['s3'] = 'Community'
+                    s['review_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['review'].items()]) # should be the same as openreview
+                    s['area_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['area'].items()]) # should be the same as openreview
                     s['bot_mark'] += 'GF;'
                     
                     tier_id = dict((v,k) for k,v in summary['name']['tier_raw'].items())

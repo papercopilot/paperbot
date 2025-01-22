@@ -15,9 +15,50 @@
             },
             "rname": {
                 "main": {
-                    "rating": "Initial Overall Recommendation",
+                    "overall_recommendation": "Initial Overall Recommendation",
                     "confidence": "Initial Confidence"
                 }
+            },
+            "aname": {
+                "main": [
+                    "3D from multi-view and sensors",
+                    "3D from single images",
+                    "Adversarial attack and defense",
+                    "Autonomous driving",
+                    "Biometrics",
+                    "Computational imaging",
+                    "Computer vision for social good",
+                    "Computer vision theory",
+                    "Datasets and evaluation",
+                    "Deep learning architectures and techniques",
+                    "Document analysis and understanding",
+                    "Efficient and scalable vision",
+                    "Embodied vision: Active agents, simulation",
+                    "Event-based cameras",
+                    "Explainable computer vision",
+                    "Humans: Face, body, pose, gesture, movement",
+                    "Image and video synthesis and generation",
+                    "Low-level vision",
+                    "Machine learning (other than deep learning)",
+                    "Medical and biological vision, cell microscopy",
+                    "Multimodal learning",
+                    "Optimization methods (other than deep learning)",
+                    "Photogrammetry and remote sensing",
+                    "Physics-based vision and shape-from-X",
+                    "Recognition: Categorization, detection, retrieval",
+                    "Representation learning",
+                    "Computer Vision for Robotics",
+                    "Scene analysis and understanding",
+                    "Segmentation, grouping and shape analysis",
+                    "Self-, semi-, meta- and unsupervised learning",
+                    "Transfer/ low-shot/ continual/ long-tail learning",
+                    "Transparency, fairness, accountability, privacy and ethics in vision",
+                    "Video: Action and event understanding ",
+                    "Video: Low-level analysis, motion, and tracking",
+                    "Vision + graphics",
+                    "Vision, language, and reasoning",
+                    "Vision applications and systems"
+                ]
             }
         }
     },

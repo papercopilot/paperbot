@@ -78,6 +78,8 @@ class GFormBot(sitebot.SiteBot):
                     'title': '',
                     'track': ret['track'],
                     'status': ret['status'],
+                    'primary_area': ret.get('primary_area', ''),
+                    'open2public': ret.get('open2public', ''),
                     'keywords': '',
                     'author': '',
                 }
@@ -302,7 +304,7 @@ class GFormBot(sitebot.SiteBot):
                         else:
                             # there's no data for this key, usually total0, remove the key to keep consistency for the merger
                             del self._summary_all_tracks[track]['name']['tier_raw'][kid]
-                        
+                                            
                 continue
             
             elif self._conf == 'cvpr' and self._year >= 2024:
@@ -314,11 +316,17 @@ class GFormBot(sitebot.SiteBot):
                             paperlist[i]['status'] = 'Unknown'
                                 
                 update_paperlist_status(self.summarizer.paperlist)
+                paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.init.json'), paperlist_filtered)
+                
+                # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
+                primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
+                self.summarizer.area_dimensions = {i: area for i, area in enumerate(primary_areas)}
                     
                 # update tids and get initial histogram
                 for k in self._args['tname'][track]:
                     self.summarizer.update_summary(k, 0)
-                self.summarizer.update_summary('Withdraw', 0)
+                self.summarizer.update_summary('Withdraw', 0) # TODO: can be removed since get_histogram has a fix 
                 self.summarizer.get_histogram(self._args['tname'][track], track=track)
                 self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
         
@@ -327,6 +335,8 @@ class GFormBot(sitebot.SiteBot):
                 self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
                 update_paperlist_status(self.summarizer.paperlist)
                 update_paperlist_status(self.summarizer.paperlist_init)
+                paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.json'), paperlist_filtered)
                 self.summarizer.get_histogram(self._args['tname'][track], track=track)
                 self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
                 self._summary_all_tracks[track]['tsf'] = {}
@@ -1306,7 +1316,7 @@ class GFormBotCVPR(GFormBot):
         
             # remove nan data
             if pd.isna(row['[Optional] Overall Recommendation after Rebuttal']) or not row['[Optional] Overall Recommendation after Rebuttal']: return ret
-            paper_id = row['Paper ID (hash it if you prefer more anonymity)']
+            paper_id = row['Paper/Submission ID']
             
             if as_init:
                 for key in self.review_name:
@@ -1316,13 +1326,16 @@ class GFormBotCVPR(GFormBot):
                     rebuttal_key = self.review_name[key].replace('Initial ', '').replace('Initial ', '') + ' after Rebuttal'
                     rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
                     review_scores[key] = self.auto_split(row[rebuttal_key])
-            status = row['[Optional] Final Decision']
+            # status = row['[Optional] Final Decision']
         else:
             # remove redundant data
-            paper_id = row['Paper ID (hash it if you prefer more anonymity)']
-            status = row['[Optional] Final Decision']
+            paper_id = row['Paper/Submission ID']
             for key in self.review_name:
                 review_scores[key] = self.auto_split(row[self.review_name[key]])
+                
+        primary_area = row['Primary Area'].strip()
+        status = row['[Optional] Final Decision']
+        open2public = row['Open to Community']
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
@@ -1340,7 +1353,10 @@ class GFormBotCVPR(GFormBot):
         ret = {
             'id': paper_id,
             'track': track,
-            'status': status,
+            # 'status': status,
+            'status': 'Active',
+            'primary_area': primary_area,
+            'open2public': open2public,
         }
         for key in self.review_name:
             ret[key] = {

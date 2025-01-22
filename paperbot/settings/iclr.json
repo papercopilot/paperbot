@@ -22,7 +22,9 @@
                     "ICLR 2025 poster": "Poster",
                     "ICLR 2025 oral": "Oral",
                     "ICLR 2025 spotlight": "Spotlight",
-                    "Submitted to ICLR 2025": "Reject"
+                    "Submitted to ICLR 2025": "Reject",
+                    "ICLR 2025 conditionalonethicsreview": "Conditional",
+                    "ICLR 2025": "Poster"
                 }
             },
             "rname": {

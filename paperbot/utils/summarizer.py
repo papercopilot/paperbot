@@ -4,6 +4,8 @@ import json
 from tqdm import tqdm
 from collections import Counter
 import spacy
+import time
+from ..utils.util import color_print as cprint
 
 from .compress_uncompress_array import compress_array, uncompress_string
 from .util import load_json
@@ -259,6 +261,7 @@ class Summarizer():
         # hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(self._paperlist, status=k, track=track)
         # self.tier_hist[tid], self.tier_hist_sum[tid], self.tier_hist_confidence[tid] = hist_rating_str, hist_sum, hist_confidence_str
         self.get_hists(tid, self._paperlist, status=k, track=track)
+        self.tier_num[tid] = 0 if tid not in self.tier_num else self.tier_num[tid] # could be the case there's no active status in the paperlist, assign 0
         
         k = 'Withdraw'
         if 'Withdraw' in self.tier_ids:
@@ -266,6 +269,7 @@ class Summarizer():
             # hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(self._paperlist, status=k, track=track)
             # self.tier_hist[tid], self.tier_hist_sum[tid], self.tier_hist_confidence[tid] = hist_rating_str, hist_sum, hist_confidence_str
             self.get_hists(tid, self._paperlist, status=k, track=track)
+            self.tier_num[tid] = 0 if tid not in self.tier_num else self.tier_num[tid] # could be the case there's no active status in the paperlist, assign 0
 
             # if withdraw in thsum is not equal to withdraw in tnum, label the difference as "Post Decision Withdraw"
             if k == 'Withdraw':
@@ -734,3 +738,13 @@ class Summarizer():
         }
         
         return self.sorted_summary(summary)
+    
+    @staticmethod
+    def save_paperlist(path, paperlist):
+        tic = time.time()
+        if paperlist:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as f:
+                json.dump(paperlist, f, indent=4)
+            cprint('io', f"Saved paperlist for to {path} in {time.time()-tic:.2f} sec")
+    
