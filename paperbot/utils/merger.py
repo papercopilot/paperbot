@@ -1622,7 +1622,7 @@ class MergerNIPS(Merger):
             for t in s['t_order'].split(','):
                 k = s[f'n{t}']
                 for key in review_dimension:
-                    hist_sum, hist_str, hist = Summarizer().get_hist_by_key_avg(paperlist, review_dimension[key], status=k, track=track)
+                    _, hist_sum, hist_str, hist = Summarizer().get_hist_by_key_avg(paperlist, review_dimension[key], status=k, track=track)
                     tier_num[k] = hist_sum
                     tier_hists[key][k] = hist_str.replace(';', ',')
                 s[f't{t}'] = max(s[f't{t}'], tier_num.get(s[f'n{t}'], 0))

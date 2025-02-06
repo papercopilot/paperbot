@@ -111,7 +111,7 @@ class Summarizer():
             self.tier_ids = swap_key_value(summary['name']['tier_raw'])
             
         self.tier_hists = {}
-        self.tier_sums = {'hist': {}, 'tsf': {}}
+        self.tier_sums = {'hist': {}, 'tsf': {}, 'replies': {}}
         for review_key, review_value in summary['hist'].items():
             for tier_key, tier_value in review_value.items():
                 if type(tier_value) == str:
@@ -169,15 +169,20 @@ class Summarizer():
             
             # for each primary area
             for (area_key, area) in self.area_dimensions.items():
+                
+                bin_max = 10 if key != 'replies' else 100 # map 0:10:0.1 to 0:100:1
                 if area == 'overall':
-                    hist_sum, hist_str, hist = self.get_hist_by_key_avg(paperlist, key, status=status, track=track)
+                    data_sum, hist_sum, hist_str, hist = self.get_hist_by_key_avg(paperlist, key, status=status, track=track, bin_max=bin_max)
                 else:
-                    hist_sum, hist_str, hist = self.get_hist_by_key_avg(paperlist, key, status=status, track=track, primary_area=area)
+                    data_sum, hist_sum, hist_str, hist = self.get_hist_by_key_avg(paperlist, key, status=status, track=track, primary_area=area, bin_max=bin_max)
                     
                 # initialize
                 if tid not in self.tier_hists[key]:
                     self.tier_hists[key][tid] = {}
                     self.tier_sums['hist'][tid] = {}
+                    if 'replies' in self.tier_sums: # gform bot is not initialized with replies in the tier_sum.
+                         # most of the keys share the same hist, except for replies, therefore initialize
+                        self.tier_sums['replies'][tid] = {}
                     
                 # hack for this version, TODO: remove
                 if type(self.tier_hists[key][tid]) == str:
@@ -186,6 +191,9 @@ class Summarizer():
                     
                 self.tier_hists[key][tid][area_key] = hist_str
                 self.tier_sums['hist'][tid][area_key] = hist_sum
+                
+                if key == 'replies':
+                    self.tier_sums['replies'][tid][area_key] = data_sum 
                 
                 if area == 'overall':
                     sanity_check[key] = hist_sum
@@ -212,21 +220,24 @@ class Summarizer():
         hist_sum = int(hist.sum())
         return hist_sum, hist_str, hist
     
-    def get_hist_by_key_avg(self, paperlist, key, status='', track='', primary_area=''):
-        data = np.array([np.clip(o.get(f'{key}_avg', 0), 0, 10) for o in paperlist if (not status or o['status'] == status) and (not track or o['track'] == track) and (not primary_area or o['primary_area'] == primary_area)])
-        hist = np.histogram(data, bins=np.arange(101)/10)[0]
+    def get_hist_by_key_avg(self, paperlist, key, status='', track='', primary_area='', bin_min=0, bin_max=10, bin_num=100):
+        data = np.array([np.clip(o.get(f'{key}_avg', 0), 0, bin_max) for o in paperlist if (not status or o['status'] == status) and (not track or o['track'] == track) and (not primary_area or o['primary_area'] == primary_area)])
+        # hist = np.histogram(data, bins=np.arange(101)/10)[0]
+        bins = np.linspace(bin_min, bin_max, bin_num+1)
+        hist = np.histogram(data, bins=bins)[0]
 
         # sanity check
-        data_2 = np.array([np.clip(np.array(list(map(float, (o.get(f'{key}', '').split(';') if o.get(f'{key}', '') else '0')))).mean(), 0, 10) for o in paperlist if (not status or o['status'] == status) and (not track or o['track'] == track) and (not primary_area or o['primary_area'] == primary_area)])
-        hist_2 = np.histogram(data_2, bins=np.arange(101)/10)[0]
-        assert (hist == hist_2).all(), hist - hist_2
+        # data_2 = np.array([np.clip(np.array(list(map(float, (o.get(f'{key}', '').split(';') if o.get(f'{key}', '') else '0')))).mean(), 0, 10) for o in paperlist if (not status or o['status'] == status) and (not track or o['track'] == track) and (not primary_area or o['primary_area'] == primary_area)])
+        # hist_2 = np.histogram(data_2, bins=np.arange(101)/10)[0]
+        # assert (hist == hist_2).all(), hist - hist_2
         
         # output
         hist_str = ';'.join(np.char.mod('%d', hist))
         # hist_str = compress_array(hist)
         hist_sum = int(hist.sum())
+        data_sum = int(data.sum())
         
-        return hist_sum, hist_str, hist
+        return data_sum, hist_sum, hist_str, hist
     
     def get_weighted_hist_by_key_avg(self, paperlist, key, weight_key, status='', track=''):
         data = np.array([np.clip(np.array(list(map(float, (o.get(f'{key}', '').split(';') if o.get(f'{key}', '') else '0')))).mean(), 0, 10) for o in paperlist if (not status or o['status'] == status) and (not track or o['track'] == track)])
@@ -354,10 +365,12 @@ class Summarizer():
             # self.tier_tsfs[key][tid] = tsf_str
             # sanity_check[key] = tsf_sum
             for (area_key, area) in self.area_dimensions.items():
+                
+                bin_max = 10 if key != 'replies' else 100 # map 0:10:0.1 to 0:100:1
                 if area == 'overall':
-                    tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track)
+                    tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track, bin_max=bin_max)
                 else:
-                    tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track, primary_area=area)
+                    tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track, primary_area=area, bin_max=bin_max)
                     
                 # initialize
                 if tid not in self.tier_tsfs[key]:
@@ -425,7 +438,7 @@ class Summarizer():
     #     tsf_sum = int(tsf.sum())
     #     return tsf_sum, tsf_str, tsf
     
-    def get_tsf_by_key_avg(self, paperlist, paperlist0, key, status='', track='', primary_area=''):
+    def get_tsf_by_key_avg(self, paperlist, paperlist0, key, status='', track='', primary_area='', bin_min=0, bin_max=10, bin_num=100):
         tsf = np.zeros((100, 100))
         for o, o0 in zip(paperlist, paperlist0):
             if o['id'] != o0['id']: continue
@@ -433,10 +446,11 @@ class Summarizer():
             # if o['status'] != status: continue
                 if f'{key}_avg' not in o0 or f'{key}_avg' not in o: continue
                 rating0_avg, rating_avg = o0[f'{key}_avg'], o[f'{key}_avg']
-                rating0_avg = np.clip(rating0_avg, 0, 10)
-                rating_avg = np.clip(rating_avg, 0, 10)
+                rating0_avg = np.clip(rating0_avg, bin_min, bin_max)
+                rating_avg = np.clip(rating_avg, bin_min, bin_max)
                 rating_avg_delta = rating_avg - rating0_avg
-                tsf[int(rating0_avg*10), 50+int(rating_avg_delta*10)] += 1
+                scaleup_to_100 = 100 / bin_max
+                tsf[int(rating0_avg*scaleup_to_100), 50+int(rating_avg_delta*scaleup_to_100)] += 1
         tsf = tsf.astype(np.int32)
         # tsf_str = ';'.join(np.char.mod('%d', tsf.flatten()))
         tsf_str = compress_array(tsf)
@@ -470,15 +484,17 @@ class Summarizer():
         for (o0, o) in zip(paperlist0, self._paperlist):
             if o.keys() == o0.keys(): continue
             else:
+                # fix the version mismatch
                 if 'primary_area' in o and 'primary_area' not in o0:
                     o0['primary_area'] = o['primary_area']
-                else:
-                    raise ValueError(f'{o.keys()} != {o0.keys()}')
+                if 'replies_avg' in o and 'replies_avg' not in o0:
+                    o0['replies_avg'] = o['replies_avg']
+                # assert o.keys() == o0.keys(), f'{o.keys()} != {o0.keys()}'
         
         # get histogram over all submissions at initial
         # hist_sum, hist_rating_str, _, hist_confidence_str, _ = self.get_hist(paperlist0, track=track)
         first_key = list(self.tier_hists.keys())[0] # usually be the rating
-        hist_sum, _, _ = self.get_hist_by_key_avg(paperlist0, first_key, track=track)
+        _, hist_sum, _, _ = self.get_hist_by_key_avg(paperlist0, first_key, track=track)
         if hist_sum > 0:
             tid = self.get_tid('Total0')
             # self.tier_hist[tid], self.tier_hist_sum[tid], self.tier_hist_confidence[tid] = hist_rating_str, hist_sum, hist_confidence_str
@@ -720,6 +736,8 @@ class Summarizer():
             # summary['ttsf'] = self.tier_tsfs['rating']
             # summary['ttsf_conf'] = self.tier_tsfs['confidence']
             # summary['ttsfsum'] = self.tier_sums['tsf']
+        
+        if 'replies' in self.tier_sums: summary['sum']['replies'] = self.tier_sums['replies']
         
         if is_sort:
             return self.sorted_summary(summary)

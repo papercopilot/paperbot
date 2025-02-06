@@ -33,7 +33,8 @@
                     "confidence": "confidence",
                     "soundness": "soundness",
                     "contribution": "contribution",
-                    "presentation": "presentation"
+                    "presentation": "presentation",
+                    "replies": "replies"
                 }
             }
         }
@@ -70,7 +71,8 @@
                     "confidence": "confidence",
                     "soundness": "soundness",
                     "contribution": "contribution",
-                    "presentation": "presentation"
+                    "presentation": "presentation",
+                    "replies": "replies"
                 }
             }
         },
@@ -120,7 +122,8 @@
                     "confidence": "confidence",
                     "correctness": "correctness",
                     "technical_novelty": "technical_novelty_and_significance",
-                    "empirical_novelty": "empirical_novelty_and_significance"
+                    "empirical_novelty": "empirical_novelty_and_significance",
+                    "replies": "replies"
                 }
             }
         },
@@ -169,7 +172,8 @@
                     "confidence": "confidence",
                     "correctness": "correctness",
                     "technical_novelty": "technical_novelty_and_significance",
-                    "empirical_novelty": "empirical_novelty_and_significance"
+                    "empirical_novelty": "empirical_novelty_and_significance",
+                    "replies": "replies"
                 }
             }
         },
@@ -216,7 +220,8 @@
             "rname": {
                 "main": {
                     "rating": "rating",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies"
                 }
             }
         },
@@ -263,7 +268,8 @@
             "rname": {
                 "main": {
                     "rating": "rating",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies"
                 }
             }
         },

@@ -320,7 +320,10 @@ class GFormBot(sitebot.SiteBot):
                 self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.init.json'), paperlist_filtered)
                 
                 # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
-                primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
+                if 'aname' in self._args:
+                    primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
+                else:
+                    primary_areas = ['overall']
                 self.summarizer.area_dimensions = {i: area for i, area in enumerate(primary_areas)}
                     
                 # update tids and get initial histogram
@@ -1311,12 +1314,17 @@ class GFormBotCVPR(GFormBot):
         review_scores = {}
         for key in self.review_name:
             review_scores[key] = []
+            
+        if self._year == 2025:
+            id_key = 'Paper/Submission ID'
+        elif self._year == 2024:
+            id_key = 'Paper ID (hash it if you prefer more anonymity)'
         
         if mode == 'Rebuttal':
         
             # remove nan data
             if pd.isna(row['[Optional] Overall Recommendation after Rebuttal']) or not row['[Optional] Overall Recommendation after Rebuttal']: return ret
-            paper_id = row['Paper/Submission ID']
+            paper_id = row[id_key]
             
             if as_init:
                 for key in self.review_name:
@@ -1329,13 +1337,18 @@ class GFormBotCVPR(GFormBot):
             # status = row['[Optional] Final Decision']
         else:
             # remove redundant data
-            paper_id = row['Paper/Submission ID']
+            paper_id = row[id_key]
             for key in self.review_name:
                 review_scores[key] = self.auto_split(row[self.review_name[key]])
                 
-        primary_area = row['Primary Area'].strip()
-        status = row['[Optional] Final Decision']
-        open2public = row['Open to Community']
+        if self._year >= 2025:
+            primary_area = row['Primary Area'].strip()
+            open2public = row['Open to Community']
+            status = 'Active'
+        else:
+            primary_area = ''
+            open2public = ''
+            status = row['[Optional] Final Decision']
 
         # list to numpy
         list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
@@ -1353,8 +1366,7 @@ class GFormBotCVPR(GFormBot):
         ret = {
             'id': paper_id,
             'track': track,
-            # 'status': status,
-            'status': 'Active',
+            'status': status,
             'primary_area': primary_area,
             'open2public': open2public,
         }

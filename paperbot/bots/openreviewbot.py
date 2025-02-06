@@ -117,6 +117,12 @@ class OpenreviewBot(sitebot.SiteBot):
         #     status = note['content']['venue']['value']
         #     status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
         #     self.summarizer.update_summary(status)
+        
+        # review_counts
+        count_replies = note['details']['replyCount']
+        count_review = 0
+        count_non_review = count_replies
+        count_others = 0
             
         # check comments
         for reply in note['details']['directReplies']:
@@ -125,6 +131,10 @@ class OpenreviewBot(sitebot.SiteBot):
             else: key_invitation = key_invitation = reply['invitations'][0] # iclr2024 and neurips 2023
             
             if review_invitation in key_invitation:
+                
+                # update non_review_replies_count
+                count_review += 1
+                count_non_review -= 1
                 
                 # get review comments, '0' if not available
                 def getvalue(key, rname, src):
@@ -238,6 +248,11 @@ class OpenreviewBot(sitebot.SiteBot):
         for i, key in enumerate(review_name):
             if i > 0:
                 extra[key][f'corr_{list(review_name)[0]}_{key}'] = np2coef(review_scores[list(review_name)[0]], review_scores[key])
+        # include reply count and an dimension similar to review dimension
+        extra['replies'] = {
+            'str': f'',
+            'avg': count_replies,
+        }
                 
         return id, title, keywords, primary_area, status, extra
 
@@ -289,8 +304,8 @@ class OpenreviewBot(sitebot.SiteBot):
                 author_ids = list2str(author_ids, separator=',')
                 profiles_url = f'https://api2.openreview.net/profiles?ids={author_ids}'
                 
-                fetch_user_profiles = True
                 fetch_user_profiles = False
+                fetch_user_profiles = True
                 if fetch_user_profiles:
                     profiles_response = sitebot.SiteBot.session_request(profiles_url)
                     profiles = profiles_response.json()
@@ -376,9 +391,10 @@ class OpenreviewBot(sitebot.SiteBot):
                     'position': list2str(position_on_submit),
                 }
                 for key in extra:
+                    if key == 'replies': continue # skip replies
                     paper_entry[key] = extra[key]['str']
                 for key in extra:
-                    paper_entry[key + '_avg'] = extra[key]['avg']
+                    paper_entry[key + '_avg'] = extra[key]['avg'] # modify this could make the calculating histogram failed since summa
                 for i, key in enumerate(review_name):
                     if i > 0:
                         if not key in ['confidence', 'correctness']: continue # hack for now before validate the correctness of implementation
@@ -493,7 +509,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 self.summarizer.tier_tsfs[key] = {}
                 self.summarizer.review_dimensions[i] = key
             self.summarizer.area_dimensions = {}
-            self.summarizer.tier_sums = {'hist': {},'tsf': {},}
+            self.summarizer.tier_sums = {'hist': {},'tsf': {}, 'replies': {}}
             
             # fetch paperlist
             if fetch_site:
