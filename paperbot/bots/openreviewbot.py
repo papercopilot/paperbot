@@ -270,6 +270,7 @@ class OpenreviewBot(sitebot.SiteBot):
             # get response
             response = sitebot.SiteBot.session_request(f'{url}&limit={batch}&offset={offset}&details=replyCount,directReplies')
             data = response.json()
+            time.sleep(0.5) # avoid being blocked
             
             # process data here
             for note in tqdm(data['notes'], leave=False, desc='Processing'):
@@ -338,7 +339,35 @@ class OpenreviewBot(sitebot.SiteBot):
                                 if start <= year_on_submit and end >= year_on_submit:
                                     entry_on_submit = entry
                             if entry_on_submit:
-                                affs_name_on_submit.append(entry_on_submit['institution'].get('name', ''))
+                                # check aff_name
+                                aff_name = entry_on_submit['institution'].get('name', '')
+                                rename_map = {
+                                    # aff_name_before_check: aff_name_after_check
+                                    
+                                    # university
+                                    'Tsinghua University, Tsinghua University': 'Tsinghua University',
+                                    'Shanghai Jiao Tong University': 'Shanghai Jiaotong University',
+                                    'The Hong Kong University of Science and Technology': 'Hong Kong University of Science and Technology',
+                                    'University of Pennsylvania, University of Pennsylvania': 'University of Pennsylvania',
+                                    'Korea Advanced Institute of Science and Technology': 'Korea Advanced Institute of Science & Technology',
+                                    'University of California Berkeley': 'University of California, Berkeley',
+                                    'nanjing university': 'Nanjing University',
+                                    'national university of singaore, National University of Singapore': 'National University of Singapore',
+                                    'University of Illinois at Urbana-Champaign': 'University of Illinois, Urbana Champaign',
+                                    'CMU, Carnegie Mellon University': 'Carnegie Mellon University',
+                                    'Beijing University of Aeronautics and Astronautics': 'Beihang University',
+                                    'University of the Chinese Academy of Sciences': 'University of Chinese Academy of Sciences',
+                                    'Institute of automation, Chinese academy of science, Chinese Academy of Sciences': 'Institute of Automation, Chinese Academy of Sciences',
+                                    
+                                    # company
+                                    'Google Research': 'Google Research',
+                                    'DeepMind': 'Google DeepMind',
+                                    'Research, Microsoft': 'Microsoft Research',
+                                    'Facebook': 'Meta Facebook',
+                                }
+                                if aff_name in rename_map: aff_name = rename_map[aff_name]
+                                
+                                affs_name_on_submit.append(aff_name)
                                 affs_domain_on_submit.append(entry_on_submit['institution'].get('domain', ''))
                                 position_on_submit.append(entry_on_submit.get('position', ''))
                     
