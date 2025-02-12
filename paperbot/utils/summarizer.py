@@ -111,7 +111,7 @@ class Summarizer():
             self.tier_ids = swap_key_value(summary['name']['tier_raw'])
             
         self.tier_hists = {}
-        self.tier_sums = {'hist': {}, 'tsf': {}, 'replies': {}}
+        self.tier_sums = {'hist': {}, 'tsf': {}, 'replies': {}, 'authors#': {}}
         for review_key, review_value in summary['hist'].items():
             for tier_key, tier_value in review_value.items():
                 if type(tier_value) == str:
@@ -171,6 +171,7 @@ class Summarizer():
             for (area_key, area) in self.area_dimensions.items():
                 
                 bin_max = 10 if key != 'replies' else 100 # map 0:10:0.1 to 0:100:1
+                bin_max = 10 if key != 'authors#' else 100 # map 0:10:0.1 to 0:100:1
                 if area == 'overall':
                     data_sum, hist_sum, hist_str, hist = self.get_hist_by_key_avg(paperlist, key, status=status, track=track, bin_max=bin_max)
                 else:
@@ -183,6 +184,8 @@ class Summarizer():
                     if 'replies' in self.tier_sums: # gform bot is not initialized with replies in the tier_sum.
                          # most of the keys share the same hist, except for replies, therefore initialize
                         self.tier_sums['replies'][tid] = {}
+                    if 'authors#' in self.tier_sums:
+                        self.tier_sums['authors#'][tid] = {}
                     
                 # hack for this version, TODO: remove
                 if type(self.tier_hists[key][tid]) == str:
@@ -194,6 +197,8 @@ class Summarizer():
                 
                 if key == 'replies':
                     self.tier_sums['replies'][tid][area_key] = data_sum 
+                if key == 'authors#':
+                    self.tier_sums['authors#'][tid][area_key] = data_sum
                 
                 if area == 'overall':
                     sanity_check[key] = hist_sum
@@ -367,6 +372,7 @@ class Summarizer():
             for (area_key, area) in self.area_dimensions.items():
                 
                 bin_max = 10 if key != 'replies' else 100 # map 0:10:0.1 to 0:100:1
+                bin_max = 10 if key != 'authors#' else 100 # map 0:10:0.1 to 0:100:1
                 if area == 'overall':
                     tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track, bin_max=bin_max)
                 else:
@@ -738,6 +744,7 @@ class Summarizer():
             # summary['ttsfsum'] = self.tier_sums['tsf']
         
         if 'replies' in self.tier_sums: summary['sum']['replies'] = self.tier_sums['replies']
+        if 'authors#' in self.tier_sums: summary['sum']['authors#'] = self.tier_sums['authors#']
         
         if is_sort:
             return self.sorted_summary(summary)

@@ -1,0 +1,28 @@
+{
+    "2025": {
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "aistats.org/AISTATS",
+                "review": "Official_Review",
+                "decision": "in_venue"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "AISTATS 2025 Poster": "Poster",
+                    "AISTATS 2025 Oral": "Oral"
+                }
+            },
+            "rname": {
+                "main": {
+                    "authors#": "authors#"
+                }
+            }
+        }
+    }
+}

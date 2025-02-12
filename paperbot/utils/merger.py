@@ -1838,3 +1838,6 @@ class MergerGoogleScholar(Merger):
 
 class MergerWWW(Merger):
     pass
+
+class MergerAISTATS(Merger):
+    pass

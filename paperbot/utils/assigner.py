@@ -247,3 +247,12 @@ class AssignerGoogleScholar(Assigner):
         elif botname == 'merge':
             return merger.MergerGoogleScholar
         else: super().__new__(cls, botname)
+        
+class AssignerAISTATS(Assigner):
+    
+    def __new__(cls, botname, year=0):
+        if botname == 'or':
+            return openreviewbot.ORBotAISTATS
+        elif botname == 'merge':
+            return merger.MergerAISTATS
+        else: super().__new__(cls, botname)

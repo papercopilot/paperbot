@@ -302,11 +302,18 @@ class OpenreviewBot(sitebot.SiteBot):
                 position_on_submit = []
                 author_ids = get_str_list(note['content'].get('authorids', ''))
                 author_ids = [author_id for author_id in author_ids if re.match(r'^~.*\d+$', author_id)] # filter author_ids that match '^~.*\d+$'
+                count_authors = len(author_ids)
                 author_ids = list2str(author_ids, separator=',')
                 profiles_url = f'https://api2.openreview.net/profiles?ids={author_ids}'
                 
-                fetch_user_profiles = False
+                # count authors, similar to replies
+                extra['authors#'] = {
+                    'str': f'',
+                    'avg': count_authors,
+                }
+                
                 fetch_user_profiles = True
+                fetch_user_profiles = False
                 if fetch_user_profiles:
                     profiles_response = sitebot.SiteBot.session_request(profiles_url)
                     profiles = profiles_response.json()
@@ -421,6 +428,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 }
                 for key in extra:
                     if key == 'replies': continue # skip replies
+                    if key == 'authors#': continue # skip authors
                     paper_entry[key] = extra[key]['str']
                 for key in extra:
                     paper_entry[key + '_avg'] = extra[key]['avg'] # modify this could make the calculating histogram failed since summa
@@ -538,7 +546,7 @@ class OpenreviewBot(sitebot.SiteBot):
                 self.summarizer.tier_tsfs[key] = {}
                 self.summarizer.review_dimensions[i] = key
             self.summarizer.area_dimensions = {}
-            self.summarizer.tier_sums = {'hist': {},'tsf': {}, 'replies': {}}
+            self.summarizer.tier_sums = {'hist': {},'tsf': {}, 'replies': {}, 'authors#': {}}
             
             # fetch paperlist
             if fetch_site:
@@ -716,6 +724,16 @@ class ORBotACL(OpenreviewBot):
     pass
 
 class ORBotWWW(OpenreviewBot):
+    
+    def get_status(self, note, tier_name, decision_invitation):
+    
+        status = note['content']['venue']['value']
+        status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+        
+        if status: self.summarizer.update_summary(status)
+        return status
+    
+class ORBotAISTATS(OpenreviewBot):
     
     def get_status(self, note, tier_name, decision_invitation):
     
