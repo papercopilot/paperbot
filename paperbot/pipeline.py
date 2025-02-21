@@ -155,7 +155,8 @@ class Pipeline:
             # TODO: to merge the two functions
             
             s['conference'] = venue
-            s['name'] = row['Abbr'] if not row['name'] else row['name']
+            s['name'] = '' if row['Abbr'] != row['Abbr'] else row['Abbr'] # nan
+            s['name'] = venue.split('_')[0][:-4].upper() if not s['name'] else s['name']
             
             # if row['total']: s['total'] = int(row['total'].replace(',',''))
             # if row['withdraw']: s['withdraw'] = int(row['withdraw'].replace(',',''))

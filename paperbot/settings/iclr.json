@@ -37,7 +37,8 @@
                     "soundness": "soundness",
                     "contribution": "contribution",
                     "presentation": "presentation",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         }
@@ -75,7 +76,8 @@
                     "soundness": "soundness",
                     "contribution": "contribution",
                     "presentation": "presentation",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -126,7 +128,8 @@
                     "correctness": "correctness",
                     "technical_novelty": "technical_novelty_and_significance",
                     "empirical_novelty": "empirical_novelty_and_significance",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -176,7 +179,8 @@
                     "correctness": "correctness",
                     "technical_novelty": "technical_novelty_and_significance",
                     "empirical_novelty": "empirical_novelty_and_significance",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -224,7 +228,8 @@
                 "main": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -272,7 +277,8 @@
                 "main": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -314,7 +320,9 @@
             "rname": {
                 "main": {
                     "rating": "rating",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -361,7 +369,9 @@
             "rname": {
                 "main": {
                     "rating": "rating",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -406,7 +416,9 @@
             "rname": {
                 "main": {
                     "rating": "rating",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -449,7 +461,9 @@
             },
             "rname": {
                 "main": {
-                    "rating": "rating"
+                    "rating": "rating",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -486,7 +500,9 @@
             },
             "rname": {
                 "main": {
-                    "rating": "rating"
+                    "rating": "rating",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },

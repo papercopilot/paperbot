@@ -22,7 +22,9 @@
             },
             "rname": {
                 "main": {
-                    "rating": "rating"
+                    "rating": "rating",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -74,7 +76,9 @@
             },
             "rname": {
                 "main": {
-                    "rating": "rating"
+                    "rating": "rating",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },

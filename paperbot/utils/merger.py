@@ -219,6 +219,9 @@ class Merger:
         # p1 is site, p2 is openaccess
         # put the implementaiton for each conf to the subclass
         raise NotImplementedError
+    
+    def force_update_paper_record(self):
+        pass
         
     def merge_paperlist(self):
         
@@ -255,6 +258,8 @@ class Merger:
             for i, paper in enumerate(self._paperlist_merged):
                 self._paperlist_merged[i]['track'] = 'main'
                 self._paperlist_merged[i]['status'] = 'Poster'
+                
+        self.force_update_paper_record()
         
     def process_unmatched_paperlist_openreview(self, paperdict_openreview):
         
@@ -1586,6 +1591,19 @@ class MergerICLR(Merger):
         for title in paperdict_openreview.keys():
             paper = self._paperlist_openreview[paperdict_openreview[title]]
             self._paperlist_merged.append(paper)
+            
+    def force_update_paper_record(self):
+        
+        if self._year == 2025:
+            # # update based on the author and committee's response
+            # https://github.com/papercopilot/paperlists/issues/6#issuecomment-2672962237
+            
+            # loop all self._paperlist_merged and update the aff and aff_domain
+            for paper_entry in self._paperlist_merged:
+                if paper_entry['id'] == '8oFvUBvF1u':
+                    paper_entry['aff'] = 'Tepan Inc.;Shanghai Qi Zhi Institute'
+                    paper_entry['aff_domain'] = 'tepan.co;sqz.ac.cn'
+                    break
         
     
 class MergerNIPS(Merger):

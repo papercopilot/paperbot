@@ -36,12 +36,14 @@
                     "correctness": "soundness",
                     "novelty": "contribution",
                     "presentation": "presentation",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 },
                 "Datasets & Benchmarks": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -146,12 +148,14 @@
                     "correctness": "soundness",
                     "novelty": "contribution",
                     "presentation": "presentation",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 },
                 "Datasets & Benchmarks": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -226,12 +230,14 @@
                     "correctness": "soundness",
                     "novelty": "contribution",
                     "presentation": "presentation",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 },
                 "Datasets & Benchmarks": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },
@@ -294,12 +300,14 @@
                 "main": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 },
                 "Datasets & Benchmarks": {
                     "rating": "rating",
                     "confidence": "confidence",
-                    "replies": "replies"
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },

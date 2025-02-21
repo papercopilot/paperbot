@@ -131,6 +131,8 @@ class Summarizer():
                         self.tier_hists[review_key_name][int(tier_key)][int(area_key)] = area_value
                         self.tier_sums['hist'][int(tier_key)][int(area_key)] = summary['sum']['hist'][tier_key][area_key] # not split by review dim
                         if 'tsf' in summary['sum'] and tier_key in summary['sum']['tsf']: self.tier_sums['tsf'][int(tier_key)] = summary['sum']['tsf'][tier_key] # not split by review dim
+                        if 'replies' in summary['sum'] and tier_key in summary['sum']['replies']: self.tier_sums['replies'][int(tier_key)] = summary['sum']['replies'][tier_key]
+                        if 'authors#' in summary['sum'] and tier_key in summary['sum']['authors#']: self.tier_sums['authors#'][int(tier_key)] = summary['sum']['authors#'][tier_key]
         
         if 'tsf' in summary: self.tier_tsfs = {self.review_dimensions[int(k)]: key_str2int(summary['tsf'][k]) for k in summary['tsf']}
         
@@ -170,8 +172,10 @@ class Summarizer():
             # for each primary area
             for (area_key, area) in self.area_dimensions.items():
                 
-                bin_max = 10 if key != 'replies' else 100 # map 0:10:0.1 to 0:100:1
-                bin_max = 10 if key != 'authors#' else 100 # map 0:10:0.1 to 0:100:1
+                bin_max = 10
+                if key == 'replies': bin_max = 100 # map 0:10:0.1 to 0:100:1
+                if key == 'authors#': bin_max = 100 # map 0:10:0.1 to 0:100:1
+                
                 if area == 'overall':
                     data_sum, hist_sum, hist_str, hist = self.get_hist_by_key_avg(paperlist, key, status=status, track=track, bin_max=bin_max)
                 else:
@@ -371,8 +375,9 @@ class Summarizer():
             # sanity_check[key] = tsf_sum
             for (area_key, area) in self.area_dimensions.items():
                 
-                bin_max = 10 if key != 'replies' else 100 # map 0:10:0.1 to 0:100:1
-                bin_max = 10 if key != 'authors#' else 100 # map 0:10:0.1 to 0:100:1
+                bin_max = 10
+                if key == 'replies': bin_max = 100 # map 0:10:0.1 to 0:100:1
+                if key == 'authors#': bin_max = 100 # map 0:10:0.1 to 0:100:1
                 if area == 'overall':
                     tsf_sum, tsf_str, tsf = self.get_tsf_by_key_avg(paperlist, paperlist0, key, status=status, track=track, bin_max=bin_max)
                 else:

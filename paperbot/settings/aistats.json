@@ -20,6 +20,7 @@
             },
             "rname": {
                 "main": {
+                    "replies": "replies",
                     "authors#": "authors#"
                 }
             }

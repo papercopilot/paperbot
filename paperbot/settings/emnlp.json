@@ -44,7 +44,9 @@
                     "confidence": "Reviewer_Confidence",
                     "excitement": "Excitement",
                     "reproducibility": "Reproducibility",
-                    "correctness": "Soundness"
+                    "correctness": "Soundness",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         },

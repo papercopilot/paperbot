@@ -41,10 +41,12 @@
             },
             "rname": {
                 "main": {
-                    "Novelty": "novelty",
-                    "Technical Quality": "technical_quality",
-                    "Scope": "scope",
-                    "Confidence": "reviewer_confidence"
+                    "novelty": "novelty",
+                    "technical_quality": "technical_quality",
+                    "scope": "scope",
+                    "confidence": "reviewer_confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         }

@@ -23,7 +23,9 @@
             "rname": {
                 "main": {
                     "rating": "recommendation",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             },
             "rmap": {
@@ -67,7 +69,9 @@
             "rname": {
                 "main": {
                     "rating": "recommendation",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             },
             "rmap": {
@@ -111,7 +115,9 @@
             "rname": {
                 "main": {
                     "rating": "recommendation",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             },
             "rmap": {
@@ -155,7 +161,9 @@
             "rname": {
                 "main": {
                     "rating": "recommendation",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             },
             "rmap": {

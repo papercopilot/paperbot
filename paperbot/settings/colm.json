@@ -23,7 +23,9 @@
             "rname": {
                 "main": {
                     "rating": "rating",
-                    "confidence": "confidence"
+                    "confidence": "confidence",
+                    "replies": "replies",
+                    "authors#": "authors#"
                 }
             }
         }
