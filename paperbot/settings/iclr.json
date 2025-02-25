@@ -41,6 +41,18 @@
                     "authors#": "authors#"
                 }
             }
+        },
+        "site": {
+            "domain": "https://iclr.cc",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster",
+                        "spotlight-posters": "Spotlight",
+                        "oral": "Oral"
+                    }
+                }
+            }
         }
     },
     "2024": {
