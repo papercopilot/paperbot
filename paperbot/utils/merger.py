@@ -209,6 +209,7 @@ class Merger:
         paper['author'] = paper['author'] if paper['author'] else p1['author']
         paper['status'] = paper['status'] if paper['status'] else p1['status']
         paper['site'] = p1['site']
+        paper['or'] = f'https://openreview.net/forum?id={p2["id"]}'
         
         if paper['title'] != p1['title']:
             paper['title_site'] = p1['title']
