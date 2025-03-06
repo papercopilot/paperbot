@@ -364,6 +364,64 @@ class GFormBot(sitebot.SiteBot):
                             del self._summary_all_tracks[track]['name']['tier_raw'][kid]
                         
                 continue
+            
+            elif self._conf == 'icml' and self._year == 2025: # duplicated from cvpr2025 directly
+                
+                # update paper ids from announced paper ids
+                def update_paperlist_status(paperlist):
+                    for i, p in enumerate(paperlist):
+                        if p['status'] == '':
+                            paperlist[i]['status'] = 'Unknown'
+                                
+                update_paperlist_status(self.summarizer.paperlist)
+                paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.init.json'), paperlist_filtered)
+                
+                # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
+                if 'aname' in self._args:
+                    primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
+                else:
+                    primary_areas = ['overall']
+                self.summarizer.area_dimensions = {i: area for i, area in enumerate(primary_areas)}
+                    
+                # update tids and get initial histogram
+                for k in self._args['tname'][track]:
+                    self.summarizer.update_summary(k, 0)
+                self.summarizer.update_summary('Withdraw', 0) # TODO: can be removed since get_histogram has a fix 
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
+        
+                # update paperlist and get rebuttal histogram
+                self.summarizer.paperlist = self.get_paperlist(track=track, mode='Rebuttal')
+                self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
+                update_paperlist_status(self.summarizer.paperlist)
+                update_paperlist_status(self.summarizer.paperlist_init)
+                paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.json'), paperlist_filtered)
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
+                self._summary_all_tracks[track]['tsf'] = {}
+                for key in self.summarizer.review_dimensions:
+                    self._summary_all_tracks[track]['tsf'][key] = self.summarizer.tier_tsfs[self.summarizer.review_dimensions[key]]
+                self._summary_all_tracks[track]['sum']['tsf'] = self.summarizer.tier_sums['tsf']
+                
+                
+                # update total and total0 since usually rebuttal data is less than initial data
+                for k in ['Total', 'Total0']:
+                    kid = self.summarizer.get_tid(k)
+                    for key in self.summarizer.review_dimensions:
+                        if k == 'Total0': 
+                            # temporary add k to the id list for the following loop check
+                            self._summary_all_tracks[track]['name']['tier_raw'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                        rname = self.summarizer.review_dimensions[key]
+                        if kid in self.summarizer.tier_hists[rname]:
+                            self._summary_all_tracks[track]['hist'][key][kid] = self.summarizer.tier_hists[rname][kid]
+                            self._summary_all_tracks[track]['sum']['hist'][kid] = self.summarizer.tier_sums['hist'][kid]
+                        else:
+                            # there's no data for this key, usually total0, remove the key to keep consistency for the merger
+                            del self._summary_all_tracks[track]['name']['tier_raw'][kid]
+                        
+                continue
                 
             # the following:
             # for gform data that without explicit status, which is before decision, everything is marked as 'Active'
@@ -1344,7 +1402,8 @@ class GFormBotCVPR(GFormBot):
         if self._year >= 2025:
             primary_area = row['Primary Area'].strip()
             open2public = row['Open to Community']
-            status = 'Active'
+            # status = 'Active' # before decision
+            status = row['[Optional] Final Decision'] # after decision
         else:
             primary_area = ''
             open2public = ''

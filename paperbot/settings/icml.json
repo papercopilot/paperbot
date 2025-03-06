@@ -1,4 +1,39 @@
 {
+    "2025": {
+        "gform": {
+            "track": {
+                "main": "icml"
+            },
+            "tname": {
+                "main": {
+                    "Poster": "Poster",
+                    "Highlight": "Highlight",
+                    "Oral": "Oral",
+                    "Reject": "Reject",
+                    "Unknown": "Unknown"
+                }
+            },
+            "rname": {
+                "main": {
+                    "overall_recommendation": "Initial Overall Recommendation"
+                }
+            },
+            "aname": {
+                "main": [
+                    "General Machine Learning (active learning, clustering, online learning, ranking, supervised, semi- and self-supervised learning, time series analysis, etc.)",
+                    "Deep Learning (architectures, generative models, theory, etc.)",
+                    "Evaluation (methodology, meta studies, replicability and validity, human-in-the-loop, etc.)",
+                    "Theory of Machine Learning (statistical learning theory, bandits, game theory, decision theory, etc.)",
+                    "Machine Learning Systems (improved implementation and scalability, hardware, libraries, distributed methods, etc.)",
+                    "Optimization (convex and non-convex optimization, matrix/tensor methods, stochastic, online, non-smooth, composite, etc.)",
+                    "Probabilistic Methods (Bayesian methods, graphical models, Monte Carlo methods, etc.)",
+                    "Reinforcement Learning (decision and control, planning, hierarchical RL, robotics, etc.)",
+                    "Trustworthy Machine Learning (causality, fairness, interpretability, privacy, robustness, safety, etc.)",
+                    "Application-Driven Machine Learning (innovative techniques, problems, and datasets that are of interest to the machine learning community and driven by the needs of end-users in applications such as healthcare, physical sciences, biosciences, social sciences, sustainability and climate, etc.)"
+                ]
+            }
+        }
+    },
     "2024": {
         "openreview": {
             "api": "api2",
