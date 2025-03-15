@@ -321,7 +321,7 @@ class GFormBot(sitebot.SiteBot):
                                 
                 update_paperlist_status(self.summarizer.paperlist)
                 paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
-                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.init.json'), paperlist_filtered)
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'), paperlist_filtered)
                 
                 # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
                 if 'aname' in self._args:
@@ -343,7 +343,7 @@ class GFormBot(sitebot.SiteBot):
                 update_paperlist_status(self.summarizer.paperlist)
                 update_paperlist_status(self.summarizer.paperlist_init)
                 paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
-                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.json'), paperlist_filtered)
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), paperlist_filtered)
                 self.summarizer.get_histogram(self._args['tname'][track], track=track)
                 self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
                 self._summary_all_tracks[track]['tsf'] = {}
@@ -379,7 +379,7 @@ class GFormBot(sitebot.SiteBot):
                                 
                 update_paperlist_status(self.summarizer.paperlist)
                 paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
-                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.init.json'), paperlist_filtered)
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'), paperlist_filtered)
                 
                 # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
                 if 'aname' in self._args:
@@ -401,7 +401,7 @@ class GFormBot(sitebot.SiteBot):
                 update_paperlist_status(self.summarizer.paperlist)
                 update_paperlist_status(self.summarizer.paperlist_init)
                 paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
-                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.json'), paperlist_filtered)
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), paperlist_filtered)
                 self.summarizer.get_histogram(self._args['tname'][track], track=track)
                 self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
                 self._summary_all_tracks[track]['tsf'] = {}
