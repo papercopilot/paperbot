@@ -60,6 +60,17 @@
                     "Vision applications and systems"
                 ]
             }
+        },
+        "site": {
+            "domain": "https://cvpr.thecvf.com",
+            "track": {
+                "main": {
+                    "pages": {
+                        "poster": "Poster"
+                    }
+                }
+            },
+            "accepted": "https://cvpr.thecvf.com/Conferences/2024/AcceptedPapers"
         }
     },
     "2024": {
