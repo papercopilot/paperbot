@@ -3,6 +3,7 @@ import numpy as np
 import re
 import gspread
 import os
+import hashlib
 
 from . import sitebot
 from ..utils import util
@@ -314,6 +315,9 @@ class GFormBot(sitebot.SiteBot):
                     for i, p in enumerate(paperlist):
                         if p['status'] == '':
                             paperlist[i]['status'] = 'Unknown'
+                            
+                        # hash paper id to keep privacy
+                        p['id'] = hashlib.md5(p['id'].encode()).hexdigest()
                                 
                 update_paperlist_status(self.summarizer.paperlist)
                 paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
