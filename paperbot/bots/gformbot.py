@@ -317,7 +317,7 @@ class GFormBot(sitebot.SiteBot):
                             paperlist[i]['status'] = 'Unknown'
                             
                         # hash paper id to keep privacy
-                        p['id'] = hashlib.md5(p['id'].encode()).hexdigest()
+                        p['id'] = 'GF_' + hashlib.md5(p['id'].encode()).hexdigest()
                                 
                 update_paperlist_status(self.summarizer.paperlist)
                 paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
