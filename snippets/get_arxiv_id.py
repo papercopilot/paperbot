@@ -17,6 +17,19 @@ def animate_loading(message, duration=3):
     sys.stdout.write("\r" + " " * (len(message) + 2) + "\r")  # Clear the line
     sys.stdout.flush()
 
+def make_request(url, params=None, max_retries=3, delay=2):
+    """Handles requests with retries on failure."""
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}. Retrying ({attempt+1}/{max_retries})...")
+            time.sleep(delay * (2 ** attempt))  # Exponential backoff
+    print("Max retries reached. Skipping request.")
+    return None
+
 def extract_links_from_tex(arxiv_id, extract_tex=True):
     if not extract_tex:
         return None, None, None
@@ -28,8 +41,9 @@ def extract_links_from_tex(arxiv_id, extract_tex=True):
     animate_loading("Scanning TeX source")
     
     tex_url = f"https://arxiv.org/e-print/{arxiv_id}"
-    response = requests.get(tex_url)
-    if response.status_code != 200:
+    response = make_request(tex_url)
+    
+    if response is None:
         return None, None, None
     
     tex_content = response.text
@@ -49,9 +63,9 @@ def get_arxiv_id(title, verbose=True, extract_tex=True):
         "max_results": 1,
     }
     
-    response = requests.get(search_url, params=params)
-    if response.status_code != 200:
-        print("Error fetching data from arXiv API")
+    response = make_request(search_url, params=params)
+    if response is None:
+        print("Failed to retrieve data from arXiv API.")
         return None, None, None, None, None, None, 0.0
     
     root = ET.fromstring(response.text)
@@ -98,22 +112,31 @@ def get_arxiv_id(title, verbose=True, extract_tex=True):
     return None, None, None, None, None, None, 0.0
 
 def process_titles_to_csv(titles, output_file="arxiv_results.csv", verbose=True, extract_tex=True):
-    with open(output_file, mode="w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerow(["Input Title", "arXiv ID", "Alpha arXiv URL", "GitHub Link", "Project Page", "PapersWithCode", "Confidence"])
+    pending_titles = set(titles)
+    network_stats = {"success": 0, "failures": 0}
+    
+    while pending_titles:
+        title = pending_titles.pop()
+        arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence = get_arxiv_id(title, verbose=verbose, extract_tex=extract_tex)
         
-        for title in titles:
-            arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence = get_arxiv_id(title, verbose=verbose, extract_tex=extract_tex)
-            writer.writerow([title, arxiv_id, arxiv_alpha_url, github_link, project_link, paperswithcode_link, f"{confidence:.2f}"])
-            
-            if arxiv_id:
-                print(f"Successfully Processed: {title} -> {arxiv_id}")
-            else:
-                print(f"WARNING: No match found for '{title}'")
+        if arxiv_id:
+            with open(output_file, mode="a", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                writer.writerow([title, arxiv_id, arxiv_alpha_url, github_link, project_link, paperswithcode_link, f"{confidence:.2f}"])
+            print(f"Successfully Processed: {title} -> {arxiv_id}")
+            network_stats["success"] += 1
+        else:
+            print(f"WARNING: No match found for '{title}', reattempting...")
+            pending_titles.add(title)
+            network_stats["failures"] += 1
+    
+    print("=" * 80)
+    print(f"Network Stats: Success: {network_stats['success']}, Failures: {network_stats['failures']}")
+    print("=" * 80)
 
 # Example usage
 titles = [
     "Attention Is All You Need",
     "The Artificial Intelligence and Machine Learning Community Should Adopt a More Transparent and Regulated Peer Review Process"
 ]
-process_titles_to_csv(titles, extract_tex=True)
+process_titles_to_csv(titles, verbose=False, extract_tex=True)
