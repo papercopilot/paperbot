@@ -10,6 +10,7 @@ import time
 import json
 from difflib import SequenceMatcher, ndiff
 from termcolor import colored
+import numpy as np
 
 class ArxivBot(sitebot.SiteBot):
 
@@ -22,6 +23,8 @@ class ArxivBot(sitebot.SiteBot):
             'summary': os.path.join(self._root_dir, 'summary'),
         }
         
+        self._last_request_time = 0
+        
     def launch(self, fetch_site=False):
         if not self._args: 
             cprint('Info', f'{self._conf} {self._year}: Site Not available.')
@@ -30,15 +33,14 @@ class ArxivBot(sitebot.SiteBot):
         if fetch_site:
             cprint('info', f'{self._conf} {self._year}: Fetching site...')
             titles = [paper['title'] for paper in self.paperlist_from_merger]
-            ArxivBot.process_titles(titles, output_file=os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}'), output_format='json', verbose=False, extract_tex=False)
+            self.process_titles(titles, output_file=os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}'), output_format='json', verbose=False, extract_tex=False)
         
         else:
             # load previous
             cprint('info', f'{self._conf} {self._year}: Fetching Skiped.')
             self._paperlist = self.read_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}{self._year}.json'))
         
-    @staticmethod
-    def animate_loading(message, duration=3):
+    def animate_loading(self, message, duration=3):
         """Displays a loading animation."""
         animation = ["|", "/", "-", "\\"]
         for _ in range(duration * 4):
@@ -48,13 +50,22 @@ class ArxivBot(sitebot.SiteBot):
         sys.stdout.write("\r" + " " * (len(message) + 2) + "\r")  # Clear the line
         sys.stdout.flush()
 
-    @staticmethod
-    def make_request(url, params=None, max_retries=3, delay=2):
+    def make_request(self, url, params=None, max_retries=3, delay=2):
         """Handles requests with retries on failure."""
+        
+        # Ensure a minimum interval of 3 seconds between requests
+        elapsed_time = time.time() - self._last_request_time
+        random_delay = np.random.uniform(0, 0.5)
+        if elapsed_time < 3:
+            # https://info.arxiv.org/help/api/tou.html
+            # When using the legacy APIs (including OAI-PMH, RSS, and the arXiv API), make no more than one request every three seconds, and limit requests to a single connection at a time.
+            time.sleep(3 - elapsed_time + random_delay)
+        
         for attempt in range(max_retries):
             try:
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()
+                self._last_request_time = time.time() # reset the clock
                 return response
             except requests.exceptions.RequestException as e:
                 print(f"Request failed: {e}. Retrying ({attempt+1}/{max_retries})...")
@@ -62,8 +73,7 @@ class ArxivBot(sitebot.SiteBot):
         print("Max retries reached. Skipping request.")
         return None
 
-    @staticmethod
-    def extract_links_from_tex(arxiv_id, extract_tex=True):
+    def extract_links_from_tex(self, arxiv_id, extract_tex=True):
         if not extract_tex:
             return None, None, None
         
@@ -71,10 +81,10 @@ class ArxivBot(sitebot.SiteBot):
         print(f"Processing arXiv ID: {arxiv_id}")
         print("-" * 80)
         print(f"Extracting links from TeX source...")
-        ArxivBot.animate_loading("Scanning TeX source")
+        self.animate_loading("Scanning TeX source")
         
         tex_url = f"https://arxiv.org/e-print/{arxiv_id}"
-        response = ArxivBot.make_request(tex_url)
+        response = self.make_request(tex_url)
         
         if response is None:
             return None, None, None
@@ -88,8 +98,7 @@ class ArxivBot(sitebot.SiteBot):
                 project_links[0] if project_links else None,
                 paperswithcode_links[0] if paperswithcode_links else None)
 
-    @staticmethod
-    def get_arxiv_id(title, verbose=True, extract_tex=True):
+    def get_arxiv_id(self, title, verbose=True, extract_tex=True):
         search_url = "http://export.arxiv.org/api/query"
         params = {
             "search_query": f"ti:\"{title}\"",
@@ -97,7 +106,7 @@ class ArxivBot(sitebot.SiteBot):
             "max_results": 1,
         }
         
-        response = ArxivBot.make_request(search_url, params=params)
+        response = self.make_request(search_url, params=params)
         if response is None:
             print("Failed to retrieve data from arXiv API.")
             return None, None, None, None, None, None, 0.0
@@ -133,7 +142,7 @@ class ArxivBot(sitebot.SiteBot):
             github_link, project_link, paperswithcode_link = (None, None, None)
             
             if extract_tex:
-                github_link, project_link, paperswithcode_link = ArxivBot.extract_links_from_tex(arxiv_alpha_id, extract_tex)
+                github_link, project_link, paperswithcode_link = self.extract_links_from_tex(arxiv_alpha_id, extract_tex)
                 print("-" * 80)
                 print(f"GitHub Link: {github_link if github_link else 'Not found'}")
                 print(f"Project Page: {project_link if project_link else 'Not found'}")
@@ -145,8 +154,7 @@ class ArxivBot(sitebot.SiteBot):
         
         return None, None, None, None, None, None, 0.0
 
-    @staticmethod
-    def process_titles(titles, output_file="arxiv_results", output_format="csv", verbose=True, extract_tex=True):
+    def process_titles(self, titles, output_file="arxiv_results", output_format="csv", verbose=True, extract_tex=True):
         pending_titles = set(titles)
         total_titles = len(pending_titles)
         network_stats = {"success": 0, "failures": 0}
@@ -157,7 +165,7 @@ class ArxivBot(sitebot.SiteBot):
             print(f"Progress: {progress:.2f}% ({completed_titles}/{total_titles})")
             
             title = pending_titles.pop()
-            arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence = ArxivBot.get_arxiv_id(title, verbose, extract_tex)
+            arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence = self.get_arxiv_id(title, verbose, extract_tex)
             
             if arxiv_id:
                 result = {
