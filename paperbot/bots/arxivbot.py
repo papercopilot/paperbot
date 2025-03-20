@@ -24,6 +24,8 @@ class ArxivBot(sitebot.SiteBot):
         }
         
         self._last_request_time = time.time()
+        self._consecutive_failures = 0  # Track consecutive failures
+        self._first_failure_time = None  # Track when failures started
         
     def launch(self, fetch_site=False):
         if not self._args: 
@@ -50,31 +52,45 @@ class ArxivBot(sitebot.SiteBot):
         sys.stdout.write("\r" + " " * (len(message) + 2) + "\r")  # Clear the line
         sys.stdout.flush()
 
-    def make_request(self, url, params=None, max_retries=3, delay=5):
-        """Handles requests with retries on failure."""
+    def make_request(self, url, params=None, max_retries=3, delay=5, failure_threshold=2, pause_duration=300):
+        """Handles requests with retries and detects prolonged failures."""
         
         session = requests.Session()  # Use a persistent session to avoid ConnectionResetError(104, 'Connection reset by peer')
         
         # Ensure a minimum interval of 3 seconds between requests
         elapsed_time = time.time() - self._last_request_time
         random_delay = np.random.uniform(0, 0.5)
+
         if elapsed_time < delay:
             # https://info.arxiv.org/help/api/tou.html
             # When using the legacy APIs (including OAI-PMH, RSS, and the arXiv API), make no more than one request every three seconds, and limit requests to a single connection at a time.
             time.sleep(delay - elapsed_time + random_delay)
-            print(f"Sleeping for {delay - elapsed_time:.2f} seconds to respect API rate limits...")
-        
+
         for attempt in range(max_retries):
             try:
                 response = session.get(url, params=params, timeout=20)
                 response.raise_for_status()
-                self._last_request_time = time.time() # reset the clock
+                self._last_request_time = time.time()  # Reset request timer
+                self._consecutive_failures = 0  # Reset failure count on success
                 return response
+
             except requests.exceptions.RequestException as e:
                 print(f"Request failed: {e}. Retrying ({attempt+1}/{max_retries})...")
-                random_delay = np.random.uniform(0, 0.5)
-                time.sleep(delay * (2 ** attempt) + random_delay)  # Exponential backoff
-                print(f"Sleeping for {delay * (2 ** attempt) + random_delay:.2f} seconds...")
+                time.sleep(delay + random_delay)
+
+                # Track consecutive failures
+                if self._consecutive_failures == 0:
+                    self._first_failure_time = time.time()
+                self._consecutive_failures += 1
+
+                # Check if failures persist beyond threshold
+                if self._consecutive_failures >= failure_threshold*max_retries:
+                    elapsed_failure_time = time.time() - self._first_failure_time
+                    # if elapsed_failure_time >= 300:  # 5 minutes threshold
+                    print(f"⚠️ Consecutive failures detected for {elapsed_failure_time} seconds. Pausing requests for {pause_duration} seconds...")
+                    time.sleep(pause_duration)  # Pause before retrying
+                    self._consecutive_failures = 0  # Reset failure counter
+
         print("Max retries reached. Skipping request.")
         return None
 
@@ -237,6 +253,7 @@ class ArxivBot(sitebot.SiteBot):
                 print(f"✅ Successfully Processed: {title} -> {arxiv_id}")
                 network_stats["success"] += 1
             elif status == "no record":
+                # TODO: to validate max_no_record_retries, run multiple, if the records are found arbitrary, then keep it, otherwise, considering remove it.
                 if no_record_retries[title] < max_no_record_retries:
                     print(f"⚠️ No record found for '{title}', retrying... ({no_record_retries[title] + 1}/{max_no_record_retries})")
                     no_record_retries[title] += 1
