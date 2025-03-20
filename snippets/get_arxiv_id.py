@@ -1,6 +1,7 @@
 import requests
 import xml.etree.ElementTree as ET
 import csv
+import json
 import re
 import sys
 import time
@@ -111,18 +112,69 @@ def get_arxiv_id(title, verbose=True, extract_tex=True):
     
     return None, None, None, None, None, None, 0.0
 
-def process_titles_to_csv(titles, output_file="arxiv_results.csv", verbose=True, extract_tex=True):
+def process_titles(titles, output_file="arxiv_results", output_format="csv", verbose=True, extract_tex=True):
     pending_titles = set(titles)
+    total_titles = len(pending_titles)
     network_stats = {"success": 0, "failures": 0}
     
     while pending_titles:
+        completed_titles = total_titles - len(pending_titles)
+        progress = (completed_titles / total_titles) * 100
+        print(f"Progress: {progress:.2f}% ({completed_titles}/{total_titles})")
+        
         title = pending_titles.pop()
-        arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence = get_arxiv_id(title, verbose=verbose, extract_tex=extract_tex)
+        arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence = get_arxiv_id(title, verbose, extract_tex)
         
         if arxiv_id:
-            with open(output_file, mode="a", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                writer.writerow([title, arxiv_id, arxiv_alpha_url, github_link, project_link, paperswithcode_link, f"{confidence:.2f}"])
+            result = {
+                "Title": title,
+                "arXiv ID": arxiv_id,
+                "arXiv URL": arxiv_alpha_url,
+                "GitHub Link": github_link or "",
+                "Project Page": project_link or "",
+                "PapersWithCode": paperswithcode_link or "",
+                "Confidence Score": round(confidence, 2)
+            }
+            
+            if output_format == "csv":
+                existing_rows = []
+                try:
+                    with open(f"{output_file}.csv", mode="r", newline="", encoding="utf-8") as file:
+                        reader = csv.DictReader(file)
+                        existing_rows = list(reader)
+                except FileNotFoundError:
+                    pass
+                with open(f"{output_file}.csv", mode="w", newline="", encoding="utf-8") as file:
+                    writer = csv.DictWriter(file, fieldnames=result.keys())
+                    writer.writeheader()
+                    updated = False
+                    for row in existing_rows:
+                        if row["Title"] == title:
+                            writer.writerow(result)
+                            updated = True
+                        else:
+                            writer.writerow(row)
+                    if not updated:
+                        writer.writerow(result)
+            elif output_format == "json":
+                try:
+                    with open(f"{output_file}.json", mode="r", encoding="utf-8") as file:
+                        existing_data = json.load(file)
+                except (FileNotFoundError, json.JSONDecodeError):
+                    existing_data = []
+                updated = False
+                for i, entry in enumerate(existing_data):
+                    if entry["Title"] == title:
+                        existing_data[i] = result
+                        updated = True
+                        break
+                if not updated:
+                    existing_data.append(result)
+                with open(f"{output_file}.json", mode="w", encoding="utf-8") as file:
+                    json.dump(existing_data, file, indent=4)
+            else:
+                print("Invalid output format. Choose either 'csv' or 'json'.")
+            
             print(f"Successfully Processed: {title} -> {arxiv_id}")
             network_stats["success"] += 1
         else:
@@ -139,4 +191,5 @@ titles = [
     "Attention Is All You Need",
     "The Artificial Intelligence and Machine Learning Community Should Adopt a More Transparent and Regulated Peer Review Process"
 ]
-process_titles_to_csv(titles, verbose=False, extract_tex=True)
+process_titles(titles, output_file="arxiv_results", output_format="csv", verbose=False, extract_tex=False)
+# process_titles(titles, output_file="arxiv_results", output_format="json", verbose=False, extract_tex=False)
