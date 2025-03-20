@@ -23,7 +23,7 @@ class ArxivBot(sitebot.SiteBot):
             'summary': os.path.join(self._root_dir, 'summary'),
         }
         
-        self._last_request_time = 0
+        self._last_request_time = time.time()
         
     def launch(self, fetch_site=False):
         if not self._args: 
@@ -109,7 +109,7 @@ class ArxivBot(sitebot.SiteBot):
         response = self.make_request(search_url, params=params)
         if response is None:
             print("Failed to retrieve data from arXiv API.")
-            return None, None, None, None, None, None, 0.0
+            return None, None, None, None, None, None, 0.0, "failed"
         
         root = ET.fromstring(response.text)
         
@@ -150,23 +150,24 @@ class ArxivBot(sitebot.SiteBot):
             
             print("-" * 80)
             
-            return arxiv_alpha_id, arxiv_id, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence
-        
-        return None, None, None, None, None, None, 0.0
+            return arxiv_alpha_id, arxiv_id, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence, "found"
+
+        return None, None, None, None, None, None, 0.0, "no record"
 
     def process_titles(self, titles, output_file="arxiv_results", output_format="csv", verbose=True, extract_tex=True):
         pending_titles = set(titles)
         total_titles = len(pending_titles)
-        network_stats = {"success": 0, "failures": 0}
-        
+        network_stats = {"success": 0, "no_record": 0, "retries": 0}
+
         while pending_titles:
             completed_titles = total_titles - len(pending_titles)
             progress = (completed_titles / total_titles) * 100
-            print(f"Progress: {progress:.2f}% ({completed_titles}/{total_titles})")
+            print(f"Progress: {progress:.2f}% ({completed_titles}/{total_titles})| Success: {network_stats['success']}, No Record: {network_stats['no_record']}, Retries: {network_stats['retries']}")
             
             title = pending_titles.pop()
-            arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence = self.get_arxiv_id(title, verbose, extract_tex)
-            
+            arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence, status = self.get_arxiv_id(title, verbose, extract_tex)
+
+            # only save when arxiv_id is available
             if arxiv_id:
                 result = {
                     "Title": title,
@@ -175,7 +176,8 @@ class ArxivBot(sitebot.SiteBot):
                     "GitHub Link": github_link or "",
                     "Project Page": project_link or "",
                     "PapersWithCode": paperswithcode_link or "",
-                    "Confidence Score": round(confidence, 2)
+                    "Confidence": round(confidence, 2),
+                    "Status": status
                 }
                 
                 if output_format == "csv":
@@ -217,16 +219,21 @@ class ArxivBot(sitebot.SiteBot):
                         json.dump(existing_data, file, indent=4)
                 else:
                     print("Invalid output format. Choose either 'csv' or 'json'.")
-                
+            
+            # update status  
+            if status == "found":
                 print(f"Successfully Processed: {title} -> {arxiv_id}")
                 network_stats["success"] += 1
+            elif status == "no record":
+                print(f"No record found for '{title}'")
+                network_stats["no_record"] += 1
             else:
-                print(f"WARNING: No match found for '{title}', reattempting...")
+                print(f"WARNING: API failure while retrieving '{title}', append to the queue...")
                 pending_titles.add(title)
-                network_stats["failures"] += 1
-        
+                network_stats["retries"] += 1
+
         print("=" * 80)
-        print(f"Network Stats: Success: {network_stats['success']}, Failures: {network_stats['failures']}")
+        print(f"Overall Stats: Success: {network_stats['success']}, No Record: {network_stats['no_record']}, Retries: {network_stats['retries']}")
         print("=" * 80)
     
 class ArxivBotCVPR(ArxivBot):

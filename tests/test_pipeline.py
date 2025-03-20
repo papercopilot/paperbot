@@ -18,6 +18,7 @@ def set_arguments():
     parser.add_argument('--site_dir', type=str, help='directory for site logs', default='sites')
     parser.add_argument('--openaccess_dir', type=str, help='directory for openaccess logs', default='openaccess')
     parser.add_argument('--gform_dir', type=str, help='directory for google form logs', default='gform')
+    parser.add_argument('--arxiv_dir', type=str, help='directory for arxiv logs', default='arxiv')
     parser.add_argument('--paperlists_dir', type=str, help='directory for site logs', default='paperlists')
     parser.add_argument('--statistics_dir', type=str, help='directory for summary logs', default='')
     
@@ -26,11 +27,13 @@ def set_arguments():
     parser.add_argument('--use_site', action='store_true', help='use data from site', default=True)
     parser.add_argument('--use_openaccess', action='store_true', help='use data from openaccess', default=True)
     parser.add_argument('--use_gform', action='store_true', help='use data from google form', default=True)
+    parser.add_argument('--use_arxiv', action='store_true', help='use data from arxiv', default=True)
     
     parser.add_argument('--fetch_openreview', action='store_true', help='fetch from openreview, disabled automatically when not using openreview data', default=False)
     parser.add_argument('--fetch_site', action='store_true', help='fetch from site, disabled automatically when not using site data', default=False)
     parser.add_argument('--fetch_openaccess', action='store_true', help='fetch from openaccess, disabled automatically when not using openaccess data ', default=False)
     parser.add_argument('--fetch_gform', action='store_true', help='fetch from google form, disabled automatically when not using google form data', default=True)
+    parser.add_argument('--fetch_arxiv', action='store_true', help='fetch from arxiv, disabled automatically when not using paperlists data', default=True)
     
     parser.add_argument('--fetch_openreview_extra', action='store_true', help='fetch extra information on openreview', default=False)
     parser.add_argument('--fetch_site_extra', action='store_true', help='fetch extra information on site', default=False)
@@ -45,6 +48,7 @@ def set_arguments():
     parser.add_argument('--save', action='store_true', help='save the results', default=True)
     parser.add_argument('--save_mode', type=str, default='update', choices=['overwrite', 'update'], help='save mode')
     parser.add_argument('--mp', action='store_true', help='load the results', default=True)
+    parser.add_argument('--debug', action='store_true', help='debug', default=True)
 
 def test_pipeline(args):
     tic = time.time()
@@ -53,6 +57,9 @@ def test_pipeline(args):
     
     # disable mp if fetching from any source is enabled
     if args.fetch_openreview and args.fetch_site and args.fetch_openaccess and args.fetch_gform:
+        args.mp = False
+        
+    if args.debug:
         args.mp = False
     
     p.launch(is_save=args.save, is_mp=args.mp)
@@ -69,12 +76,12 @@ if __name__ == "__main__":
     # args.confs = ['iclr', 'nips', 'icml', 'corl', 'emnlp', 'colm'] # openreview + site
     # args.confs = ['cvpr', 'iccv', 'eccv', 'wacv'] # openaccess + site
     # args.confs = ['aaai', 'icml', 'acl', 'kdd', 'uai', 'acmmm'] # gform
-    # args.confs = ['nips', 'icml', 'corl', 'emnlp', 'colm']
+    # args.confs = ['iclr', 'nips', 'icml', 'corl', 'emnlp', 'colm', 'aistats', 'www']
     # args.confs = ['googlescholar']
-    # args.confs = ['icml']
+    args.confs = ['cvpr']
     
-    # args.years = [2025, 2024, 2023, 2022, 2021]
-    # args.years = [2024]
+    args.years = [2025]
+    # args.years = [2023, 2022, 2021, 2020, 2019, 2018, 2017]
     # args.years = range(2024, 2012, -1)
     
     # check iclr 2024/23 summary

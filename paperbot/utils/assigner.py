@@ -5,6 +5,7 @@ from ..bots import cvfbot
 from ..bots import openaccessbot
 from ..bots import gformbot
 from ..bots import seleniumbot
+from ..bots import arxivbot
 from ..utils import merger
 
 class Assigner:
@@ -117,6 +118,8 @@ class AssignerCVPR(Assigner):
             return gformbot.GFormBotCVPR
         elif botname == 'merge':
             return merger.MergerCVPR
+        elif botname == 'arxiv':
+            return arxivbot.ArxivBotCVPR
         else: super().__new__(cls, botname)
         
 

@@ -25,8 +25,8 @@ class Pipeline:
         self.keywords_openreview = {}
         
         self.config = PipelineConfig(
-            use_openreview=args.use_openreview, use_site=args.use_site, use_openaccess=args.use_openaccess, use_gform=args.use_gform, 
-            fetch_openreview=args.fetch_openreview, fetch_site=args.fetch_site, fetch_openaccess=args.fetch_openaccess, fetch_gform=args.fetch_gform, 
+            use_openreview=args.use_openreview, use_site=args.use_site, use_openaccess=args.use_openaccess, use_gform=args.use_gform, use_arxiv=args.use_arxiv,
+            fetch_openreview=args.fetch_openreview, fetch_site=args.fetch_site, fetch_openaccess=args.fetch_openaccess, fetch_gform=args.fetch_gform, fetch_arxiv=args.fetch_arxiv,
             fetch_openreview_extra=args.fetch_openreview_extra, fetch_site_extra=args.fetch_site_extra, fetch_openaccess_extra=args.fetch_openaccess_extra,
             fetch_openreview_extra_mp=args.fetch_openreview_extra_mp, fetch_site_extra_mp=args.fetch_site_extra_mp, fetch_openaccess_extra_mp=args.fetch_openaccess_extra_mp,
             save_mode=args.save_mode,
@@ -39,6 +39,7 @@ class Pipeline:
             'site': os.path.join(self.root_dir, args.site_dir),
             'openaccess': os.path.join(self.root_dir, args.openaccess_dir),
             'gform': os.path.join(self.root_dir, args.gform_dir), 
+            'arxiv': os.path.join(self.root_dir, args.arxiv_dir),
             # 'paperlists': os.path.join(self.root_dir, args.paperlists_dir),
             'statistics': os.path.join(self.root_dir, args.statistics_dir),
         }
@@ -374,7 +375,30 @@ class Pipeline:
                 else: log_error('gform', e)
             cprint('info', f"GForm Bot Completed {conf} {year} in {time.time()-tik:.2f} sec")
             return available_gform, summary_gform, paperlist_gform
+        
+        # arxiv workflow
+        @log_status('arxiv')
+        def process_arxiv(paperlist_from_merger):
+            tik = time.time()
+            available_arxiv, summary_arxiv, paperlist_arxiv = False, None, None
+            try:
+                assigner = eval(assigner_name)('arxiv')
+                arxivbot = assigner(conf, year, root_dir=paths['arxiv'])
+                arxivbot.paperlist_from_merger = paperlist_from_merger # needs to be set before launch for arxivbot to work
+                arxivbot.launch(config.fetch_arxiv)
+                summary_arxiv = arxivbot.summary_all_tracks
+                paperlist_arxiv = arxivbot.paperlist
+                available_arxiv = True
+            except Exception as e:
+                if type(e) == ValueError:
+                    cprint('warning', f'{conf} {year}: Arxiv Not available.')
+                    raise e
+                elif type(e) == NameError: log_unavailable('arxiv')
+                else: log_error('arxiv', e)
+            cprint('info', f"Arxiv Bot Completed {conf} {year} in {time.time()-tik:.2f} sec")
+            return available_arxiv, summary_arxiv, paperlist_arxiv
                 
+        # merge paperlist
         @log_status('merge')
         def process_merge_paperlist():
             tik = time.time()
@@ -389,6 +413,11 @@ class Pipeline:
             if available_gform: 
                 merger.paperlist_gform = paperlist_gform
             merger.merge_paperlist()
+            
+            if config.use_arxiv:
+                available_arxiv, summary_arxiv, paperlist_arxiv = process_arxiv(merger._paperlist_merged)
+                merger.merge_paperlist_arxiv(paperlist_arxiv)
+                
             cprint('info', f"Merger Completed {conf} {year} in {time.time()-tik:.2f} sec")
             return merger
 
@@ -533,7 +562,7 @@ class Pipeline:
         for conf in self.confs:
             for year in self.years:
                 status[f"{conf} {year}"] = auto_dict(is_mp)
-                for bot in ['openreview', 'site', 'openaccess', 'gform', 'merge']:
+                for bot in ['openreview', 'site', 'openaccess', 'gform', 'arxiv', 'merge']:
                     status[f"{conf} {year}"][bot] = ""
                     
         is_render_table = True
