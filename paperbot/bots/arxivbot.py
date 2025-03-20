@@ -50,26 +50,31 @@ class ArxivBot(sitebot.SiteBot):
         sys.stdout.write("\r" + " " * (len(message) + 2) + "\r")  # Clear the line
         sys.stdout.flush()
 
-    def make_request(self, url, params=None, max_retries=3, delay=2):
+    def make_request(self, url, params=None, max_retries=3, delay=5):
         """Handles requests with retries on failure."""
+        
+        session = requests.Session()  # Use a persistent session to avoid ConnectionResetError(104, 'Connection reset by peer')
         
         # Ensure a minimum interval of 3 seconds between requests
         elapsed_time = time.time() - self._last_request_time
         random_delay = np.random.uniform(0, 0.5)
-        if elapsed_time < 3:
+        if elapsed_time < delay:
             # https://info.arxiv.org/help/api/tou.html
             # When using the legacy APIs (including OAI-PMH, RSS, and the arXiv API), make no more than one request every three seconds, and limit requests to a single connection at a time.
-            time.sleep(3 - elapsed_time + random_delay)
+            time.sleep(delay - elapsed_time + random_delay)
+            print(f"Sleeping for {delay - elapsed_time:.2f} seconds to respect API rate limits...")
         
         for attempt in range(max_retries):
             try:
-                response = requests.get(url, params=params, timeout=10)
+                response = session.get(url, params=params, timeout=20)
                 response.raise_for_status()
                 self._last_request_time = time.time() # reset the clock
                 return response
             except requests.exceptions.RequestException as e:
                 print(f"Request failed: {e}. Retrying ({attempt+1}/{max_retries})...")
-                time.sleep(delay * (2 ** attempt))  # Exponential backoff
+                random_delay = np.random.uniform(0, 0.5)
+                time.sleep(delay * (2 ** attempt) + random_delay)  # Exponential backoff
+                print(f"Sleeping for {delay * (2 ** attempt) + random_delay:.2f} seconds...")
         print("Max retries reached. Skipping request.")
         return None
 
@@ -154,17 +159,21 @@ class ArxivBot(sitebot.SiteBot):
 
         return None, None, None, None, None, None, 0.0, "no record"
 
-    def process_titles(self, titles, output_file="arxiv_results", output_format="csv", verbose=True, extract_tex=True):
+    def process_titles(self, titles, output_file="arxiv_results", output_format="csv", verbose=True, extract_tex=True, max_no_record_retries=2):
         pending_titles = set(titles)
         total_titles = len(pending_titles)
         network_stats = {"success": 0, "no_record": 0, "retries": 0}
 
+        # Track retries for titles that get "no record"
+        no_record_retries = {title: 0 for title in pending_titles}
+
         while pending_titles:
             completed_titles = total_titles - len(pending_titles)
             progress = (completed_titles / total_titles) * 100
-            print(f"Progress: {progress:.2f}% ({completed_titles}/{total_titles})| Success: {network_stats['success']}, No Record: {network_stats['no_record']}, Retries: {network_stats['retries']}")
-            
+            print(f"Progress: {progress:.2f}% ({completed_titles}/{total_titles}) | Success: {network_stats['success']}, No Record: {network_stats['no_record']}, Retries: {network_stats['retries']}")
+
             title = pending_titles.pop()
+            print(f"Processing Title: {title}")
             arxiv_id, arxiv_link, arxiv_alpha_url, github_link, project_link, paperswithcode_link, confidence, status = self.get_arxiv_id(title, verbose, extract_tex)
 
             # only save when arxiv_id is available
@@ -179,7 +188,8 @@ class ArxivBot(sitebot.SiteBot):
                     "Confidence": round(confidence, 2),
                     "Status": status
                 }
-                
+
+                # Save results
                 if output_format == "csv":
                     existing_rows = []
                     try:
@@ -200,6 +210,7 @@ class ArxivBot(sitebot.SiteBot):
                                 writer.writerow(row)
                         if not updated:
                             writer.writerow(result)
+
                 elif output_format == "json":
                     try:
                         with open(f"{output_file}.json", mode="r", encoding="utf-8") as file:
@@ -217,23 +228,30 @@ class ArxivBot(sitebot.SiteBot):
                     os.makedirs(os.path.dirname(f"{output_file}.json"), exist_ok=True)
                     with open(f"{output_file}.json", mode="w", encoding="utf-8") as file:
                         json.dump(existing_data, file, indent=4)
+
                 else:
                     print("Invalid output format. Choose either 'csv' or 'json'.")
-            
-            # update status  
+
+            # Update statistics and handle retries
             if status == "found":
-                print(f"Successfully Processed: {title} -> {arxiv_id}")
+                print(f"✅ Successfully Processed: {title} -> {arxiv_id}")
                 network_stats["success"] += 1
             elif status == "no record":
-                print(f"No record found for '{title}'")
-                network_stats["no_record"] += 1
+                if no_record_retries[title] < max_no_record_retries:
+                    print(f"⚠️ No record found for '{title}', retrying... ({no_record_retries[title] + 1}/{max_no_record_retries})")
+                    no_record_retries[title] += 1
+                    pending_titles.add(title)  # Retry title
+                    network_stats["retries"] += 1
+                else:
+                    print(f"🚫 No record found for '{title}' after {max_no_record_retries} attempts. Marking as final 'no record'.")
+                    network_stats["no_record"] += 1
             else:
-                print(f"WARNING: API failure while retrieving '{title}', append to the queue...")
+                print(f"❌ WARNING: API failure while retrieving '{title}', retrying...")
                 pending_titles.add(title)
                 network_stats["retries"] += 1
 
         print("=" * 80)
-        print(f"Overall Stats: Success: {network_stats['success']}, No Record: {network_stats['no_record']}, Retries: {network_stats['retries']}")
+        print(f"📊 Overall Stats: Success: {network_stats['success']}, No Record: {network_stats['no_record']}, Retries: {network_stats['retries']}")
         print("=" * 80)
     
 class ArxivBotCVPR(ArxivBot):
