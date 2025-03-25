@@ -36,7 +36,10 @@ class GFormBot(sitebot.SiteBot):
         if self._tracks[track]:
             # TODO: self._tracks[track] here could be confusing and redundant in the settings, 
             # df = util.gspread2pd(self._gform[self._tracks[track]], parse_header=True)
-            df = util.gspread2pd(self._gform[self._tracks[track] + str(self._year)], parse_header=True)
+            if track == 'main':
+                df = util.gspread2pd(self._gform[self._tracks[track] + str(self._year)], parse_header=True)
+            else:
+                df = util.gspread2pd(self._gform[self._tracks[track].split('_')[0] + str(self._year) + '_' + self._tracks[track].split('_')[1]], parse_header=True)
         else:
             cprint('warning', f'{self._conf} {self._year} {track}: Google Form Not indicated.')
             df = pd.DataFrame()
@@ -324,7 +327,7 @@ class GFormBot(sitebot.SiteBot):
                 self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'), paperlist_filtered)
                 
                 # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
-                if 'aname' in self._args:
+                if 'aname' in self._args and track in self._args['aname']:
                     primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
                 else:
                     primary_areas = ['overall']
@@ -376,13 +379,16 @@ class GFormBot(sitebot.SiteBot):
                     for i, p in enumerate(paperlist):
                         if p['status'] == '':
                             paperlist[i]['status'] = 'Unknown'
+                            
+                        # hash paper id to keep privacy
+                        p['id'] = 'GF_' + hashlib.md5(p['id'].encode()).hexdigest()
                                 
                 update_paperlist_status(self.summarizer.paperlist)
                 paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
-                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'), paperlist_filtered)
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'), paperlist_filtered, mode='overwrite' if track == 'main' else 'append')
                 
                 # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
-                if 'aname' in self._args:
+                if 'aname' in self._args and track in self._args['aname']:
                     primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
                 else:
                     primary_areas = ['overall']
@@ -401,7 +407,7 @@ class GFormBot(sitebot.SiteBot):
                 update_paperlist_status(self.summarizer.paperlist)
                 update_paperlist_status(self.summarizer.paperlist_init)
                 paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
-                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), paperlist_filtered)
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), paperlist_filtered, mode='overwrite' if track == 'main' else 'append')
                 self.summarizer.get_histogram(self._args['tname'][track], track=track)
                 self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
                 self._summary_all_tracks[track]['tsf'] = {}
@@ -514,10 +520,16 @@ class GFormBotICML(GFormBot):
             confidence = self.auto_split(row['Rate Your Reviewer: Confidences'])
         else:
             # remove invalide response
-            match = re.search('[a-zA-Z]', row['Initial Ratings'])
-            if match: return ret
-            match = re.search('[a-zA-Z]', row['Initial Confidence'])
-            if match: return ret
+            if self._year >=2025:
+                if track == 'main':
+                    match = re.search('[a-zA-Z]', row['Initial Overall Recommendation'])
+                elif track == 'Position':
+                    match = re.search('[a-zA-Z]', row['Initial Rating'])
+            else:
+                match = re.search('[a-zA-Z]', row['Initial Ratings'])
+                if match: return ret
+                match = re.search('[a-zA-Z]', row['Initial Confidence'])
+                if match: return ret
         
             review_scores = {}
             for key in self.review_name:
@@ -526,8 +538,27 @@ class GFormBotICML(GFormBot):
             if mode == 'Rebuttal':
             
                 # remove nan data
-                if pd.isna(row['[Optional] Ratings after Rebuttal']) or not row['[Optional] Ratings after Rebuttal']: return ret
-                
+                if self._year >=2025:
+                    if track == 'main':
+                        if pd.isna(row['[Optional] Overall Recommendation after Rebuttal']) or not row['[Optional] Overall Recommendation after Rebuttal']: return ret
+                        primary_area = row['Primary Area'].strip()
+                    elif track == 'Position':
+                        if pd.isna(row['[Optional] Rating after Rebuttal']) or not row['[Optional] Rating after Rebuttal']: return ret
+                        primary_area = ''
+                    else:
+                        assert False, "Unknown track"
+                    paper_id = row['Paper/Submission ID']
+                    status = row['[Optional] Final Decision']
+                    open2public = row['Open to Community']
+                elif self._year >=2024:
+                    if pd.isna(row['[Optional] Ratings after Rebuttal']) or not row['[Optional] Ratings after Rebuttal']: return ret
+                    paper_id = index
+                    status = 'Active'
+                    primary_area = ''
+                    open2public = False
+                else:
+                    assert False, "Unknown year"
+                    
                 if as_init:
                     # rating = self.auto_split(row['Initial Ratings'])
                     # confidence = self.auto_split(row['Initial Confidence'])
@@ -542,7 +573,22 @@ class GFormBotICML(GFormBot):
                         review_scores[key] = self.auto_split(row[rebuttal_key])
             else:
                 # remove redundant data
-                if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
+                if self._year >=2025:
+                    paper_id = row['Paper/Submission ID']
+                    status = row['[Optional] Final Decision']
+                    open2public = row['Open to Community']
+                    if track == 'main':
+                        primary_area = row['Primary Area'].strip()
+                    else:
+                        primary_area = ''
+                elif self._year >= 2024:
+                    if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
+                    paper_id = index
+                    status = 'Active'
+                    primary_area = ''
+                    open2public = False
+                else:
+                    assert False, "Unknown year"
                 
                 # rating = self.auto_split(row['Initial Ratings'])
                 # confidence = self.auto_split(row['Initial Confidence'])
@@ -560,13 +606,19 @@ class GFormBotICML(GFormBot):
         np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
         np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
         
-        if len(review_scores[list(review_scores.keys())[0]]) != len(review_scores[list(review_scores.keys())[1]]):
-            raise ValueError(f"Rating and confidence length mismatch: {review_scores[list(review_scores.keys())[0]]} vs {review_scores[list(review_scores.keys())[1]]}")
-        
+        if self._year >= 2025:
+            pass
+        elif self._year >= 2024:
+            if len(review_scores[list(review_scores.keys())[0]]) != len(review_scores[list(review_scores.keys())[1]]):
+                raise ValueError(f"Rating and confidence length mismatch: {review_scores[list(review_scores.keys())[0]]} vs {review_scores[list(review_scores.keys())[1]]}")
+            
         ret = {
-            'id': index,
+            'id': paper_id,
             'track': track,
-            'status': 'Active',
+            'status': status,
+            'primary_area': primary_area,
+            'open2public': open2public,
+            # 'status': 'Active',
             # 'rating': {
             #     'str': np2str(rating),
             #     'avg': np2avg(rating)

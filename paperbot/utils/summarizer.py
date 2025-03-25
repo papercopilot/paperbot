@@ -770,11 +770,20 @@ class Summarizer():
         return self.sorted_summary(summary)
     
     @staticmethod
-    def save_paperlist(path, paperlist):
+    def save_paperlist(path, paperlist, mode='overwrite'):
         tic = time.time()
         if paperlist:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, 'w') as f:
-                json.dump(paperlist, f, indent=4)
+            if mode == 'overwrite':
+                with open(path, 'w') as f:
+                    json.dump(paperlist, f, indent=4)
+            elif mode == 'append':
+                with open(path, 'r') as f:
+                    data = json.load(f)
+                data += paperlist
+                with open(path, 'w') as f:
+                    json.dump(data, f, indent=4)
+            else:
+                raise ValueError(f"mode {mode} is not supported")
             cprint('io', f"Saved paperlist for to {path} in {time.time()-tic:.2f} sec")
     

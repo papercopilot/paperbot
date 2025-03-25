@@ -2,10 +2,18 @@
     "2025": {
         "gform": {
             "track": {
-                "main": "icml"
+                "main": "icml",
+                "Position": "icml_posi"
             },
             "tname": {
                 "main": {
+                    "Poster": "Poster",
+                    "Highlight": "Highlight",
+                    "Oral": "Oral",
+                    "Reject": "Reject",
+                    "Unknown": "Unknown"
+                },
+                "Position": {
                     "Poster": "Poster",
                     "Highlight": "Highlight",
                     "Oral": "Oral",
@@ -16,6 +24,15 @@
             "rname": {
                 "main": {
                     "overall_recommendation": "Initial Overall Recommendation"
+                },
+                "Position": {
+                    "rating": "Initial Rating",
+                    "confidence": "Initial Confidence",
+                    "support": "Initial Support",
+                    "significance": "Initial Significance",
+                    "discussion_potential": "Initial Discussion Potential",
+                    "argument_clarity": "Initial Argument Clarity",
+                    "related_work": "Initial Related Work"
                 }
             },
             "aname": {
