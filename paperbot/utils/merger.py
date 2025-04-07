@@ -1412,7 +1412,7 @@ class Merger:
                         s['track'] = track
                     s['s3'] = 'Community'
                     s['review_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['review'].items()]) # should be the same as openreview
-                    s['area_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['area'].items()]) # should be the same as openreview
+                    s['area_dims'] = ';'.join([f'{k}:{v}' for k,v in summary['name']['area'].items()]) if not s['area_dims'] else s['area_dims'] # should be the same as openreview, use openreview by default
                     s['bot_mark'] += 'GF;'
                     
                     tier_id = dict((v,k) for k,v in summary['name']['tier_raw'].items())
@@ -1859,4 +1859,7 @@ class MergerWWW(Merger):
     pass
 
 class MergerAISTATS(Merger):
+    pass
+
+class MergerARR(Merger):
     pass

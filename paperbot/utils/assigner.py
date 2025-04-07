@@ -212,7 +212,9 @@ class AssignerUAI(Assigner):
 class AssignerACMMM(Assigner):
     
     def __new__(cls, botname, year=0):
-        if botname == 'st':
+        if botname == 'or':
+            return openreviewbot.ORBotACMMM
+        elif botname == 'st':
             return sitebot.StBotACMMM
         elif botname == 'gform':
             return gformbot.GFormBotACMMM
@@ -258,4 +260,15 @@ class AssignerAISTATS(Assigner):
             return openreviewbot.ORBotAISTATS
         elif botname == 'merge':
             return merger.MergerAISTATS
+        else: super().__new__(cls, botname)
+        
+class AssignerARR(Assigner):
+    
+    def __new__(cls, botname, year=0):
+        if botname == 'or':
+            return openreviewbot.ORBotARR
+        elif botname == 'gform':
+            return gformbot.GFormBotARR
+        elif botname == 'merge':
+            return merger.MergerARR
         else: super().__new__(cls, botname)

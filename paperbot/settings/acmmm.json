@@ -13,6 +13,37 @@
                     "confidence": "Initial Confidence"
                 }
             }
+        },
+        "openreview": {
+            "api": "api2",
+            "invitation": {
+                "root": "acmmm.org/ACMMM",
+                "review": "Official_Review",
+                "decision": "in_venue"
+            },
+            "track": {
+                "main": {
+                    "Active": "Conference/-/Submission"
+                }
+            },
+            "tname": {
+                "main": {
+                    "MM2024 Poster": "Poster",
+                    "MM2024 Oral": "Oral",
+                    "Submitted to ACMMM 2024": "Reject"
+                }
+            },
+            "rname": {
+                "main": {
+                    "rating": "rating",
+                    "confidence": "confidence",
+                    "strengths": "strengths",
+                    "limitations": "limitations",
+                    "suitability": "suitability",
+                    "replies": "replies",
+                    "authors#": "authors#"
+                }
+            }
         }
     }
 }

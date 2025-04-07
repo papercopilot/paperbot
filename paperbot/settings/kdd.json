@@ -3,7 +3,7 @@
         "gform": {
             "track": {
                 "main": "kdd",
-                "Applied Data Science": "kdd"
+                "Applied Data Science": "kdd_appl"
             },
             "tname": {
                 "main": {},
@@ -27,7 +27,7 @@
         "gform": {
             "track": {
                 "main": "kdd",
-                "Applied Data Science": "kdd"
+                "Applied Data Science": "kdd_appl"
             },
             "tname": {
                 "main": {},

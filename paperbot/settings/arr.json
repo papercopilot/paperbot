@@ -2,16 +2,16 @@
     "2025": {
         "gform": {
             "track": {
-                "main": "acl"
+                "February": "arr_febr"
             },
             "tname": {
-                "main": {
+                "February": {
                     "Long": "Long",
                     "Short": "Short"
                 }
             },
             "rname": {
-                "main": {
+                "February": {
                     "overall_assessment": "Initial Overall Assessment",
                     "confidence": "Initial Confidence",
                     "soundness": "Initial Soundness",
@@ -20,7 +20,7 @@
                 }
             },
             "aname": {
-                "main": [
+                "February": [
                     "Computational Social Science and Cultural Analytics",
                     "Dialogue and Interactive Systems",
                     "Discourse and Pragmatics",
@@ -48,23 +48,6 @@
                     "Syntax: Tagging, Chunking and Parsing",
                     "Theme tracks (proposed by participating publication venues and specific to those venues)"
                 ]
-            }
-        }
-    },
-    "2024": {
-        "gform": {
-            "track": {
-                "main": "acl"
-            },
-            "tname": {
-                "main": {}
-            },
-            "rname": {
-                "main": {
-                    "overall_assessment": "Initial Overall Assessment",
-                    "confidence": "Initial Confidence",
-                    "soundness": "Initial Soundness"
-                }
             }
         }
     }

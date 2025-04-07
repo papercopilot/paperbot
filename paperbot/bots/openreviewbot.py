@@ -89,6 +89,7 @@ class OpenreviewBot(sitebot.SiteBot):
         title = getstr(note['content']['title'])
         keywords = '' if 'keywords' not in note['content'] else getstr(note['content']['keywords'])
         primary_area = '' if 'primary_area' not in note['content'] else getstr(note['content']['primary_area'])
+        if not primary_area and 'primary_subject_area' in note['content']: primary_area = getstr(note['content']['primary_subject_area']) # ACM-MM, TODO: this should be placed in config, this venue also has secondary_subject_area
         status = self.get_status(note, tier_name, decision_invitation)
         
         # process title
@@ -178,7 +179,16 @@ class OpenreviewBot(sitebot.SiteBot):
                 review_scores[meta_key] = [rating_avg] * len(review_scores[meta_key]) # fill with the same value, TODO, this could cause issue if count score frequency
                 
         # to numpy
-        list2np = lambda x: np.array(list(filter(None, x))).astype(np.int32)
+        # list2np = lambda x: np.array(list(filter(None, x))).astype(np.int32)
+        def list2np(x):
+            result = []
+            for item in x:
+                try:
+                    val = np.array(list(filter(None, item))).astype(np.int32)
+                    result.append(val)
+                except Exception:
+                    result.append(np.array([0], dtype=np.int32))
+            return np.concatenate(result)
         # rating = list2np(rating)
         # confidence = list2np(confidence)
         # correctness = list2np(correctness)
@@ -734,6 +744,26 @@ class ORBotWWW(OpenreviewBot):
         return status
     
 class ORBotAISTATS(OpenreviewBot):
+    
+    def get_status(self, note, tier_name, decision_invitation):
+    
+        status = note['content']['venue']['value']
+        status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+        
+        if status: self.summarizer.update_summary(status)
+        return status
+    
+class ORBotARR(OpenreviewBot):
+    
+    def get_status(self, note, tier_name, decision_invitation):
+    
+        status = note['content']['venue']['value']
+        status = tier_name[status] if (status in tier_name and tier_name[status] in self.main_track) else status # replace status by tier_name if available and limited to [Active, Withdraw, Desk Reject]
+        
+        if status: self.summarizer.update_summary(status)
+        return status
+    
+class ORBotACMMM(OpenreviewBot):
     
     def get_status(self, note, tier_name, decision_invitation):
     

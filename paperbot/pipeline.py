@@ -416,7 +416,7 @@ class Pipeline:
             
             if config.use_arxiv:
                 available_arxiv, summary_arxiv, paperlist_arxiv = process_arxiv(merger._paperlist_merged)
-                merger.merge_paperlist_arxiv(paperlist_arxiv)
+                # merger.merge_paperlist_arxiv(paperlist_arxiv)
                 
             cprint('info', f"Merger Completed {conf} {year} in {time.time()-tik:.2f} sec")
             return merger

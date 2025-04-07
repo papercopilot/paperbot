@@ -432,9 +432,138 @@ class GFormBot(sitebot.SiteBot):
                             del self._summary_all_tracks[track]['name']['tier_raw'][kid]
                         
                 continue
+            
+            elif self._conf == 'acl' and self._year == 2025: # duplicated from cvpr2025 directly
+                
+                # update paper ids from announced paper ids
+                def update_paperlist_status(paperlist):
+                    for i, p in enumerate(paperlist):
+                        if p['status'] == '':
+                            paperlist[i]['status'] = 'Unknown'
+                            
+                        # hash paper id to keep privacy
+                        p['id'] = 'GF_' + hashlib.md5(p['id'].encode()).hexdigest()
+                                
+                update_paperlist_status(self.summarizer.paperlist)
+                paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'), paperlist_filtered, mode='overwrite' if track == 'main' else 'append')
+                
+                # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
+                if 'aname' in self._args and track in self._args['aname']:
+                    primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
+                else:
+                    primary_areas = ['overall']
+                self.summarizer.area_dimensions = {i: area for i, area in enumerate(primary_areas)}
+                    
+                # update tids and get initial histogram
+                for k in self._args['tname'][track]:
+                    self.summarizer.update_summary(k, 0)
+                self.summarizer.update_summary('Withdraw', 0) # TODO: can be removed since get_histogram has a fix 
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
+        
+                # update paperlist and get rebuttal histogram
+                self.summarizer.paperlist = self.get_paperlist(track=track, mode='Rebuttal')
+                self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
+                update_paperlist_status(self.summarizer.paperlist)
+                update_paperlist_status(self.summarizer.paperlist_init)
+                paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), paperlist_filtered, mode='overwrite' if track == 'main' else 'append')
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
+                self._summary_all_tracks[track]['tsf'] = {}
+                for key in self.summarizer.review_dimensions:
+                    self._summary_all_tracks[track]['tsf'][key] = self.summarizer.tier_tsfs[self.summarizer.review_dimensions[key]]
+                self._summary_all_tracks[track]['sum']['tsf'] = self.summarizer.tier_sums['tsf']
+                
+                
+                # update total and total0 since usually rebuttal data is less than initial data
+                for k in ['Total', 'Total0']:
+                    kid = self.summarizer.get_tid(k)
+                    for key in self.summarizer.review_dimensions:
+                        if k == 'Total0': 
+                            # temporary add k to the id list for the following loop check
+                            self._summary_all_tracks[track]['name']['tier_raw'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                        rname = self.summarizer.review_dimensions[key]
+                        if kid in self.summarizer.tier_hists[rname]:
+                            self._summary_all_tracks[track]['hist'][key][kid] = self.summarizer.tier_hists[rname][kid]
+                            self._summary_all_tracks[track]['sum']['hist'][kid] = self.summarizer.tier_sums['hist'][kid]
+                        else:
+                            # there's no data for this key, usually total0, remove the key to keep consistency for the merger
+                            del self._summary_all_tracks[track]['name']['tier_raw'][kid]
+                        
+                continue
+            
+            elif self._conf == 'arr' and self._year == 2025: # duplicated from cvpr2025 directly
+                
+                # update paper ids from announced paper ids
+                def update_paperlist_status(paperlist):
+                    for i, p in enumerate(paperlist):
+                        if p['status'] == '':
+                            paperlist[i]['status'] = 'Unknown'
+                            
+                        # hash paper id to keep privacy
+                        p['id'] = 'GF_' + hashlib.md5(p['id'].encode()).hexdigest()
+                                
+                update_paperlist_status(self.summarizer.paperlist)
+                paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.init.json'), paperlist_filtered, mode='overwrite')
+                
+                # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
+                if 'aname' in self._args and track in self._args['aname']:
+                    primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
+                else:
+                    primary_areas = ['overall']
+                self.summarizer.area_dimensions = {i: area for i, area in enumerate(primary_areas)}
+                    
+                # update tids and get initial histogram
+                for k in self._args['tname'][track]:
+                    self.summarizer.update_summary(k, 0)
+                self.summarizer.update_summary('Withdraw', 0) # TODO: can be removed since get_histogram has a fix 
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self._summary_all_tracks[track] = self.summarizer.summarize_openreview_paperlist()
+        
+                # update paperlist and get rebuttal histogram
+                self.summarizer.paperlist = self.get_paperlist(track=track, mode='Rebuttal')
+                self.summarizer.paperlist_init = self.get_paperlist(track=track, mode='Rebuttal', as_init=True)
+                update_paperlist_status(self.summarizer.paperlist)
+                update_paperlist_status(self.summarizer.paperlist_init)
+                paperlist_filtered = [p for p in self.summarizer.paperlist if p['open2public'] == 'Yes']
+                self.summarizer.save_paperlist(os.path.join(self._paths['paperlist'], f'{self._conf}/{self._conf}{self._year}.json'), paperlist_filtered, mode='overwrite')
+                self.summarizer.get_histogram(self._args['tname'][track], track=track)
+                self.summarizer.get_transfer_matrix(self._args['tname'][track], track)
+                self._summary_all_tracks[track]['tsf'] = {}
+                for key in self.summarizer.review_dimensions:
+                    self._summary_all_tracks[track]['tsf'][key] = self.summarizer.tier_tsfs[self.summarizer.review_dimensions[key]]
+                self._summary_all_tracks[track]['sum']['tsf'] = self.summarizer.tier_sums['tsf']
+                
+                
+                # update total and total0 since usually rebuttal data is less than initial data
+                for k in ['Total', 'Total0']:
+                    kid = self.summarizer.get_tid(k)
+                    for key in self.summarizer.review_dimensions:
+                        if k == 'Total0': 
+                            # temporary add k to the id list for the following loop check
+                            self._summary_all_tracks[track]['name']['tier_raw'][self.summarizer.tier_ids[k]] = k # may have conflicts, verify later
+                        rname = self.summarizer.review_dimensions[key]
+                        if kid in self.summarizer.tier_hists[rname]:
+                            self._summary_all_tracks[track]['hist'][key][kid] = self.summarizer.tier_hists[rname][kid]
+                            self._summary_all_tracks[track]['sum']['hist'][kid] = self.summarizer.tier_sums['hist'][kid]
+                        else:
+                            # there's no data for this key, usually total0, remove the key to keep consistency for the merger
+                            del self._summary_all_tracks[track]['name']['tier_raw'][kid]
+                        
+                continue
                 
             # the following:
             # for gform data that without explicit status, which is before decision, everything is marked as 'Active'
+            
+            # include area_dimension here since usually, the sampled area_dimension could be smaller than the overall data
+            if 'aname' in self._args and track in self._args['aname']:
+                primary_areas = ['overall'] + sorted(list(self._args['aname'][track])) + ['Others']
+            else:
+                primary_areas = ['overall']
+            self.summarizer.area_dimensions = {i: area for i, area in enumerate(primary_areas)}
                     
             # update tids and get initial histogram
             self.summarizer.update_summary('Active', 0)
@@ -661,9 +790,23 @@ class GFormBotACL(GFormBot):
             
             if mode == 'Rebuttal':
 
-                # remove nan data
-                if pd.isna(row['[Optional] Overall Assessment after Rebuttal']) or not row['[Optional] Overall Assessment after Rebuttal']: return ret
-                
+                if self._year >=2025:
+                    if pd.isna(row['[Optional] Overall Assessment after Rebuttal']) or not row['[Optional] Overall Assessment after Rebuttal']: return ret
+                    
+                    paper_id = row['Paper/Submission ID']
+                    status = row['Submittion Type']
+                    open2public = row['Open to Community']
+                    if track == 'main':
+                        primary_area = row['Primary Area'].strip()
+                    else:
+                        primary_area = ''
+                elif self._year >= 2024:
+                    # remove nan data
+                    if pd.isna(row['[Optional] Overall Assessment after Rebuttal']) or not row['[Optional] Overall Assessment after Rebuttal']: return ret
+                    paper_id = index
+                    status = 'Active'
+                    primary_area = ''
+                    open2public = False
                 if as_init:
                     # rating = self.auto_split(row['Initial Overall Assessment'])
                     # confidence = self.auto_split(row['Initial Confidence'])
@@ -678,7 +821,22 @@ class GFormBotACL(GFormBot):
                         review_scores[key] = self.auto_split(row[rebuttal_key])
             else:
                 # remove redundant data
-                if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
+                if self._year >=2025:
+                    paper_id = row['Paper/Submission ID']
+                    status = row['Submittion Type']
+                    open2public = row['Open to Community']
+                    if track == 'main':
+                        primary_area = row['Primary Area'].strip()
+                    else:
+                        primary_area = ''
+                elif self._year >= 2024:
+                    if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
+                    paper_id = index
+                    status = 'Active'
+                    primary_area = ''
+                    open2public = False
+                else:
+                    assert False, "Unknown year"
                 
                 # rating = self.auto_split(row['Initial Overall Assessment'])
                 # confidence = self.auto_split(row['Initial Confidence'])
@@ -702,9 +860,134 @@ class GFormBotACL(GFormBot):
             return ret
             
         ret = {
-            'id': index,
+            'id': paper_id,
             'track': track,
-            'status': 'Active',
+            'status': status,
+            'primary_area': primary_area,
+            'open2public': open2public,
+            # 'rating': {
+            #     'str': np2str(rating),
+            #     'avg': np2avg(rating)
+            # },
+            # 'confidence': {
+            #     'str': np2str(confidence),
+            #     'avg': np2avg(confidence)
+            # },
+            # 'corr_rating_confidence': np2coef(rating, confidence),
+        }
+        for key in self.review_name:
+            ret[key] = {
+                'str': np2str(review_scores[key]),
+                'avg': np2avg(review_scores[key])
+            }
+        
+        return ret
+    
+class GFormBotARR(GFormBot):
+        
+    def process_row(self, index, row, track, mode=None, as_init=False):
+            
+        ret = {}
+        if 'ryr' in self._conf:
+            match = re.search('[a-zA-Z]', row['Rate Your Reviewer: Ratings']) # check if there is any alphabet
+            if match: return ret
+            if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
+
+            rating = self.auto_split(row['Rate Your Reviewer: Ratings'])
+            confidence = self.auto_split(row['Rate Your Reviewer: Confidences'])
+        else:
+            # remove invalide response
+            if self._year >=2025:
+                if track == 'main':
+                    match = re.search('[a-zA-Z]', row['Initial Overall Recommendation'])
+            else:
+                match = re.search('[a-zA-Z]', row['Initial Overall Assessment']) # check if there is any alphabet
+                if match: return ret
+        
+            review_scores = {}
+            for key in self.review_name:
+                review_scores[key] = []
+            
+            if mode == 'Rebuttal':
+
+                if self._year >=2025:
+                    if pd.isna(row['[Optional] Overall Assessment after Rebuttal']) or not row['[Optional] Overall Assessment after Rebuttal']: return ret
+                    
+                    paper_id = row['Paper/Submission ID']
+                    status = row['Submittion Type']
+                    open2public = row['Open to Community']
+                    if track == 'main':
+                        primary_area = row['Primary Area'].strip()
+                    else:
+                        primary_area = ''
+                elif self._year >= 2024:
+                    # remove nan data
+                    if pd.isna(row['[Optional] Overall Assessment after Rebuttal']) or not row['[Optional] Overall Assessment after Rebuttal']: return ret
+                    
+                    paper_id = index
+                    status = 'Active'
+                    primary_area = ''
+                    open2public = False
+                    
+                if as_init:
+                    # rating = self.auto_split(row['Initial Overall Assessment'])
+                    # confidence = self.auto_split(row['Initial Confidence'])
+                    for key in self.review_name:
+                        review_scores[key] = self.auto_split(row[self.review_name[key]])
+                else:
+                    # rating = self.auto_split(row['[Optional] Overall Assessment after Rebuttal'])
+                    # confidence = self.auto_split(row['[Optional] Confidence after Rebuttal'])
+                    for key in self.review_name:
+                        rebuttal_key = self.review_name[key].replace('Initial ', '') + ' after Rebuttal'
+                        rebuttal_key = rebuttal_key if '[Optional]' in rebuttal_key else '[Optional] ' + rebuttal_key # usually it is optional
+                        review_scores[key] = self.auto_split(row[rebuttal_key])
+            else:
+                # remove redundant data
+                if self._year >=2025:
+                    paper_id = row['Paper/Submission ID']
+                    status = row['Submittion Type']
+                    open2public = row['Open to Community']
+                    if track == 'main':
+                        primary_area = row['Primary Area'].strip()
+                    else:
+                        primary_area = ''
+                elif self._year >= 2024:
+                    if row['Submitting this form for the first time? (for redundancy removal)'] == 'No': return ret
+                    
+                    paper_id = index
+                    status = 'Active'
+                    primary_area = ''
+                    open2public = False
+                else:
+                    assert False, "Unknown year"
+                
+                # rating = self.auto_split(row['Initial Overall Assessment'])
+                # confidence = self.auto_split(row['Initial Confidence'])
+                # correctness = self.auto_split(row['Initial Soundness'])
+                for key in self.review_name:
+                    review_scores[key] = self.auto_split(row[self.review_name[key]])
+
+        # list to numpy
+        list2np = lambda x: np.array(list(filter(None, x))).astype(np.float64)
+        # rating = list2np(rating)
+        # confidence = list2np(confidence)
+        for key in self.review_name:
+            review_scores[key] = list2np(review_scores[key])
+
+        np2avg = lambda x: 0 if not any(x) else x.mean() # calculate mean
+        np2coef = lambda x, y: 0 if (not any(x) or not any(y)) else np.nan_to_num(np.corrcoef(np.stack((x, y)))[0,1]) # calculate corelation coef
+        np2str = lambda x: ';'.join([str(y) for y in x]) # stringfy
+        
+        if np2avg(review_scores[list(review_scores.keys())[0]]) > 5:
+            cprint('warning', f"Rating > 5: {np2avg(review_scores[list(review_scores.keys())[0]])}, skipping")
+            return ret
+            
+        ret = {
+            'id': paper_id,
+            'track': track,
+            'status': status,
+            'primary_area': primary_area,
+            'open2public': open2public,
             # 'rating': {
             #     'str': np2str(rating),
             #     'avg': np2avg(rating)
