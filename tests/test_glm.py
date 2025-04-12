@@ -96,6 +96,8 @@ def try_parse_json_object(input: str) -> Tuple[str, dict]:
         except json.JSONDecodeError:
             log.exception("error loading json, json=%s", input)
             return json_info, {}
+        except SyntaxError as e:
+            raise e
         else:
             if not isinstance(result, dict):
                 log.exception("not expected dict type. type=%s:", type(result))
@@ -105,7 +107,7 @@ def try_parse_json_object(input: str) -> Tuple[str, dict]:
         return input, result
 
 
-def batchify_json(root_in, root_out):
+def batchify_json(root_in, root_out, model='glm-4-flash'):
 
     confs = glob(os.path.join(root_in, '*'))
     confs = sorted([os.path.basename(conf) for conf in confs])
@@ -133,8 +135,7 @@ def batchify_json(root_in, root_out):
                     'method': 'POST',
                     'url': '/v4/chat/completions',
                     'body': {
-                        # 'model': 'glm-4',
-                        'model': 'glm-4-flash',
+                        'model': model,
                         'response_format': {
                             'type': 'json_object'
                         },
@@ -213,26 +214,64 @@ def batchify_json(root_in, root_out):
                             #         Here is the content to parse:\n""" + row['aff'],
                             # }
                             # glm-4-flashx_v3
+                            # {
+                            #     'role': 'user',
+                            #     'content': """
+                            #         Please extract and summarize the following content into the specified JSON format. Follow these rules strictly:
+                            #         1. Identify the paper's title.
+                            #         2. Extract all authors in order, separated by semicolons.
+                            #         3. Extract the corresponding affiliations for each author in the same order, separated by semicolons. If the text uses numbering or symbols (e.g., ¹, *, †) to map authors to affiliations, preserve that matching.
+                            #         4. Extract the corresponding emails for each author in the same order, separated by semicolons. If an email is not provided for an author, use an empty string "" as a placeholder.
+                            #         5. Extract a project link (non-GitHub) if available, otherwise use an empty string "".
+                            #         6. Extract a GitHub link if available, otherwise use an empty string "".
+                            #         7. Output only the JSON object exactly following the template below. Do not include any extra explanation, comment, or text.
+                            #         Use this exact JSON structure:
+                            #         ```json 
+                            #             { 
+                            #                 "title": "{{title of the paper}}", 
+                            #                 "authors": "{{name of the first author}}; {{name of the second author}}; ...",
+                            #                 "aff": "{{affiliation of the first author}}; {{affiliation of the second author}}; ...",
+                            #                 "email": "{{email of the first author}}; {{email of the second author}}; ...",
+                            #                 "github": "{{github link if available, otherwise empty}}", 
+                            #                 "project": "{{project link if available and not github, otherwise empty}}", 
+                            #             }
+                            #         ```
+                            #         Here is the content to parse:\n""" + row['aff'],
+                            # }
+                            # glm-4-flashx_v4
                             {
                                 'role': 'user',
                                 'content': """
-                                    Please extract and summarize the following content into the specified JSON format. Follow these rules strictly:
+                                    [INST] 
+                                    Extract and summarize the following content into the specified JSON format.
+                                    Follow these rules strictly:
                                     1. Identify the paper's title.
-                                    2. Identify all authors and their affiliations, preserving both the order and the one-to-one pairing. If the content uses numbering or symbols (e.g., superscript numbers) to link authors to affiliations, maintain that matching convention.
-                                    3. Identify a project link if one is provided (non-GitHub), otherwise leave it empty.
-                                    4. Identify a GitHub link if provided, otherwise leave it empty.
-                                    5. Output only the JSON object as shown in the template, with no additional text or comments.
-                                    Use this exact JSON structure:
+                                    2. Extract all authors in order, separated by semicolons.
+                                    3. Extract the corresponding affiliations for each author in the same order, separated by semicolons. If the text uses numbering or symbols (e.g., ¹, *, †) to map authors to affiliations, preserve that matching.
+                                    4. Extract the corresponding emails for each author in the same order, separated by semicolons. If an email is not provided for an author, use an empty string "" as a placeholder.
+                                    5. Extract a project link (non-GitHub) if available, otherwise use an empty string "".
+                                    6. Extract a GitHub link if available, otherwise use an empty string "".
+                                    
+                                    Special Rule for Emails:
+                                    - If emails are written like `{alice, bob}@usc.edu`, expand them to `alice@usc.edu; bob@usc.edu` accordingly.
+                                    
+                                    Important:
+                                    - Output ONLY a valid JSON object in the exact structure shown below.
+                                    - Do NOT include any extra explanation, text, or comment.
+                                    - Always return every key, even if the value is empty.
+                                    
+                                    Output JSON format::
                                     ```json 
                                         { 
                                             "title": "{{title of the paper}}", 
                                             "authors": "{{name of the first author}}; {{name of the second author}}; ...",
                                             "aff": "{{affiliation of the first author}}; {{affiliation of the second author}}; ...",
+                                            "email": "{{email of the first author}}; {{email of the second author}}; ...",
                                             "github": "{{github link if available, otherwise empty}}", 
                                             "project": "{{project link if available and not github, otherwise empty}}", 
                                         }
                                     ```
-                                    Here is the content to parse:\n""" + row['aff'],
+                                Text to parse:\n """ + row['aff'] + """ [/INST]""",
                             }
                         ],
                         'top_p':0.1, # https://community.openai.com/t/cheat-sheet-mastering-temperature-and-top-p-in-chatgpt-api/172683
@@ -312,6 +351,12 @@ def glm_decode(output_fids, root_download, root_src, root_out):
         for id, p in enumerate(paperlist):
             if 'aff' in paperlist[id]:
                 paperlist[id]['aff'] = ''
+            
+            if 'email' not in paperlist[id]:
+                paperlist[id]['email'] = ''
+                
+            if 'status' not in paperlist[id]:
+                paperlist[id]['status'] = ''
         
         # load file line by line, each line is the request
         with open(os.path.join(root_download, output_fids[fid])) as f:
@@ -352,22 +397,115 @@ def glm_decode(output_fids, root_download, root_src, root_out):
                     # affs = '' if len(affs) > 1000 else affs
                     authors = json_object['authors']
                     affs = json_object['aff']
+                    emails = json_object['email']
                     url_project = json_object['project']
                     url_github = json_object['github']
                     
                     paperlist[req_id]['aff'] = affs
+                    paperlist[req_id]['email'] = emails
                     paperlist[req_id]['project'] = url_project
                     paperlist[req_id]['github'] = url_github
                     
-                except:
-                    # cprint('error', f'Error Parsing JSON from LLM: ' + url_pdf)
-                    print('Error Parsing JSON from LLM: ' + output_fids[fid])
+                    # track the updated fields since some of the keys may missing
+                    paperlist[req_id]['status'] = ['aff', 'email', 'project', 'github']
                     
-            keys_to_keep = ['title', 'author', 'aff', 'project', 'github']
+                    # update author when empty
+                    if paperlist[req_id]['author'] == '': 
+                        paperlist[req_id]['author'] = authors
+                        paperlist[req_id]['status'].append('author')
+                        
+                    # convert the 'updated' to a string
+                    paperlist[req_id]['status'] = '; '.join(paperlist[req_id]['status'])
+                    
+                    
+                    # check the number of authors, affs and emails
+                    if len(authors.split(';')) != len(affs.split(';')):
+                        paperlist[req_id]['status'] += 'Mismatch authors and affs;'
+                    if len(authors.split(';')) != len(emails.split(';')):
+                        paperlist[req_id]['status'] += 'Mismatch authors and emails;'
+                    
+                except KeyError as e:
+                    if e.args[0] == 'email':
+                        paperlist[req_id]['email'] = ''
+                        paperlist[req_id]['status'] += 'Missing email;'
+                        print('Missing email: ' + output_fids[fid] + ' ' + str(req_id))
+                    elif e.args[0] == 'authors':
+                        paperlist[req_id]['author'] = ''
+                        paperlist[req_id]['status'] += 'Missing author;'
+                        print('Missing author: ' + output_fids[fid] + ' ' + str(req_id))
+                    elif e.args[0] == 'github':
+                        paperlist[req_id]['github'] = ''
+                        paperlist[req_id]['status'] += 'Missing github;'
+                        print('Missing github: ' + output_fids[fid] + ' ' + str(req_id))
+                    elif e.args[0] == 'project':
+                        paperlist[req_id]['project'] = ''
+                        paperlist[req_id]['status'] += 'Missing project;'
+                        print('Missing project: ' + output_fids[fid] + ' ' + str(req_id))
+                    else:
+                        raise e
+                    
+                except ValueError as e:
+                    if e.args[0] == 'source code string cannot contain null bytes':
+                        paperlist[req_id]['status'] = 'Error Parsing JSON;'
+                        print('Error Parsing JSON: ' + output_fids[fid])
+                    else:
+                        raise e
+                    
+                except SyntaxError as e:
+                    if 'invalid syntax' in e.args[0]:
+                        paperlist[req_id]['status'] = 'Error Parsing JSON;'
+                        print('Error Parsing JSON: ' + output_fids[fid])
+                    else:
+                        raise e
+                    
+                except Exception as e:
+                    raise e
+                    
+            keys_to_keep = ['title', 'author', 'aff', 'email', 'project', 'github', 'status']
             paperlist[req_id] = {k: paperlist[req_id][k] for k in keys_to_keep}
                 
         if len(paperlist) != len(lines):
             print('Error', output_fids[fid], len(paperlist), len(lines), 'Missing', checklist)
+            
+        # check in each paper record if the number of authors, affs and emails are the same
+        # make a summary of all the errors
+        error_summary = {}
+        for id, p in enumerate(paperlist):
+            if 'status' in paperlist[id]:
+                status = paperlist[id]['status']
+                if 'Mismatch authors and affs' in status:
+                    if 'Mismatch authors and affs' not in error_summary:
+                        error_summary['Mismatch authors and affs'] = []
+                    error_summary['Mismatch authors and affs'].append(id)
+                if 'Mismatch authors and emails' in status:
+                    if 'Mismatch authors and emails' not in error_summary:
+                        error_summary['Mismatch authors and emails'] = []
+                    error_summary['Mismatch authors and emails'].append(id)
+                if 'Missing author' in status:
+                    if 'Missing author' not in error_summary:
+                        error_summary['Missing author'] = []
+                    error_summary['Missing author'].append(id)
+                if 'Missing email' in status:
+                    if 'Missing email' not in error_summary:
+                        error_summary['Missing email'] = []
+                    error_summary['Missing email'].append(id)
+                if 'Missing github' in status:
+                    if 'Missing github' not in error_summary:
+                        error_summary['Missing github'] = []
+                    error_summary['Missing github'].append(id)
+                if 'Missing project' in status:
+                    if 'Missing project' not in error_summary:
+                        error_summary['Missing project'] = []
+                    error_summary['Missing project'].append(id)
+                if 'Error Parsing JSON' in status:
+                    if 'Error Parsing JSON' not in error_summary:
+                        error_summary['Error Parsing JSON'] = []
+                    error_summary['Error Parsing JSON'].append(id)
+        # print sum for each list
+        # print('Error summary:', error_summary)
+        print('Error summary:', output_fids[fid])
+        for k in error_summary:
+            print(k, len(error_summary[k]), ' (', len(error_summary[k])/len(paperlist), ')')
             
         # dump paperlist
         os.makedirs(os.path.dirname(os.path.join(root_out, output_fids[fid])), exist_ok=True)
@@ -376,6 +514,33 @@ def glm_decode(output_fids, root_download, root_src, root_out):
             
     # print usage summary
     print(output_fids[fid], usage_summary)
+            
+def glm_count_tokens(root_download):
+    """
+    Count the number of tokens in the downloaded files.
+    """
+    confs = glob(os.path.join(root_download, '*'))
+    confs = sorted([os.path.basename(conf) for conf in confs])
+    total_tokens = {}
+    for conf in confs:
+        fpaths = glob(os.path.join(root_download, conf, '*'))
+        fpaths = sorted(fpaths)
+        for fpath in fpaths:
+            with open(fpath) as f:
+                lines = f.readlines()
+            # tokens = sum([len(line.split()) for line in lines])
+            token_per_file = 0
+            for line in lines:
+                if 'total_tokens' in line:
+                    tokens = json.loads(line)['response']['body']['usage']['total_tokens']
+                    token_per_file += tokens
+            print(os.path.basename(fpath), token_per_file)
+        total_tokens[conf] = token_per_file
+        
+    print('\nTotal tokens per conference:')
+    for conf in total_tokens:
+        print(conf, total_tokens[conf])
+    print('\nTotal tokens:', sum(total_tokens.values()), ' (', sum(total_tokens.values())/1000000, 'M)')
             
 def align_cvpr24():
     
@@ -412,9 +577,16 @@ def align_cvpr24():
                     
 if __name__ == '__main__':
     
-    client = ZhipuAI(api_key='72978cba6dab1e2aeb15ffb9bde74c60.GWp3BZHSXB5eJtYX')
-    model = 'glm-4-flashx'
-    version = 'v3'
+    # price for glm-4-air is 0.25cny/1M tokens: https://bigmodel.cn/pricing
+    # price for gpt-4o-mini is $0.075 (I) and $0.30 (O), amortize 0.075*0.9+0.3*0.1=$0.1: https://platform.openai.com/docs/pricing
+    
+    client = ZhipuAI(api_key='72978cba6dab1e2aeb15ffb9bde74c60.GWp3BZHSXB5eJtYX-010') # modify this to your own key
+    # 目前支持的模型: glm-4, glm-4-0520, glm-4-plus, glm-4-long, glm-4-plus-0111, glm-4-air, glm-4-air-0111, glm-4-flash, glm-3-turbo, glm-4v, glm-4v-plus, glm-4v-plus-0111, cogview-3, cogview-3-plus, embedding-2, embedding-3, cogvideox"
+    # model= 'glm-4',
+    # model = 'glm-4-flash'
+    # model = 'glm-4-flashx' # not supported batch-ai
+    model = 'glm-4-air'
+    version = 'v4'
     root_raw = f'/home/jyang/projects/papercopilot/logs/llm/pdftext' # generated from paperbots with aff filled as extracted text
     root_batch = f'/home/jyang/projects/papercopilot/logs/llm/{model}_{version}/batch' # output of batchify_json
     root_download = f'/home/jyang/projects/papercopilot/logs/llm/{model}_{version}/download' # downloaded results from glm batchai
@@ -423,122 +595,123 @@ if __name__ == '__main__':
     
     # fids should be generated afer sucessfully upload
     input_fids = {
-        '1734133869_961af2d683e2490fa48ea6e3a18fd945': 'corl2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/corl/corl2021.jsonl
-        '1734133871_7dc508069de44b75bf93b1d36886986f': 'corl2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/corl/corl2022.jsonl
-        '1734133872_2dec2d4f8a0b4de6b11e79f2cc3ba8f7': 'corl2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/corl/corl2023.jsonl
-        '1734133875_07cf46a66bcd47638249dea83eb4afd3': 'cvpr2013.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2013.jsonl
-        '1734133877_566ad611723c4091ba07827723a769f2': 'cvpr2014.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2014.jsonl
-        '1734133881_20e22ca032b34fb8933f723bb57034ae': 'cvpr2015.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2015.jsonl
-        '1734133884_61b80466f4284119b98218ec26abc037': 'cvpr2016.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2016.jsonl
-        '1734133888_5031bb3d2de9411d8579b67d243b2643': 'cvpr2017.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2017.jsonl
-        '1734133893_2cd64ab3b11d44be873e6279d215cec3': 'cvpr2018.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2018.jsonl
-        '1734133900_e090cd0e407541939cd0201aaa7a6b3f': 'cvpr2019.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2019.jsonl
-        '1734133907_dcf44307812e4fa2ad914f4c49bb2b90': 'cvpr2020.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2020.jsonl
-        '1734133915_27da5542b395485183ed0dcc54fc1bf5': 'cvpr2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2021.jsonl
-        '1734133925_8dfe42ba88a44623bed6393693b3d57b': 'cvpr2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2022.jsonl
-        '1734133937_666f1f27943a4ed996071533879c62b8': 'cvpr2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/cvpr/cvpr2023.jsonl
-        '1734133943_122abfca9cd349aa81434b9ed3161519': 'eccv2018.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/eccv/eccv2018.jsonl
-        '1734133949_8dff8350d0fc4af9a8c006e2f4381c2b': 'eccv2020.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/eccv/eccv2020.jsonl
-        '1734133955_a8742870358f4e7485d521bbf9c9cc1a': 'eccv2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/eccv/eccv2022.jsonl
-        '1734133965_da1374aaf25b4e41b10a4be2c9fc06a1': 'emnlp2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/emnlp/emnlp2023.jsonl
-        '1734133968_70f6780665a34eedb55d5b902ff84f1c': 'iccv2013.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/iccv/iccv2013.jsonl
-        '1734133971_9ce13fa0982c43929770ea42fc7a3d14': 'iccv2015.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/iccv/iccv2015.jsonl
-        '1734133974_d6594bcd31454ea592e0a03d66033676': 'iccv2017.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/iccv/iccv2017.jsonl
-        '1734133981_aa3cfd231292400989c0030a0726dc5c': 'iccv2019.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/iccv/iccv2019.jsonl
-        '1734133990_1cc743db53c5422ba2135920f18c8074': 'iccv2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/iccv/iccv2021.jsonl
-        '1734134001_a49ecb40f20f44149eb10da5147139fc': 'iccv2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/iccv/iccv2023.jsonl
-        '1734134011_f433b1dba9454d038ee688be0f609f06': 'icml2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/icml/icml2023.jsonl
-        '1734134022_f50d9db33d614d6698870cd84ec75b9c': 'nips2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/nips/nips2021.jsonl
-        '1734134035_742d39e681214627a93d76a37d2018ff': 'nips2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/nips/nips2022.jsonl
-        '1734134051_e40348bead4a444b8950dc84b9702cf9': 'nips2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/nips/nips2023.jsonl
-        '1734134053_59ee3998a4ae4f58909a14111c0fdd13': 'wacv2020.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/wacv/wacv2020.jsonl
-        '1734134055_2e194e0197944e28b3af83053c0c55d3': 'wacv2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/wacv/wacv2021.jsonl
-        '1734134057_975c64b05bb4464f97bd6ee640db3b0b': 'wacv2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/wacv/wacv2022.jsonl
-        '1734134061_2d1af169f418459683d37355980be503': 'wacv2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/wacv/wacv2023.jsonl
-        '1734134065_ed001fb5e023433d81bac63b6b70f533': 'wacv2024.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-flashx_v3/batch/wacv/wacv2024.jsonl
+        '1744439230_0822e52d31da4ef7987734619bfb9ba5': 'corl2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/corl/corl2021.jsonl
+        '1744439232_adff0fc3507f4e319c018cbb91d062eb': 'corl2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/corl/corl2022.jsonl
+        '1744439233_ddf06306dd7c4e20ade8ce11bc526af4': 'corl2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/corl/corl2023.jsonl
+        '1744439236_ebe541de598842b69e2015ab0d1ce75b': 'cvpr2013.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2013.jsonl
+        '1744439240_ff2489bffb2840418a0e42aa0b4015d0': 'cvpr2014.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2014.jsonl
+        '1744439245_dd024e1ec80d4f25a77408dffdad6816': 'cvpr2015.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2015.jsonl
+        '1744439249_beccf120d8da4df28b38b8cbf44d6834': 'cvpr2016.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2016.jsonl
+        '1744439254_a3070048e9e2488a85c63eaae2af0226': 'cvpr2017.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2017.jsonl
+        '1744439261_080e0d2a064a416995189948a071639e': 'cvpr2018.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2018.jsonl
+        '1744439269_a82e18d813304ae5be67a74e2f5d4776': 'cvpr2019.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2019.jsonl
+        '1744439278_c8fecdb1113d4f21bf6b8526b478083c': 'cvpr2020.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2020.jsonl
+        '1744439290_2cc26aefba4e476b8d3c9cb0d7ae0423': 'cvpr2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2021.jsonl
+        '1744439303_3601e3894fd440658eb7b9074071489d': 'cvpr2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2022.jsonl
+        '1744439318_e864e603b824435985ad0efab57249da': 'cvpr2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/cvpr/cvpr2023.jsonl
+        '1744439326_bea6f4c3a3734d45b379e6ab0eaabc12': 'eccv2018.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/eccv/eccv2018.jsonl
+        '1744439334_444a121ed0854764915975d972a79aa8': 'eccv2020.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/eccv/eccv2020.jsonl
+        '1744439342_a9aa22ba136b4385b30462eefe611f53': 'eccv2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/eccv/eccv2022.jsonl
+        '1744439356_3491ba0c548147a092981b434690cba6': 'emnlp2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/emnlp/emnlp2023.jsonl
+        '1744439360_7d3ada008ea2411e990db80ddfcd5ad4': 'iccv2013.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/iccv/iccv2013.jsonl
+        '1744439364_70e9f825c3d54b6faafea426ae987eef': 'iccv2015.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/iccv/iccv2015.jsonl
+        '1744439370_0ed54aa8207742e2ba295132e04f0d68': 'iccv2017.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/iccv/iccv2017.jsonl
+        '1744439377_c675f57fdce54917b98e1eac6a450d68': 'iccv2019.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/iccv/iccv2019.jsonl
+        '1744439387_de17da97589647a2ab4807386fb11eb6': 'iccv2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/iccv/iccv2021.jsonl
+        '1744439401_d22322c5ccf847db916e68b3aba136c0': 'iccv2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/iccv/iccv2023.jsonl
+        '1744439416_51d2f687ba3340a0bf0016db29552057': 'icml2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/icml/icml2023.jsonl
+        '1744439432_50d593b8a3c746be8a82d19f3f54f06d': 'nips2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/nips/nips2021.jsonl
+        '1744439450_8ed0b27b2159406ea0b8b3778c5f43cc': 'nips2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/nips/nips2022.jsonl
+        '1744439469_c3f4c2785ea140b39c54d9e01e161edc': 'nips2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/nips/nips2023.jsonl
+        '1744439473_a12398c0f64048b2bd6b32c8543abd70': 'wacv2020.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/wacv/wacv2020.jsonl
+        '1744439476_2084632df7a247aba4acd349f817f59f': 'wacv2021.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/wacv/wacv2021.jsonl
+        '1744439479_9f65fc1cef6d4899b5a3187fd9d47346': 'wacv2022.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/wacv/wacv2022.jsonl
+        '1744439483_b95cbc3ac231455480b129c175d6881a': 'wacv2023.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/wacv/wacv2023.jsonl
+        '1744439488_b82d41bf9f9442448269949ccfaf2156': 'wacv2024.jsonl', # /home/jyang/projects/papercopilot/logs/llm/glm-4-air_v4/batch/wacv/wacv2024.jsonl
     }
     
     batchids = {
-        'batch_1867719997147459584': 'corl2021.jsonl', # 1734133869_961af2d683e2490fa48ea6e3a18fd945 Batch(id='batch_1867719997147459584', completion_window='24h', created_at=1734134122536, endpoint='/v4/chat/completions', input_file_id='1734133869_961af2d683e2490fa48ea6e3a18fd945', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=153))
-        'batch_1867719998555828224': 'corl2022.jsonl', # 1734133871_7dc508069de44b75bf93b1d36886986f Batch(id='batch_1867719998555828224', completion_window='24h', created_at=1734134122872, endpoint='/v4/chat/completions', input_file_id='1734133871_7dc508069de44b75bf93b1d36886986f', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=197))
-        'batch_1867719999760240640': 'corl2023.jsonl', # 1734133872_2dec2d4f8a0b4de6b11e79f2cc3ba8f7 Batch(id='batch_1867719999760240640', completion_window='24h', created_at=1734134123159, endpoint='/v4/chat/completions', input_file_id='1734133872_2dec2d4f8a0b4de6b11e79f2cc3ba8f7', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=199))
-        'batch_1867720001693814784': 'cvpr2013.jsonl', # 1734133875_07cf46a66bcd47638249dea83eb4afd3 Batch(id='batch_1867720001693814784', completion_window='24h', created_at=1734134123620, endpoint='/v4/chat/completions', input_file_id='1734133875_07cf46a66bcd47638249dea83eb4afd3', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=471))
-        'batch_1867720004402290688': 'cvpr2014.jsonl', # 1734133877_566ad611723c4091ba07827723a769f2 Batch(id='batch_1867720004402290688', completion_window='24h', created_at=1734134124266, endpoint='/v4/chat/completions', input_file_id='1734133877_566ad611723c4091ba07827723a769f2', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=540))
-        'batch_1867720006889910272': 'cvpr2015.jsonl', # 1734133881_20e22ca032b34fb8933f723bb57034ae Batch(id='batch_1867720006889910272', completion_window='24h', created_at=1734134124859, endpoint='/v4/chat/completions', input_file_id='1734133881_20e22ca032b34fb8933f723bb57034ae', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=600))
-        'batch_1867720008136663040': 'cvpr2016.jsonl', # 1734133884_61b80466f4284119b98218ec26abc037 Batch(id='batch_1867720008136663040', completion_window='24h', created_at=1734134125156, endpoint='/v4/chat/completions', input_file_id='1734133884_61b80466f4284119b98218ec26abc037', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=643))
-        'batch_1867720010099470336': 'cvpr2017.jsonl', # 1734133888_5031bb3d2de9411d8579b67d243b2643 Batch(id='batch_1867720010099470336', completion_window='24h', created_at=1734134125624, endpoint='/v4/chat/completions', input_file_id='1734133888_5031bb3d2de9411d8579b67d243b2643', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=783))
-        'batch_1867720011378733056': 'cvpr2018.jsonl', # 1734133893_2cd64ab3b11d44be873e6279d215cec3 Batch(id='batch_1867720011378733056', completion_window='24h', created_at=1734134125929, endpoint='/v4/chat/completions', input_file_id='1734133893_2cd64ab3b11d44be873e6279d215cec3', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=979))
-        'batch_1867720012644495360': 'cvpr2019.jsonl', # 1734133900_e090cd0e407541939cd0201aaa7a6b3f Batch(id='batch_1867720012644495360', completion_window='24h', created_at=1734134126231, endpoint='/v4/chat/completions', input_file_id='1734133900_e090cd0e407541939cd0201aaa7a6b3f', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1294))
-        'batch_1867720015466864640': 'cvpr2020.jsonl', # 1734133907_dcf44307812e4fa2ad914f4c49bb2b90 Batch(id='batch_1867720015466864640', completion_window='24h', created_at=1734134126904, endpoint='/v4/chat/completions', input_file_id='1734133907_dcf44307812e4fa2ad914f4c49bb2b90', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1466))
-        'batch_1867720021355667456': 'cvpr2021.jsonl', # 1734133915_27da5542b395485183ed0dcc54fc1bf5 Batch(id='batch_1867720021355667456', completion_window='24h', created_at=1734134128308, endpoint='/v4/chat/completions', input_file_id='1734133915_27da5542b395485183ed0dcc54fc1bf5', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1660))
-        'batch_1867720023667773440': 'cvpr2022.jsonl', # 1734133925_8dfe42ba88a44623bed6393693b3d57b Batch(id='batch_1867720023667773440', completion_window='24h', created_at=1734134128859, endpoint='/v4/chat/completions', input_file_id='1734133925_8dfe42ba88a44623bed6393693b3d57b', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2071))
-        'batch_1867720024997367808': 'cvpr2023.jsonl', # 1734133937_666f1f27943a4ed996071533879c62b8 Batch(id='batch_1867720024997367808', completion_window='24h', created_at=1734134129176, endpoint='/v4/chat/completions', input_file_id='1734133937_666f1f27943a4ed996071533879c62b8', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2353))
-        'batch_1867720026430775296': 'eccv2018.jsonl', # 1734133943_122abfca9cd349aa81434b9ed3161519 Batch(id='batch_1867720026430775296', completion_window='24h', created_at=1734134129518, endpoint='/v4/chat/completions', input_file_id='1734133943_122abfca9cd349aa81434b9ed3161519', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1645))
-        'batch_1867720028302876672': 'eccv2020.jsonl', # 1734133949_8dff8350d0fc4af9a8c006e2f4381c2b Batch(id='batch_1867720028302876672', completion_window='24h', created_at=1734134129964, endpoint='/v4/chat/completions', input_file_id='1734133949_8dff8350d0fc4af9a8c006e2f4381c2b', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1645))
-        'batch_1867720029597872128': 'eccv2022.jsonl', # 1734133955_a8742870358f4e7485d521bbf9c9cc1a Batch(id='batch_1867720029597872128', completion_window='24h', created_at=1734134130273, endpoint='/v4/chat/completions', input_file_id='1734133955_a8742870358f4e7485d521bbf9c9cc1a', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1645))
-        'batch_1867720034358009856': 'emnlp2023.jsonl', # 1734133965_da1374aaf25b4e41b10a4be2c9fc06a1 Batch(id='batch_1867720034358009856', completion_window='24h', created_at=1734134131408, endpoint='/v4/chat/completions', input_file_id='1734133965_da1374aaf25b4e41b10a4be2c9fc06a1', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2020))
-        'batch_1867720036258426880': 'iccv2013.jsonl', # 1734133968_70f6780665a34eedb55d5b902ff84f1c Batch(id='batch_1867720036258426880', completion_window='24h', created_at=1734134131861, endpoint='/v4/chat/completions', input_file_id='1734133968_70f6780665a34eedb55d5b902ff84f1c', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=454))
-        'batch_1867720037739663360': 'iccv2015.jsonl', # 1734133971_9ce13fa0982c43929770ea42fc7a3d14 Batch(id='batch_1867720037739663360', completion_window='24h', created_at=1734134132214, endpoint='/v4/chat/completions', input_file_id='1734133971_9ce13fa0982c43929770ea42fc7a3d14', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=526))
-        'batch_1867720040473305088': 'iccv2017.jsonl', # 1734133974_d6594bcd31454ea592e0a03d66033676 Batch(id='batch_1867720040473305088', completion_window='24h', created_at=1734134132866, endpoint='/v4/chat/completions', input_file_id='1734133974_d6594bcd31454ea592e0a03d66033676', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=621))
-        'batch_1867720043066429440': 'iccv2019.jsonl', # 1734133981_aa3cfd231292400989c0030a0726dc5c Batch(id='batch_1867720043066429440', completion_window='24h', created_at=1734134133484, endpoint='/v4/chat/completions', input_file_id='1734133981_aa3cfd231292400989c0030a0726dc5c', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1075))
-        'batch_1867720048362790912': 'iccv2021.jsonl', # 1734133990_1cc743db53c5422ba2135920f18c8074 Batch(id='batch_1867720048362790912', completion_window='24h', created_at=1734134134747, endpoint='/v4/chat/completions', input_file_id='1734133990_1cc743db53c5422ba2135920f18c8074', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1612))
-        'batch_1867720050397425664': 'iccv2023.jsonl', # 1734134001_a49ecb40f20f44149eb10da5147139fc Batch(id='batch_1867720050397425664', completion_window='24h', created_at=1734134135232, endpoint='/v4/chat/completions', input_file_id='1734134001_a49ecb40f20f44149eb10da5147139fc', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2156))
-        'batch_1867720052357210112': 'icml2023.jsonl', # 1734134011_f433b1dba9454d038ee688be0f609f06 Batch(id='batch_1867720052357210112', completion_window='24h', created_at=1734134135699, endpoint='/v4/chat/completions', input_file_id='1734134011_f433b1dba9454d038ee688be0f609f06', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1828))
-        'batch_1867720055572799488': 'nips2021.jsonl', # 1734134022_f50d9db33d614d6698870cd84ec75b9c Batch(id='batch_1867720055572799488', completion_window='24h', created_at=1734134136466, endpoint='/v4/chat/completions', input_file_id='1734134022_f50d9db33d614d6698870cd84ec75b9c', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2708))
-        'batch_1867720061152538624': 'nips2022.jsonl', # 1734134035_742d39e681214627a93d76a37d2018ff Batch(id='batch_1867720061152538624', completion_window='24h', created_at=1734134137796, endpoint='/v4/chat/completions', input_file_id='1734134035_742d39e681214627a93d76a37d2018ff', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2987))
-        'batch_1867720062858305536': 'nips2023.jsonl', # 1734134051_e40348bead4a444b8950dc84b9702cf9 Batch(id='batch_1867720062858305536', completion_window='24h', created_at=1734134138203, endpoint='/v4/chat/completions', input_file_id='1734134051_e40348bead4a444b8950dc84b9702cf9', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=3733))
-        'batch_1867720065372135424': 'wacv2020.jsonl', # 1734134053_59ee3998a4ae4f58909a14111c0fdd13 Batch(id='batch_1867720065372135424', completion_window='24h', created_at=1734134138802, endpoint='/v4/chat/completions', input_file_id='1734134053_59ee3998a4ae4f58909a14111c0fdd13', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=378))
-        'batch_1867720066893225984': 'wacv2021.jsonl', # 1734134055_2e194e0197944e28b3af83053c0c55d3 Batch(id='batch_1867720066893225984', completion_window='24h', created_at=1734134139165, endpoint='/v4/chat/completions', input_file_id='1734134055_2e194e0197944e28b3af83053c0c55d3', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=406))
-        'batch_1867720068152832000': 'wacv2022.jsonl', # 1734134057_975c64b05bb4464f97bd6ee640db3b0b Batch(id='batch_1867720068152832000', completion_window='24h', created_at=1734134139465, endpoint='/v4/chat/completions', input_file_id='1734134057_975c64b05bb4464f97bd6ee640db3b0b', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=406))
-        'batch_1867720069393428480': 'wacv2023.jsonl', # 1734134061_2d1af169f418459683d37355980be503 Batch(id='batch_1867720069393428480', completion_window='24h', created_at=1734134139761, endpoint='/v4/chat/completions', input_file_id='1734134061_2d1af169f418459683d37355980be503', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=639))
-        'batch_1867720070971133952': 'wacv2024.jsonl', # 1734134065_ed001fb5e023433d81bac63b6b70f533 Batch(id='batch_1867720070971133952', completion_window='24h', created_at=1734134140137, endpoint='/v4/chat/completions', input_file_id='1734134065_ed001fb5e023433d81bac63b6b70f533', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=846))
+        'batch_1910944646059139072': 'corl2021.jsonl', # 1744439230_0822e52d31da4ef7987734619bfb9ba5 Batch(id='batch_1910944646059139072', completion_window='24h', created_at=1744439681912, endpoint='/v4/chat/completions', input_file_id='1744439230_0822e52d31da4ef7987734619bfb9ba5', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=153))
+        'batch_1910944648696958976': 'corl2022.jsonl', # 1744439232_adff0fc3507f4e319c018cbb91d062eb Batch(id='batch_1910944648696958976', completion_window='24h', created_at=1744439682541, endpoint='/v4/chat/completions', input_file_id='1744439232_adff0fc3507f4e319c018cbb91d062eb', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=197))
+        'batch_1910944650396049408': 'corl2023.jsonl', # 1744439233_ddf06306dd7c4e20ade8ce11bc526af4 Batch(id='batch_1910944650396049408', completion_window='24h', created_at=1744439682946, endpoint='/v4/chat/completions', input_file_id='1744439233_ddf06306dd7c4e20ade8ce11bc526af4', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=199))
+        'batch_1910944651406225408': 'cvpr2013.jsonl', # 1744439236_ebe541de598842b69e2015ab0d1ce75b Batch(id='batch_1910944651406225408', completion_window='24h', created_at=1744439683187, endpoint='/v4/chat/completions', input_file_id='1744439236_ebe541de598842b69e2015ab0d1ce75b', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=471))
+        'batch_1910944653453697024': 'cvpr2014.jsonl', # 1744439240_ff2489bffb2840418a0e42aa0b4015d0 Batch(id='batch_1910944653453697024', completion_window='24h', created_at=1744439683675, endpoint='/v4/chat/completions', input_file_id='1744439240_ff2489bffb2840418a0e42aa0b4015d0', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=540))
+        'batch_1910944655131418624': 'cvpr2015.jsonl', # 1744439245_dd024e1ec80d4f25a77408dffdad6816 Batch(id='batch_1910944655131418624', completion_window='24h', created_at=1744439684075, endpoint='/v4/chat/completions', input_file_id='1744439245_dd024e1ec80d4f25a77408dffdad6816', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=600))
+        'batch_1910944655912349696': 'cvpr2016.jsonl', # 1744439249_beccf120d8da4df28b38b8cbf44d6834 Batch(id='batch_1910944655912349696', completion_window='24h', created_at=1744439684261, endpoint='/v4/chat/completions', input_file_id='1744439249_beccf120d8da4df28b38b8cbf44d6834', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=643))
+        'batch_1910944657274310656': 'cvpr2017.jsonl', # 1744439254_a3070048e9e2488a85c63eaae2af0226 Batch(id='batch_1910944657274310656', completion_window='24h', created_at=1744439684586, endpoint='/v4/chat/completions', input_file_id='1744439254_a3070048e9e2488a85c63eaae2af0226', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=783))
+        'batch_1910944658575732736': 'cvpr2018.jsonl', # 1744439261_080e0d2a064a416995189948a071639e Batch(id='batch_1910944658575732736', completion_window='24h', created_at=1744439684896, endpoint='/v4/chat/completions', input_file_id='1744439261_080e0d2a064a416995189948a071639e', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=979))
+        'batch_1910944659774513152': 'cvpr2019.jsonl', # 1744439269_a82e18d813304ae5be67a74e2f5d4776 Batch(id='batch_1910944659774513152', completion_window='24h', created_at=1744439685182, endpoint='/v4/chat/completions', input_file_id='1744439269_a82e18d813304ae5be67a74e2f5d4776', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1294))
+        'batch_1910944661012623360': 'cvpr2020.jsonl', # 1744439278_c8fecdb1113d4f21bf6b8526b478083c Batch(id='batch_1910944661012623360', completion_window='24h', created_at=1744439685477, endpoint='/v4/chat/completions', input_file_id='1744439278_c8fecdb1113d4f21bf6b8526b478083c', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1466))
+        'batch_1910944662283497472': 'cvpr2021.jsonl', # 1744439290_2cc26aefba4e476b8d3c9cb0d7ae0423 Batch(id='batch_1910944662283497472', completion_window='24h', created_at=1744439685780, endpoint='/v4/chat/completions', input_file_id='1744439290_2cc26aefba4e476b8d3c9cb0d7ae0423', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1660))
+        'batch_1910944663918485504': 'cvpr2022.jsonl', # 1744439303_3601e3894fd440658eb7b9074071489d Batch(id='batch_1910944663918485504', completion_window='24h', created_at=1744439686170, endpoint='/v4/chat/completions', input_file_id='1744439303_3601e3894fd440658eb7b9074071489d', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2071))
+        'batch_1910944664686833664': 'cvpr2023.jsonl', # 1744439318_e864e603b824435985ad0efab57249da Batch(id='batch_1910944664686833664', completion_window='24h', created_at=1744439686353, endpoint='/v4/chat/completions', input_file_id='1744439318_e864e603b824435985ad0efab57249da', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2353))
+        'batch_1910944666153398272': 'eccv2018.jsonl', # 1744439326_bea6f4c3a3734d45b379e6ab0eaabc12 Batch(id='batch_1910944666153398272', completion_window='24h', created_at=1744439686703, endpoint='/v4/chat/completions', input_file_id='1744439326_bea6f4c3a3734d45b379e6ab0eaabc12', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1645))
+        'batch_1910944667411689472': 'eccv2020.jsonl', # 1744439334_444a121ed0854764915975d972a79aa8 Batch(id='batch_1910944667411689472', completion_window='24h', created_at=1744439687003, endpoint='/v4/chat/completions', input_file_id='1744439334_444a121ed0854764915975d972a79aa8', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1645))
+        'batch_1910944668838404096': 'eccv2022.jsonl', # 1744439342_a9aa22ba136b4385b30462eefe611f53 Batch(id='batch_1910944668838404096', completion_window='24h', created_at=1744439687343, endpoint='/v4/chat/completions', input_file_id='1744439342_a9aa22ba136b4385b30462eefe611f53', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1645))
+        'batch_1910944669572407296': 'emnlp2023.jsonl', # 1744439356_3491ba0c548147a092981b434690cba6 Batch(id='batch_1910944669572407296', completion_window='24h', created_at=1744439687518, endpoint='/v4/chat/completions', input_file_id='1744439356_3491ba0c548147a092981b434690cba6', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2020))
+        'batch_1910944671888453632': 'iccv2013.jsonl', # 1744439360_7d3ada008ea2411e990db80ddfcd5ad4 Batch(id='batch_1910944671888453632', completion_window='24h', created_at=1744439688070, endpoint='/v4/chat/completions', input_file_id='1744439360_7d3ada008ea2411e990db80ddfcd5ad4', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=454))
+        'batch_1910944673079635968': 'iccv2015.jsonl', # 1744439364_70e9f825c3d54b6faafea426ae987eef Batch(id='batch_1910944673079635968', completion_window='24h', created_at=1744439688354, endpoint='/v4/chat/completions', input_file_id='1744439364_70e9f825c3d54b6faafea426ae987eef', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=526))
+        'batch_1910944674355224576': 'iccv2017.jsonl', # 1744439370_0ed54aa8207742e2ba295132e04f0d68 Batch(id='batch_1910944674355224576', completion_window='24h', created_at=1744439688658, endpoint='/v4/chat/completions', input_file_id='1744439370_0ed54aa8207742e2ba295132e04f0d68', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=621))
+        'batch_1910944675718373376': 'iccv2019.jsonl', # 1744439377_c675f57fdce54917b98e1eac6a450d68 Batch(id='batch_1910944675718373376', completion_window='24h', created_at=1744439688983, endpoint='/v4/chat/completions', input_file_id='1744439377_c675f57fdce54917b98e1eac6a450d68', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1075))
+        'batch_1910944677331869696': 'iccv2021.jsonl', # 1744439387_de17da97589647a2ab4807386fb11eb6 Batch(id='batch_1910944677331869696', completion_window='24h', created_at=1744439689368, endpoint='/v4/chat/completions', input_file_id='1744439387_de17da97589647a2ab4807386fb11eb6', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1612))
+        'batch_1910944678100217856': 'iccv2023.jsonl', # 1744439401_d22322c5ccf847db916e68b3aba136c0 Batch(id='batch_1910944678100217856', completion_window='24h', created_at=1744439689551, endpoint='/v4/chat/completions', input_file_id='1744439401_d22322c5ccf847db916e68b3aba136c0', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2156))
+        'batch_1910944679869423616': 'icml2023.jsonl', # 1744439416_51d2f687ba3340a0bf0016db29552057 Batch(id='batch_1910944679869423616', completion_window='24h', created_at=1744439689973, endpoint='/v4/chat/completions', input_file_id='1744439416_51d2f687ba3340a0bf0016db29552057', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=1828))
+        'batch_1910944681102548992': 'nips2021.jsonl', # 1744439432_50d593b8a3c746be8a82d19f3f54f06d Batch(id='batch_1910944681102548992', completion_window='24h', created_at=1744439690267, endpoint='/v4/chat/completions', input_file_id='1744439432_50d593b8a3c746be8a82d19f3f54f06d', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2708))
+        'batch_1910944682070781952': 'nips2022.jsonl', # 1744439450_8ed0b27b2159406ea0b8b3778c5f43cc Batch(id='batch_1910944682070781952', completion_window='24h', created_at=1744439690498, endpoint='/v4/chat/completions', input_file_id='1744439450_8ed0b27b2159406ea0b8b3778c5f43cc', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=2987))
+        'batch_1910944683057885184': 'nips2023.jsonl', # 1744439469_c3f4c2785ea140b39c54d9e01e161edc Batch(id='batch_1910944683057885184', completion_window='24h', created_at=1744439690733, endpoint='/v4/chat/completions', input_file_id='1744439469_c3f4c2785ea140b39c54d9e01e161edc', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=3733))
+        'batch_1910944684261650432': 'wacv2020.jsonl', # 1744439473_a12398c0f64048b2bd6b32c8543abd70 Batch(id='batch_1910944684261650432', completion_window='24h', created_at=1744439691020, endpoint='/v4/chat/completions', input_file_id='1744439473_a12398c0f64048b2bd6b32c8543abd70', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=378))
+        'batch_1910944685494775808': 'wacv2021.jsonl', # 1744439476_2084632df7a247aba4acd349f817f59f Batch(id='batch_1910944685494775808', completion_window='24h', created_at=1744439691314, endpoint='/v4/chat/completions', input_file_id='1744439476_2084632df7a247aba4acd349f817f59f', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=406))
+        'batch_1910944687117180928': 'wacv2022.jsonl', # 1744439479_9f65fc1cef6d4899b5a3187fd9d47346 Batch(id='batch_1910944687117180928', completion_window='24h', created_at=1744439691701, endpoint='/v4/chat/completions', input_file_id='1744439479_9f65fc1cef6d4899b5a3187fd9d47346', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=406))
+        'batch_1910944687957352448': 'wacv2023.jsonl', # 1744439483_b95cbc3ac231455480b129c175d6881a Batch(id='batch_1910944687957352448', completion_window='24h', created_at=1744439691901, endpoint='/v4/chat/completions', input_file_id='1744439483_b95cbc3ac231455480b129c175d6881a', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=639))
+        'batch_1910944689394036736': 'wacv2024.jsonl', # 1744439488_b82d41bf9f9442448269949ccfaf2156 Batch(id='batch_1910944689394036736', completion_window='24h', created_at=1744439692244, endpoint='/v4/chat/completions', input_file_id='1744439488_b82d41bf9f9442448269949ccfaf2156', object='batch', status='validating', cancelled_at=None, cancelling_at=None, completed_at=None, error_file_id=None, errors=None, expired_at=None, expires_at=None, failed_at=None, finalizing_at=None, in_progress_at=None, metadata={'description': 'Sentiment classification'}, output_file_id=None, request_counts=BatchRequestCounts(completed=None, failed=None, total=846))
     }
     
     output_fids = {
-        '1734072506_d72be92eb44c4efba093e7512386732c': 'corl/corl2021.json', # batch_1867438520593817600 completed
-        '1734072491_cf4ad71d757342889f354b42e83e5c31': 'corl/corl2022.json', # batch_1867438523994353664 completed
-        '1734072531_56c76e7a7cac441aafb26d8934beec07': 'corl/corl2023.json', # batch_1867438525433917440 completed
-        '1734087602_2e6e652e0154496daa36489c0e33fa47': 'cvpr/cvpr2013.json', # batch_1867438526871248896 completed
-        '1734101824_3b21e880555748d78b2ae4beb362bbe1': 'cvpr/cvpr2014.json', # batch_1867438528964206592 completed
-        '1734081660_dec784c5dc0248fd8e03ff27f8347cb8': 'cvpr/cvpr2015.json', # batch_1867438533158907904 completed
-        '1734072530_5e6625540e5143af87f02b3be0c0b209': 'cvpr/cvpr2016.json', # batch_1867438538213044224 completed
-        '1734072532_66117bc7f7c446539beb0a8a2a04819d': 'cvpr/cvpr2017.json', # batch_1867438540897001472 completed
-        '1734101281_ae9da2b7d9c445f89db8965553a60695': 'cvpr/cvpr2018.json', # batch_1867438542402756608 completed
-        '1734098041_a26c8557a6ec44ec8078a20a3844c2c6': 'cvpr/cvpr2019.json', # batch_1867438544038932480 completed
-        '1734103626_6fd7e510bbbd4b9f8d67b7ff69154baf': 'cvpr/cvpr2020.json', # batch_1867438545428164608 completed
-        '1734085356_ec5f384310274a45a5b78e1de2df03b4': 'cvpr/cvpr2021.json', # batch_1867438547876720640 completed
-        '1734098671_27f8426a882449898481d7af88395871': 'cvpr/cvpr2022.json', # batch_1867438550497763328 completed
-        '1734098941_a755cfc2d033476ea4f9c2787cc0103b': 'cvpr/cvpr2023.json', # batch_1867438552055291904 completed
-        '1734072531_1fe77a2a9f9140c6bddfe9759c696f4b': 'eccv/eccv2018.json', # batch_1867438554419834880 completed
-        '1734072532_3673e7d7175241c3bbe0e954815f67df': 'eccv/eccv2020.json', # batch_1867438556181442560 completed
-        '1734072507_976ed88509b44dbc826ac01ba198d3ed': 'eccv/eccv2022.json', # batch_1867438558011203584 completed
-        '1734099481_c05bfb6ee7774b319ba5c043ff7ce182': 'emnlp/emnlp2023.json', # batch_1867438560845508608 completed
-        '1734100021_6a8014f2ed3e4dafa080bf283d559121': 'iccv/iccv2013.json', # batch_1867438563063898112 completed
-        '1734072548_d6fe223aa23c4d16aed2622ecddcb20d': 'iccv/iccv2015.json', # batch_1867438565350191104 completed
-        '1734072566_e53e92df2d4745b790cf151b641e6031': 'iccv/iccv2017.json', # batch_1867438567045607424 completed
-        '1734076981_aeb7f61ec1ce4ee5a87c844a51547397': 'iccv/iccv2019.json', # batch_1867438569545142272 completed
-        '1734101642_56319364657845a7b6a1c202f8381565': 'iccv/iccv2021.json', # batch_1867438571457097728 completed
-        '1734099302_65ae4629c5854ce48198d84beb82c165': 'iccv/iccv2023.json', # batch_1867438575173251072 completed
-        '1734098041_7c2e3c5db14b4b61a7e5bf930f16d614': 'icml/icml2023.json', # batch_1867438577531367424 completed
-        '1734072492_9fdf7ba2c4e24b49a517c1cce028093b': 'nips/nips2021.json', # batch_1867438579560493056 completed
-        '1734095165_b5194c125ce84d1fa3bef7c2dd39787b': 'nips/nips2022.json', # batch_1867438581339525120 completed
-        '1734072549_48293f8e9d8649afba4db4ba96faedc4': 'nips/nips2023.json', # batch_1867438583655178240 completed
-        '1734072567_6ab210a03c764f85ab0e749312c8643c': 'wacv/wacv2020.json', # batch_1867438587223486464 completed
-        '1734072563_55b76f7bc62445408978ddf7c344c28b': 'wacv/wacv2021.json', # batch_1867438589072777216 completed
-        '1734072531_7fe32a825b07440fb68e39544a495969': 'wacv/wacv2022.json', # batch_1867438591150002176 completed
-        '1734072533_e90ad09aecbe4cb78a72ea7795f4d179': 'wacv/wacv2023.json', # batch_1867438593149640704 completed
-        '1734072516_67bb341b71b847de892cda70d8170045': 'wacv/wacv2024.json', # batch_1867438595117166592 completed
+        '1744429502_51abbb2ce0df4bad92c9fb8efc3df15c': 'corl/corl2021.json', # batch_1910900624783052800 completed
+        '1744429502_0b874ef7413a4392b96b5497f547bad2': 'corl/corl2022.json', # batch_1910900627870711808 completed
+        '1744429503_fbca5acc911c4c8d9ec21b93b2d949a2': 'corl/corl2023.json', # batch_1910900629430738944 completed
+        '1744429503_73a91d889fec49bca529dba71490ff6e': 'cvpr/cvpr2013.json', # batch_1910900630881968128 completed
+        '1744429503_0fbb7009a4484d25a2b143d29edc61e4': 'cvpr/cvpr2014.json', # batch_1910900632387723264 completed
+        '1744429503_469f6b09ed4e44909c7580b4b457e79c': 'cvpr/cvpr2015.json', # batch_1910900633822175232 completed
+        '1744429503_f8a8ebfba6884d1eb1f04c740a551768': 'cvpr/cvpr2016.json', # batch_1910900635273404416 completed
+        '1744429504_f7e7ba76883541dda75e9e0f3189d331': 'cvpr/cvpr2017.json', # batch_1910900636707856384 completed
+        '1744429506_9c1ad030cdee443188b1d5778e88bb3d': 'cvpr/cvpr2018.json', # batch_1910900638196834304 completed
+        '1744429508_f09690c0c0da4f829785f4c44f3ea1dd': 'cvpr/cvpr2019.json', # batch_1910900640676458496 completed
+        '1744429510_37c536875233476083ee2c62338fdb23': 'cvpr/cvpr2020.json', # batch_1910900642185871360 completed
+        '1744429512_c032ee961c3b4c74a6c58c768eff6705': 'cvpr/cvpr2021.json', # batch_1910900643599097856 completed
+        '1744429515_11442f51af4944c6b258f7759c79428c': 'cvpr/cvpr2022.json', # batch_1910900645083881472 completed
+        '1744429517_5739619fa8334a609ce6f16335750bcc': 'cvpr/cvpr2023.json', # batch_1910900646551887872 completed
+        '1744429518_062907c48f5b4845bc5b14c9dd9de9eb': 'eccv/eccv2018.json', # batch_1910900648045060096 completed
+        '1744429520_1df0a32cc5e24d4790881e731a67fb55': 'eccv/eccv2020.json', # batch_1910900649556320256 completed
+        '1744429522_3eca16327c0f4c2eb19f2e4757529ace': 'eccv/eccv2022.json', # batch_1910900650981072896 completed
+        '1744429524_245b42922ae44307bb24b9ee892852f2': 'emnlp/emnlp2023.json', # batch_1910900652449079296 completed
+        '1744429525_659acdcd055841979b9628e3410873cd': 'iccv/iccv2013.json', # batch_1910900654676254720 completed
+        '1744429525_b72256774548408c8334c69ce52f9882': 'iccv/iccv2015.json', # batch_1910900656098123776 completed
+        '1744429525_09afabf990be4d12b8e6e1f59763c5d8': 'iccv/iccv2017.json', # batch_1910900657632841728 completed
+        '1744429527_8a6b12d6d1274e6b90fef484dfb0d69f': 'iccv/iccv2019.json', # batch_1910900659227865088 completed
+        '1744429529_06185f1e4b82482fabf98ead8e5ccf6a': 'iccv/iccv2021.json', # batch_1910900660851580928 completed
+        '1744429531_b68ee5758a4d427481e7eac2119af2a0': 'iccv/iccv2023.json', # batch_1910900662368210944 completed
+        '1744429533_0d91609bd31d43c592c10960a7cbf319': 'icml/icml2023.json', # batch_1910900663827828736 completed
+        '1744429536_41dce4c6cbc443aabe9e176c28ae9af7': 'nips/nips2021.json', # batch_1910900665326383104 completed
+        '1744429538_7825d4ba54d64e77988dc057d5cfe9d7': 'nips/nips2022.json', # batch_1910900666814173184 completed
+        '1744429540_13b6252376b54949a0b78856520aae45': 'nips/nips2023.json', # batch_1910900668216258560 completed
+        '1744429541_e886c60e052f4ccb861e8f3a0825bb8e': 'wacv/wacv2020.json', # batch_1910900669654904832 completed
+        '1744429541_fa10b7bad0114be491cd549684f51ad8': 'wacv/wacv2021.json', # batch_1910900671084371968 completed
+        '1744429541_687fd39668e34bdd89c7c3e5ae17b670': 'wacv/wacv2022.json', # batch_1910900672535601152 completed
+        '1744429541_08e29e964028438d98a173e20bfc4fc1': 'wacv/wacv2023.json', # batch_1910900673928900608 completed
+        '1744429543_3b328b881a204d4bb7f290706800cb25': 'wacv/wacv2024.json', # batch_1910900675429273600 completed
     }
     
     # prepare data
-    # batchify_json(root_raw, root_batch) # update the prompts and run this function to generate the batch files
+    # batchify_json(root_raw, root_batch, model) # update the prompts and run this function to generate the batch files
     
     # update, create, check, download
     # glm_upload(client, root_batch) # run this line and copy the console output to input_fids
     # glm_create(client, input_fids) # run this line and copy the console output to batchids
-    # glm_check(client, batchids) # run this line and copy the console output to the output_fids
+    glm_check(client, batchids) # run this line and copy the console output to the output_fids
     # glm_download(client, output_fids, root_download)
+    # glm_count_tokens(root_download) # prints the number of tokens in the downloaded files
     
     # align
-    glm_decode(output_fids, root_download, root_raw, root_output)
+    # glm_decode(output_fids, root_download, root_raw, root_output)
     # align_cvpr24()
